@@ -1,0 +1,39 @@
+.grade-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 100px;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.grade-label {
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+.grade-A {
+  background: #D1FAE5;
+  color: var(--grade-a);
+}
+
+.grade-B {
+  background: #EEF1FF;
+  color: var(--grade-b);
+}
+
+.grade-C {
+  background: #FEF3C7;
+  color: var(--grade-c);
+}
+
+.grade-D {
+  background: #FEE2E2;
+  color: var(--grade-d);
+}
+
+.grade-E {
+  background: #FCE7F3;
+  color: var(--grade-e);
+}

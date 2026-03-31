@@ -1,0 +1,67 @@
+.likert-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.likert-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--color-gray-400);
+  padding: 0 4px;
+}
+
+.likert-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.likert-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 4px;
+  background: var(--color-gray-100);
+  border-radius: var(--radius-sm);
+  border: 2px solid transparent;
+  transition: all 0.15s;
+  min-width: 0;
+}
+
+.likert-btn:hover {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+}
+
+.likert-btn.selected {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: white;
+}
+
+.likert-number {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.likert-label {
+  font-size: 0.65rem;
+  text-align: center;
+  line-height: 1.3;
+  color: inherit;
+  opacity: 0.8;
+  word-break: keep-all;
+}
+
+.likert-btn.selected .likert-label {
+  opacity: 0.9;
+}
+
+@media (max-width: 360px) {
+  .likert-label {
+    display: none;
+  }
+}

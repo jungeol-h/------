@@ -1,0 +1,38 @@
+.page3 {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.page3-section-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-gray-900);
+  margin-bottom: 10px;
+}
+
+.page3-coaching-box {
+  background: white;
+  border-radius: var(--radius);
+  padding: 18px;
+  box-shadow: var(--shadow);
+}
+
+.page3-coaching-box p {
+  font-size: 0.9rem;
+  line-height: 1.75;
+  color: var(--color-gray-700, #374151);
+  word-break: keep-all;
+}
+
+.page3-cards-desc {
+  font-size: 0.83rem;
+  color: var(--color-gray-400);
+  margin-bottom: 12px;
+}
+
+.page3-cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}

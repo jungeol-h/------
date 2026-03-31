@@ -1,0 +1,50 @@
+.practice-card {
+  background: white;
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  border-top: 4px solid var(--color-primary);
+}
+
+.practice-card-week {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.practice-card-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-gray-900);
+}
+
+.practice-card-section {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.practice-card-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.practice-card-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-gray-400);
+  margin-bottom: 2px;
+}
+
+.practice-card-text {
+  font-size: 0.87rem;
+  line-height: 1.55;
+  color: var(--color-gray-700, #374151);
+  word-break: keep-all;
+}

@@ -1,0 +1,6 @@
+.radar-chart-wrap {
+  width: 100%;
+  background: white;
+  border-radius: var(--radius);
+  padding: 8px 0;
+}

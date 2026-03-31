@@ -1,0 +1,57 @@
+.survey-page {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  max-width: 480px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 16px 20px 40px;
+  gap: 20px;
+}
+
+.survey-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.survey-back-btn {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+  font-size: 1.1rem;
+  color: var(--color-gray-600);
+  transition: background 0.15s;
+}
+
+.survey-back-btn:hover {
+  background: var(--color-gray-100);
+}
+
+.survey-question-num {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-gray-400);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.survey-card-wrap {
+  flex: 1;
+}
+
+.survey-scale-wrap {
+  /* 하단에 고정 느낌 */
+}
+
+.survey-hint {
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--color-gray-400);
+}

@@ -1,0 +1,112 @@
+.result-page {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  max-width: 480px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.result-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--color-gray-50);
+  padding: 16px 20px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-bottom: 1px solid var(--color-gray-200);
+}
+
+.result-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.result-header-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-gray-900);
+}
+
+.result-restart-btn {
+  padding: 6px 14px;
+  border: 1.5px solid var(--color-gray-200);
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--color-gray-600);
+  background: white;
+  transition: all 0.15s;
+}
+
+.result-restart-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.result-content {
+  flex: 1;
+  padding: 20px 20px 100px;
+}
+
+.result-tab-nav-bottom {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  background: white;
+  border-top: 1px solid var(--color-gray-200);
+  padding: 12px 20px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.result-tab-dots {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.result-tab-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-gray-200);
+  transition: all 0.15s;
+}
+
+.result-tab-dot.active {
+  background: var(--color-primary);
+  width: 20px;
+  border-radius: 100px;
+}
+
+.result-nav-btns {
+  display: flex;
+  gap: 8px;
+}
+
+.result-nav-btn {
+  padding: 10px 18px;
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--color-gray-600);
+  background: var(--color-gray-100);
+  transition: all 0.15s;
+}
+
+.result-nav-btn.primary {
+  background: var(--color-primary);
+  color: white;
+}
+
+.result-nav-btn:hover {
+  opacity: 0.85;
+}
