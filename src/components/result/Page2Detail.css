@@ -100,11 +100,11 @@
 }
 
 .page2-feedback-item.strength {
-  background: #F0FDF4;
+  background: var(--color-primary-light);
 }
 
 .page2-feedback-item.weakness {
-  background: #FFFBEB;
+  background: var(--color-gray-50);
 }
 
 .page2-feedback-label {
@@ -121,17 +121,10 @@
 }
 
 .page2-coaching {
-  display: flex;
-  gap: 10px;
-  padding: 12px;
+  padding: 12px 14px;
   background: var(--color-primary-light);
   border-radius: var(--radius-sm);
-  align-items: flex-start;
-}
-
-.page2-coaching-icon {
-  font-size: 1.1rem;
-  flex-shrink: 0;
+  border-left: 3px solid var(--color-primary);
 }
 
 .page2-coaching p {

@@ -5,9 +5,11 @@
 }
 
 .page3-section-title {
-  font-size: 1rem;
+  font-size: 0.78rem;
   font-weight: 700;
-  color: var(--color-gray-900);
+  color: var(--color-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
   margin-bottom: 10px;
 }
 

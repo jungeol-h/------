@@ -14,26 +14,26 @@
 }
 
 .grade-A {
-  background: #D1FAE5;
+  background: #EDE9FE;
   color: var(--grade-a);
 }
 
 .grade-B {
-  background: #EEF1FF;
+  background: #EDE9FE;
   color: var(--grade-b);
 }
 
 .grade-C {
-  background: #FEF3C7;
+  background: #F5F3FF;
   color: var(--grade-c);
 }
 
 .grade-D {
-  background: #FEE2E2;
+  background: var(--color-gray-100);
   color: var(--grade-d);
 }
 
 .grade-E {
-  background: #FCE7F3;
+  background: var(--color-gray-100);
   color: var(--grade-e);
 }

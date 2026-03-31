@@ -17,12 +17,12 @@ export const DOMAIN_LABELS = {
 }
 
 export const DOMAIN_COLORS = {
-  selfEfficacy: '#4F6EF7',
-  learningWill: '#10B981',
-  efficiency: '#F59E0B',
-  diligence: '#7C3AED',
-  environment: '#EF4444',
-  vision: '#EC4899',
+  selfEfficacy: '#7C3AED',
+  learningWill: '#6D28D9',
+  efficiency: '#9333EA',
+  diligence: '#8B5CF6',
+  environment: '#A855F7',
+  vision: '#C084FC',
 }
 
 export const DOMAIN_ORDER = [

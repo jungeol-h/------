@@ -52,17 +52,16 @@ export default function Page2Detail({ result }) {
 
                 <div className="page2-feedback-row">
                   <div className="page2-feedback-item strength">
-                    <span className="page2-feedback-label">💪 강점</span>
+                    <span className="page2-feedback-label">강점</span>
                     <p>{feedback.strength}</p>
                   </div>
                   <div className="page2-feedback-item weakness">
-                    <span className="page2-feedback-label">🎯 보완</span>
+                    <span className="page2-feedback-label">보완</span>
                     <p>{feedback.weakness}</p>
                   </div>
                 </div>
 
                 <div className="page2-coaching">
-                  <span className="page2-coaching-icon">💬</span>
                   <p>{feedback.coaching}</p>
                 </div>
               </div>

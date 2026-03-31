@@ -5,13 +5,10 @@
 }
 
 :root {
-  --color-primary: #4F6EF7;
-  --color-primary-dark: #3B56D9;
-  --color-primary-light: #EEF1FF;
-  --color-secondary: #7C3AED;
-  --color-success: #10B981;
-  --color-warning: #F59E0B;
-  --color-danger: #EF4444;
+  --color-primary: #7C3AED;
+  --color-primary-dark: #6D28D9;
+  --color-primary-light: #F5F3FF;
+  --color-primary-mid: #EDE9FE;
   --color-gray-50: #F9FAFB;
   --color-gray-100: #F3F4F6;
   --color-gray-200: #E5E7EB;
@@ -20,18 +17,18 @@
   --color-gray-800: #1F2937;
   --color-gray-900: #111827;
 
-  --color-self-efficacy: #4F6EF7;
-  --color-learning-will: #10B981;
-  --color-efficiency: #F59E0B;
-  --color-diligence: #7C3AED;
-  --color-environment: #EF4444;
-  --color-vision: #EC4899;
+  --color-self-efficacy: #7C3AED;
+  --color-learning-will: #9333EA;
+  --color-efficiency: #A855F7;
+  --color-diligence: #6D28D9;
+  --color-environment: #8B5CF6;
+  --color-vision: #C084FC;
 
-  --grade-a: #10B981;
-  --grade-b: #4F6EF7;
-  --grade-c: #F59E0B;
-  --grade-d: #F97316;
-  --grade-e: #EF4444;
+  --grade-a: #7C3AED;
+  --grade-b: #8B5CF6;
+  --grade-c: #A78BFA;
+  --grade-d: #9CA3AF;
+  --grade-e: #6B7280;
 
   --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif;
   --radius: 12px;

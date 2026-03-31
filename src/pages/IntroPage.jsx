@@ -32,15 +32,12 @@ export default function IntroPage() {
 
       <div className="intro-info-cards">
         <div className="intro-info-card">
-          <span className="info-icon">📋</span>
           <span>24문항</span>
         </div>
         <div className="intro-info-card">
-          <span className="info-icon">⏱</span>
           <span>약 5분</span>
         </div>
         <div className="intro-info-card">
-          <span className="info-icon">🎯</span>
           <span>맞춤 피드백</span>
         </div>
       </div>

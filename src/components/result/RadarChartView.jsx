@@ -28,9 +28,9 @@ export default function RadarChartView({ domainScores }) {
           <Radar
             name="점수"
             dataKey="score"
-            stroke="#4F6EF7"
-            fill="#4F6EF7"
-            fillOpacity={0.25}
+            stroke="#7C3AED"
+            fill="#7C3AED"
+            fillOpacity={0.2}
             strokeWidth={2}
           />
           <Tooltip

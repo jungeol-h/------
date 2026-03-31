@@ -39,24 +39,24 @@ export default function Page1Summary({ result }) {
 
       <div className="page1-summary-row">
         <div className="page1-summary-box strength">
-          <p className="page1-summary-title">💪 핵심 강점</p>
+          <p className="page1-summary-title">핵심 강점</p>
           {strengthDomains.map(d => (
             <span
               key={d}
               className="page1-summary-tag"
-              style={{ background: DOMAIN_COLORS[d] + '20', color: DOMAIN_COLORS[d] }}
+              style={{ background: 'var(--color-primary-mid)', color: 'var(--color-primary)' }}
             >
               {DOMAIN_LABELS[d]}
             </span>
           ))}
         </div>
         <div className="page1-summary-box weak">
-          <p className="page1-summary-title">🎯 보완 포인트</p>
+          <p className="page1-summary-title">보완 포인트</p>
           {weakDomains.map(d => (
             <span
               key={d}
               className="page1-summary-tag"
-              style={{ background: '#FFF3E0', color: '#F59E0B' }}
+              style={{ background: 'var(--color-gray-100)', color: 'var(--color-gray-600)' }}
             >
               {DOMAIN_LABELS[d]}
             </span>
