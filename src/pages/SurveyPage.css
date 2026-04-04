@@ -66,6 +66,21 @@
   white-space: nowrap;
 }
 
+/* 애니메이션 */
+.survey-content-wrap {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  transition: opacity 0.4s ease, transform 0.4s ease;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.survey-content-wrap.fade-out {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
 /* 페이지 표시 */
 .survey-page-indicator {
   font-size: 0.85rem;
@@ -125,10 +140,6 @@
 
 .survey-tr:hover {
   background: var(--color-gray-50, #f9fafb);
-}
-
-.survey-tr-error {
-  background: #fef2f2 !important;
 }
 
 .survey-td-question {
@@ -211,53 +222,30 @@
   background: var(--color-primary-light, #ede9fe);
 }
 
-/* 에러 메시지 */
-.survey-error-msg {
-  margin-top: 10px;
-  font-size: 0.85rem;
-  color: #ef4444;
-  text-align: center;
+.survey-actions {
+  position: sticky;
+  bottom: 0;
+  background: white;
+  padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+  margin: auto -16px -40px;
+  z-index: 100;
+  border-top: 1px solid var(--color-gray-100);
 }
 
-/* 범례 */
-.survey-legend {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  justify-content: center;
-  padding: 10px 0;
-}
-
-.survey-legend-item {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.75rem;
-  color: var(--color-gray-500);
-}
-
-.survey-legend-num {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  background: var(--color-primary-light, #ede9fe);
-  color: var(--color-primary, #7C3AED);
-  border-radius: 50%;
-  font-size: 0.7rem;
-  font-weight: 700;
-}
-
-.survey-legend-text {
-  color: var(--color-gray-600);
-}
-
-/* 다음 버튼 */
+/* 결과 보기 버튼 */
 .survey-next-btn {
   padding: 18px;
   font-size: 1.05rem;
-  margin-top: 4px;
+  width: 100%;
+  transition: all 0.2s ease;
+  margin-top: 0;
+}
+
+.survey-next-btn:disabled {
+  background: var(--color-gray-300, #d1d5db);
+  cursor: not-allowed;
+  transform: none;
+  opacity: 0.7;
 }
 
 /* 모바일 대응 */

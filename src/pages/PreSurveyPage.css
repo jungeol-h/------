@@ -126,6 +126,13 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  position: sticky;
+  bottom: 0;
+  background: white;
+  padding: 16px 24px calc(16px + env(safe-area-inset-bottom));
+  margin: auto -24px -40px;
+  z-index: 100;
+  border-top: 1px solid var(--color-gray-100);
 }
 
 .presurvey-next-btn {
@@ -133,14 +140,119 @@
   font-size: 1.05rem;
 }
 
-.presurvey-skip-btn {
-  background: none;
-  border: none;
-  padding: 10px;
-  font-size: 0.9rem;
-  color: var(--color-gray-400);
-  cursor: pointer;
-  text-align: center;
-  text-decoration: underline;
-  text-underline-offset: 3px;
+
+/* 과목 선택 버튼 */
+.subject-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 8px;
 }
+
+.subject-btn {
+  padding: 12px 8px;
+  background: white;
+  border: 1.5px solid var(--color-gray-200);
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  color: var(--color-gray-700);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.subject-btn:hover {
+  background: var(--color-gray-50);
+}
+
+.subject-btn.active {
+  background: var(--color-primary-light, #f0f7ff);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+/* MBTI 축 선택기 */
+.mbti-axes {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mbti-axis-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.mbti-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px;
+  background: white;
+  border: 1.5px solid var(--color-gray-200);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mbti-btn:hover {
+  background: var(--color-gray-50);
+}
+
+.mbti-btn.active {
+  background: var(--color-primary-light, #f0f7ff);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.mbti-letter {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--color-gray-700);
+  transition: color 0.2s;
+}
+
+.mbti-btn.active .mbti-letter {
+  color: var(--color-primary);
+}
+
+.mbti-label {
+  font-size: 0.72rem;
+  color: var(--color-gray-400);
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.mbti-btn.active .mbti-label {
+  color: var(--color-primary);
+}
+
+.required {
+  color: #ef4444;
+  margin-left: 2px;
+}
+
+.form-error {
+  font-size: 0.82rem;
+  color: #ef4444;
+  margin-top: 4px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+}
+
+.form-error::before {
+  content: '⚠';
+  margin-right: 4px;
+}
+
+.subject-btn.error,
+.mbti-btn.error,
+.presurvey-select.error,
+.presurvey-input.error {
+  border-color: #ef4444 !important;
+}
+

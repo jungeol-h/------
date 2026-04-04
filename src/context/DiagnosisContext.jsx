@@ -26,13 +26,14 @@ function createInitialState() {
     grade: '',
     studentPhone: '',
     parentPhone: '',
+    agreed: false,
     // 사전설문
     preSurvey: {
-      hardestSubject: '',
-      mbti: '',
-      gradeLevel: '',
-      counselingTopic: '',
-      career: '',
+      '가장 어려운 과목': '',
+      'MBTI': '',
+      '학습 성취도 수준': '',
+      '상담 및 코칭 희망 내용': '',
+      '희망 진로 및 관심 분야': '',
     },
     // 진단 문항
     answers: new Array(TOTAL_QUESTIONS).fill(0), // 0 = 미선택
@@ -61,6 +62,9 @@ function reducer(state, action) {
       newAnswers[action.index] = action.value
       return { ...state, answers: newAnswers }
     }
+
+    case 'SET_ANSWERS':
+      return { ...state, answers: action.payload }
 
     case 'SET_SURVEY_RESULT':
       return { ...state, answers: action.payload.answers, result: action.payload.result, isCompleted: true }

@@ -1,6 +1,27 @@
-import { questions, DOMAIN_ORDER } from '../data/questions'
+import { questions, DOMAIN_ORDER, DOMAIN_LABELS } from '../data/questions'
 import { feedbackLibrary, practiceCards as practiceCardData } from '../data/feedbackLibrary'
 import { buildOverallComment, buildOverallSummary, buildMindCoaching, buildMindSummary, buildPracticeCoaching, buildPracticeSummary } from '../data/coachingTemplates'
+
+const CORE_LABELS = {
+  leadership: '주도성',
+  strategy: '전략성',
+  diligence: '성실성',
+}
+
+function translateKeys(obj, labelMap) {
+  if (!obj) return {}
+  const result = {}
+  for (const [key, value] of Object.entries(obj)) {
+    const newKey = labelMap[key] || key
+    result[newKey] = value
+  }
+  return result
+}
+
+function translateArray(arr, labelMap) {
+  if (!arr) return []
+  return arr.map(item => labelMap[item] || item)
+}
 
 // Step 1: answers 배열 → 영역별 점수 (100점 환산)
 // shuffledQuestions: 셔플된 문항 배열 (originalIndex 포함) — 없으면 순서대로 처리
@@ -217,11 +238,16 @@ export function buildResult(answers, studentName = '', shuffledQuestions = null)
   return {
     studentName,
     domainScores,
+    koreanDomainScores: translateKeys(domainScores, DOMAIN_LABELS),
     domainGrades,
+    koreanDomainGrades: translateKeys(domainGrades, DOMAIN_LABELS),
     coreIndicators,
+    koreanCoreIndicators: translateKeys(coreIndicators, CORE_LABELS),
     finalType,
     strengthDomains,
+    koreanStrengthDomains: translateArray(strengthDomains, DOMAIN_LABELS),
     weakDomains,
+    koreanWeakDomains: translateArray(weakDomains, DOMAIN_LABELS),
     overallComment,
     overallSummary,
     mindCoaching,

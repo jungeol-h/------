@@ -11,12 +11,12 @@ export async function saveDiagnosisResult(state) {
     parent_phone: parentPhone || null,
     pre_survey: preSurvey,
     answers,
-    domain_scores: result.domainScores,
-    domain_grades: result.domainGrades,
-    core_indicators: result.coreIndicators,
+    domain_scores: result.koreanDomainScores,
+    domain_grades: result.koreanDomainGrades,
+    core_indicators: result.koreanCoreIndicators,
     final_type: result.finalType,
-    strength_domains: result.strengthDomains,
-    weak_domains: result.weakDomains,
+    strength_domains: result.koreanStrengthDomains,
+    weak_domains: result.koreanWeakDomains,
   })
 
   if (error) {

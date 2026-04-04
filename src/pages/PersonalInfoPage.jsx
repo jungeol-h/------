@@ -3,10 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { useDiagnosis } from '../context/DiagnosisContext'
 import './PersonalInfoPage.css'
 
-const GRADE_OPTIONS = [
-  '중학교 1학년', '중학교 2학년', '중학교 3학년',
-  '고등학교 1학년', '고등학교 2학년', '고등학교 3학년',
-]
+const MIDDLE_GRADES = ['중학교 1학년', '중학교 2학년', '중학교 3학년']
+const HIGH_GRADES = ['고등학교 1학년', '고등학교 2학년', '고등학교 3학년']
 
 function formatPhone(value) {
   const digits = value.replace(/\D/g, '').slice(0, 11)
@@ -20,13 +18,13 @@ export default function PersonalInfoPage() {
   const navigate = useNavigate()
 
   const [form, setForm] = useState({
-    studentName: '',
-    school: '',
-    grade: '',
-    studentPhone: '',
-    parentPhone: '',
+    studentName: state.studentName || '',
+    school: state.school || '',
+    grade: state.grade || '',
+    studentPhone: state.studentPhone || '',
+    parentPhone: state.parentPhone || '',
   })
-  const [agreed, setAgreed] = useState(false)
+  const [agreed, setAgreed] = useState(state.agreed || false)
   const [showPrivacy, setShowPrivacy] = useState(false)
   const [errors, setErrors] = useState({})
 
@@ -38,6 +36,28 @@ export default function PersonalInfoPage() {
       setForm(f => ({ ...f, [name]: value }))
     }
     setErrors(err => ({ ...err, [name]: '' }))
+  }
+
+  function handleBlur(e) {
+    const { name, value } = e.target
+    if (name === 'school') {
+      let formatted = value.trim()
+      if (formatted.endsWith('초') && !formatted.endsWith('초등학교')) {
+        formatted += '등학교'
+      } else if (formatted.endsWith('초등') && !formatted.endsWith('초등학교')) {
+        formatted += '학교'
+      } else if (formatted.endsWith('중') && !formatted.endsWith('중학교')) {
+        formatted += '학교'
+      } else if (formatted.endsWith('고') && !formatted.endsWith('고등학교')) {
+        formatted += '등학교'
+      } else if (formatted.endsWith('고등') && !formatted.endsWith('고등학교')) {
+        formatted += '학교'
+      }
+
+      if (formatted !== value) {
+        setForm(f => ({ ...f, [name]: formatted }))
+      }
+    }
   }
 
   function validate() {
@@ -59,14 +79,16 @@ export default function PersonalInfoPage() {
     if (state.result) {
       dispatch({ type: 'RESET' })
     }
-    dispatch({ type: 'SET_PERSONAL_INFO', payload: form })
+    dispatch({ type: 'SET_PERSONAL_INFO', payload: { ...form, agreed } })
     navigate('/pre-survey')
   }
 
   return (
     <div className="personal-page">
       <div className="personal-header">
-        <div className="intro-badge">학습 자기 진단</div>
+        <div className="personal-header-top">
+          <div className="intro-badge">학습 자기 진단</div>
+        </div>
         <h1 className="personal-title">기본 정보 입력</h1>
         <p className="personal-desc">진단 결과 안내를 위해 정보를 입력해 주세요.</p>
       </div>
@@ -78,7 +100,6 @@ export default function PersonalInfoPage() {
             className={`form-input${errors.studentName ? ' error' : ''}`}
             name="studentName"
             type="text"
-            placeholder="홍길동"
             value={form.studentName}
             onChange={handleChange}
             maxLength={10}
@@ -92,9 +113,9 @@ export default function PersonalInfoPage() {
             className={`form-input${errors.school ? ' error' : ''}`}
             name="school"
             type="text"
-            placeholder="○○중학교 / ○○고등학교"
             value={form.school}
             onChange={handleChange}
+            onBlur={handleBlur}
             maxLength={20}
           />
           {errors.school && <span className="form-error">{errors.school}</span>}
@@ -102,17 +123,32 @@ export default function PersonalInfoPage() {
 
         <div className="form-field">
           <label className="form-label">학년 <span className="required">*</span></label>
-          <select
-            className={`form-select${errors.grade ? ' error' : ''}`}
-            name="grade"
-            value={form.grade}
-            onChange={handleChange}
-          >
-            <option value="">학년 선택</option>
-            {GRADE_OPTIONS.map(g => (
-              <option key={g} value={g}>{g}</option>
-            ))}
-          </select>
+          <div className="grade-selector">
+            {!form.school.includes('중') && !form.school.includes('고') ? (
+              <p className="grade-hint">학교명을 먼저 입력해 주세요.</p>
+            ) : (
+              <div className="grade-group">
+                <span className="grade-group-label">
+                  {form.school.includes('중') ? '중학교' : '고등학교'}
+                </span>
+                <div className="grade-button-grid">
+                  {(form.school.includes('중') ? MIDDLE_GRADES : HIGH_GRADES).map(g => (
+                    <button
+                      key={g}
+                      type="button"
+                      className={`grade-btn${form.grade === g ? ' active' : ''}${errors.grade ? ' error' : ''}`}
+                      onClick={() => {
+                        setForm(f => ({ ...f, grade: g }))
+                        setErrors(err => ({ ...err, grade: '' }))
+                      }}
+                    >
+                      {g.replace('중학교 ', '').replace('고등학교 ', '')}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
           {errors.grade && <span className="form-error">{errors.grade}</span>}
         </div>
 
@@ -178,13 +214,31 @@ export default function PersonalInfoPage() {
         </div>
       </div>
 
-      <button className="btn-primary personal-next-btn" onClick={handleNext}>
-        다음
-      </button>
-
       <p className="personal-note">
         입력하신 정보는 진단 결과 안내 목적으로만 사용됩니다.
       </p>
+
+      <div className="personal-actions" style={{ display: 'flex', gap: '8px' }}>
+        <button 
+          type="button"
+          className="btn-secondary" 
+          onClick={() => {
+            dispatch({ type: 'SET_PERSONAL_INFO', payload: { ...form, agreed } })
+            navigate('/')
+          }}
+          style={{ width: '30%', padding: '18px 0', fontSize: '1.05rem', background: '#f3f4f6', color: '#4b5563', borderRadius: '12px', fontWeight: 600, border: 'none', cursor: 'pointer' }}
+        >
+          ← 이전
+        </button>
+        <button 
+          type="button"
+          className="btn-primary personal-next-btn" 
+          onClick={handleNext}
+          style={{ flex: 1, marginTop: 0 }}
+        >
+          다음 →
+        </button>
+      </div>
     </div>
   )
 }

@@ -42,25 +42,39 @@
   color: var(--color-gray-600);
 }
 
-.intro-info-cards {
-  display: flex;
-  gap: 10px;
-}
-
-.intro-info-card {
-  flex: 1;
+.intro-info-list {
   display: flex;
   flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.intro-info-item {
+  display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 14px 8px;
-  background: white;
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--color-gray-700, #374151);
-  border: 1.5px solid var(--color-gray-100);
+  gap: 10px;
+  font-size: 0.95rem;
+  color: var(--color-gray-600);
+}
+
+.intro-info-item svg {
+  color: var(--color-gray-500);
+  flex-shrink: 0;
+}
+
+.intro-info-item.highlight span {
+  background: linear-gradient(135deg, var(--color-primary) 0%, #d946ef 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+  font-weight: 700;
+  font-size: 1.02rem;
+  letter-spacing: -0.2px;
+}
+
+.intro-info-item.highlight svg {
+  color: var(--color-primary);
 }
 
 .intro-name-section {

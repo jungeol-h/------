@@ -15,6 +15,28 @@
   gap: 10px;
 }
 
+.personal-header-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.survey-back-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: var(--color-gray-100);
+  border-radius: 50%;
+  font-size: 1rem;
+  cursor: pointer;
+  color: var(--color-gray-700);
+  flex-shrink: 0;
+}
+
+
 .personal-title {
   font-size: 1.6rem;
   font-weight: 700;
@@ -97,6 +119,72 @@
   color: #ef4444;
 }
 
+/* 학년 선택 버튼 */
+.grade-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.grade-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.grade-group-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-gray-500);
+  margin-bottom: 2px;
+}
+
+.grade-button-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.grade-btn {
+  padding: 12px 8px;
+  background: white;
+  border: 1.5px solid var(--color-gray-200);
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  color: var(--color-gray-700);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.grade-btn:hover {
+  background: var(--color-gray-50);
+  border-color: var(--color-gray-300);
+}
+
+.grade-btn.active {
+  background: var(--color-primary-light, #f0f7ff);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  font-weight: 700;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.grade-btn.error {
+  border-color: #ef4444;
+}
+
+.grade-hint {
+  font-size: 0.88rem;
+  color: var(--color-gray-400);
+  padding: 14px 16px;
+  background: var(--color-gray-50);
+  border: 1.5px dashed var(--color-gray-200);
+  border-radius: var(--radius);
+  text-align: center;
+  margin: 0;
+}
+
 /* 개인정보 동의 */
 .privacy-section {
   display: flex;
@@ -163,10 +251,20 @@
   color: #ef4444;
 }
 
+.personal-actions {
+  position: sticky;
+  bottom: 0;
+  background: white;
+  padding: 16px 24px calc(16px + env(safe-area-inset-bottom));
+  margin: auto -24px -40px;
+  z-index: 100;
+  border-top: 1px solid var(--color-gray-100);
+}
+
 .personal-next-btn {
   padding: 18px;
   font-size: 1.05rem;
-  margin-top: 4px;
+  margin-top: 0;
 }
 
 .personal-note {
