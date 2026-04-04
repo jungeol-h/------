@@ -6,6 +6,7 @@ import PersonalInfoPage from './pages/PersonalInfoPage'
 import PreSurveyPage from './pages/PreSurveyPage'
 import SurveyPage from './pages/SurveyPage'
 import ResultPage from './pages/ResultPage'
+import CompletePage from './pages/CompletePage'
 
 export default function App() {
   return (
@@ -37,6 +38,15 @@ export default function App() {
           element={
             <ProtectedRoute condition={s => s.isCompleted && s.result !== null} redirectTo="/survey">
               <ResultPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/complete"
+          element={
+            <ProtectedRoute condition={s => s.isCompleted && s.result !== null} redirectTo="/result">
+              <CompletePage />
             </ProtectedRoute>
           }
         />

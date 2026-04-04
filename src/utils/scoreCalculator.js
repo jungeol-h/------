@@ -1,6 +1,6 @@
 import { questions, DOMAIN_ORDER } from '../data/questions'
 import { feedbackLibrary, practiceCards as practiceCardData } from '../data/feedbackLibrary'
-import { buildOverallComment, buildMindCoaching, buildPracticeCoaching } from '../data/coachingTemplates'
+import { buildOverallComment, buildOverallSummary, buildMindCoaching, buildMindSummary, buildPracticeCoaching, buildPracticeSummary } from '../data/coachingTemplates'
 
 // Step 1: answers 배열 → 영역별 점수 (100점 환산)
 // shuffledQuestions: 셔플된 문항 배열 (originalIndex 포함) — 없으면 순서대로 처리
@@ -178,6 +178,12 @@ export function buildResult(answers, studentName = '', shuffledQuestions = null)
     practiceCards: selectedCards,
   })
 
+  const overallSummary = buildOverallSummary({
+    finalType,
+    strengthDomains,
+    weakDomains,
+  })
+
   const mindCoaching = buildMindCoaching({
     lowestDomain,
     secondLowestDomain,
@@ -185,7 +191,19 @@ export function buildResult(answers, studentName = '', shuffledQuestions = null)
     allSameScore,
   })
 
+  const mindSummary = buildMindSummary({
+    lowestDomain,
+    secondLowestDomain,
+    strengthDomain,
+    allSameScore,
+  })
+
   const practiceCoaching = buildPracticeCoaching({
+    primaryCard: selectedCards[0],
+    secondaryCard: selectedCards[1],
+  })
+
+  const practiceSummary = buildPracticeSummary({
     primaryCard: selectedCards[0],
     secondaryCard: selectedCards[1],
   })
@@ -205,8 +223,11 @@ export function buildResult(answers, studentName = '', shuffledQuestions = null)
     strengthDomains,
     weakDomains,
     overallComment,
+    overallSummary,
     mindCoaching,
+    mindSummary,
     practiceCoaching,
+    practiceSummary,
     practiceCards: selectedCards,
     domainFeedbacks,
   }

@@ -8,14 +8,6 @@ const GRADE_OPTIONS = [
   '고등학교 1학년', '고등학교 2학년', '고등학교 3학년',
 ]
 
-const MBTI_OPTIONS = [
-  'ISTJ', 'ISFJ', 'INFJ', 'INTJ',
-  'ISTP', 'ISFP', 'INFP', 'INTP',
-  'ESTP', 'ESFP', 'ENFP', 'ENTP',
-  'ESTJ', 'ESFJ', 'ENFJ', 'ENTJ',
-  '모르겠음',
-]
-
 function formatPhone(value) {
   const digits = value.replace(/\D/g, '').slice(0, 11)
   if (digits.length <= 3) return digits
@@ -33,7 +25,6 @@ export default function PersonalInfoPage() {
     grade: '',
     studentPhone: '',
     parentPhone: '',
-    mbti: '',
   })
   const [agreed, setAgreed] = useState(false)
   const [showPrivacy, setShowPrivacy] = useState(false)
@@ -150,21 +141,6 @@ export default function PersonalInfoPage() {
             value={form.parentPhone}
             onChange={handleChange}
           />
-        </div>
-
-        <div className="form-field">
-          <label className="form-label">MBTI <span className="optional">(선택)</span></label>
-          <select
-            className="form-select"
-            name="mbti"
-            value={form.mbti}
-            onChange={handleChange}
-          >
-            <option value="">선택 안 함</option>
-            {MBTI_OPTIONS.map(m => (
-              <option key={m} value={m}>{m}</option>
-            ))}
-          </select>
         </div>
 
         {/* 개인정보 동의 */}

@@ -1,14 +1,25 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useDiagnosis } from '../context/DiagnosisContext'
 import ResultTabNav from '../components/result/ResultTabNav'
 import Page1Summary from '../components/result/Page1Summary'
 import Page2Detail from '../components/result/Page2Detail'
 import Page3Coaching from '../components/result/Page3Coaching'
+import { saveDiagnosisResult } from '../lib/saveResult'
 import './ResultPage.css'
 
 export default function ResultPage() {
   const { state, dispatch } = useDiagnosis()
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState(1)
+  const savedRef = useRef(false)
+
+  useEffect(() => {
+    if (state.result && !savedRef.current) {
+      savedRef.current = true
+      saveDiagnosisResult(state).catch(e => console.error('[DB 저장 실패]', e))
+    }
+  }, [state])
 
   const { result } = state
 
@@ -55,6 +66,11 @@ export default function ResultPage() {
           {activeTab < 3 && (
             <button className="result-nav-btn primary" onClick={() => setActiveTab(activeTab + 1)}>
               다음 →
+            </button>
+          )}
+          {activeTab === 3 && (
+            <button className="result-nav-btn primary" onClick={() => navigate('/complete')}>
+              결과지 저장 →
             </button>
           )}
         </div>

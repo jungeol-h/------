@@ -1,0 +1,162 @@
+.complete-page {
+  min-height: 100dvh;
+  background: var(--color-gray-50);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 32px 16px 60px;
+}
+
+.complete-inner {
+  width: 100%;
+  max-width: 680px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* 완료 헤더 */
+.complete-hero {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.complete-check {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #5B21B6, #7C3AED);
+  color: white;
+  font-size: 24px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.complete-title {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--color-gray-900);
+}
+
+.complete-desc {
+  font-size: 0.92rem;
+  color: var(--color-gray-500);
+}
+
+/* 미리보기 */
+.complete-preview-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.complete-preview-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.complete-preview-scroll {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(91, 33, 182, 0.12), 0 1px 4px rgba(0,0,0,0.08);
+  border: 1px solid #E9D5FF;
+}
+
+/* 스케일은 JS(CompletePage.jsx)에서 동적으로 처리 */
+.complete-preview-scaler {
+  overflow: hidden;
+}
+
+.complete-preview-scroll {
+  overflow: hidden;
+}
+
+/* 액션 버튼 */
+.complete-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.complete-btn-pdf {
+  flex: 1;
+  min-width: 160px;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, #5B21B6, #7C3AED);
+  color: white;
+  border-radius: var(--radius-md);
+  font-size: 0.95rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: opacity 0.15s;
+}
+
+.complete-btn-pdf:hover {
+  opacity: 0.88;
+}
+
+.complete-btn-pdf:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.complete-btn-icon {
+  font-size: 1.1rem;
+  font-weight: 900;
+}
+
+.complete-btn-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255,255,255,0.4);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.complete-btn-back {
+  padding: 14px 20px;
+  background: white;
+  border: 1.5px solid #DDD6FE;
+  color: #5B21B6;
+  border-radius: var(--radius-md);
+  font-size: 0.88rem;
+  font-weight: 600;
+  transition: all 0.15s;
+}
+
+.complete-btn-back:hover {
+  background: #F5F3FF;
+}
+
+.complete-btn-restart {
+  padding: 14px 20px;
+  background: white;
+  border: 1.5px solid var(--color-gray-200);
+  color: var(--color-gray-500);
+  border-radius: var(--radius-md);
+  font-size: 0.88rem;
+  font-weight: 600;
+  transition: all 0.15s;
+}
+
+.complete-btn-restart:hover {
+  border-color: var(--color-gray-400);
+  color: var(--color-gray-700);
+}
