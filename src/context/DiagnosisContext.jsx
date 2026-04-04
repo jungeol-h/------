@@ -48,6 +48,9 @@ function reducer(state, action) {
       return { ...state, answers: newAnswers }
     }
 
+    case 'SET_SURVEY_RESULT':
+      return { ...state, answers: action.payload.answers, result: action.payload.result, isCompleted: true }
+
     case 'NEXT_QUESTION': {
       const nextIndex = state.currentIndex + 1
       if (nextIndex >= TOTAL_QUESTIONS) {

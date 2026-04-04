@@ -8,6 +8,14 @@ const GRADE_OPTIONS = [
   '고등학교 1학년', '고등학교 2학년', '고등학교 3학년',
 ]
 
+const MBTI_OPTIONS = [
+  'ISTJ', 'ISFJ', 'INFJ', 'INTJ',
+  'ISTP', 'ISFP', 'INFP', 'INTP',
+  'ESTP', 'ESFP', 'ENFP', 'ENTP',
+  'ESTJ', 'ESFJ', 'ENFJ', 'ENTJ',
+  '모르겠음',
+]
+
 function formatPhone(value) {
   const digits = value.replace(/\D/g, '').slice(0, 11)
   if (digits.length <= 3) return digits
@@ -25,6 +33,7 @@ export default function PersonalInfoPage() {
     grade: '',
     studentPhone: '',
     parentPhone: '',
+    mbti: '',
   })
   const [agreed, setAgreed] = useState(false)
   const [showPrivacy, setShowPrivacy] = useState(false)
@@ -46,7 +55,6 @@ export default function PersonalInfoPage() {
     if (!form.school.trim()) newErrors.school = '학교명을 입력해 주세요'
     if (!form.grade) newErrors.grade = '학년을 선택해 주세요'
     if (!form.studentPhone.trim()) newErrors.studentPhone = '학생 휴대폰 번호를 입력해 주세요'
-    if (!form.parentPhone.trim()) newErrors.parentPhone = '보호자 휴대폰 번호를 입력해 주세요'
     if (!agreed) newErrors.agreed = '개인정보 수집에 동의해 주세요'
     return newErrors
   }
@@ -130,9 +138,9 @@ export default function PersonalInfoPage() {
         </div>
 
         <div className="form-field">
-          <label className="form-label">보호자 휴대폰 번호 <span className="required">*</span></label>
+          <label className="form-label">보호자 휴대폰 번호 <span className="optional">(선택)</span></label>
           <input
-            className={`form-input${errors.parentPhone ? ' error' : ''}`}
+            className="form-input"
             name="parentPhone"
             type="tel"
             inputMode="numeric"
@@ -140,7 +148,21 @@ export default function PersonalInfoPage() {
             value={form.parentPhone}
             onChange={handleChange}
           />
-          {errors.parentPhone && <span className="form-error">{errors.parentPhone}</span>}
+        </div>
+
+        <div className="form-field">
+          <label className="form-label">MBTI <span className="optional">(선택)</span></label>
+          <select
+            className="form-select"
+            name="mbti"
+            value={form.mbti}
+            onChange={handleChange}
+          >
+            <option value="">선택 안 함</option>
+            {MBTI_OPTIONS.map(m => (
+              <option key={m} value={m}>{m}</option>
+            ))}
+          </select>
         </div>
 
         {/* 개인정보 동의 */}

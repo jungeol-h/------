@@ -21,7 +21,7 @@ export default function IntroPage() {
       <div className="intro-hero">
         <div className="intro-badge">학습 자기 진단</div>
         <h1 className="intro-title">
-          나를 이해하는<br />첫 번째 질문
+          나는 어떤<br />학습자인가?
         </h1>
         <p className="intro-desc">
           24개의 짧은 질문으로<br />
