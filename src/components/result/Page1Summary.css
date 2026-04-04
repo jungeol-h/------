@@ -118,6 +118,31 @@
   margin-bottom: 2px;
 }
 
+.page1-summary-all {
+  font-size: 0.82rem;
+  color: var(--color-gray-400);
+  font-style: italic;
+}
+
+.page1-all-excellent {
+  background: linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.page1-all-icon {
+  font-size: 1.8rem;
+}
+
+.page1-all-excellent p {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
 .page1-overall {
   background: white;
   border-radius: var(--radius);

@@ -37,32 +37,46 @@ export default function Page1Summary({ result }) {
         ))}
       </div>
 
-      <div className="page1-summary-row">
-        <div className="page1-summary-box strength">
-          <p className="page1-summary-title">핵심 강점</p>
-          {strengthDomains.map(d => (
-            <span
-              key={d}
-              className="page1-summary-tag"
-              style={{ background: 'var(--color-primary-mid)', color: 'var(--color-primary)' }}
-            >
-              {DOMAIN_LABELS[d]}
-            </span>
-          ))}
+      {(strengthDomains.length > 0 || weakDomains.length > 0) && (
+        <div className="page1-summary-row">
+          <div className="page1-summary-box strength">
+            <p className="page1-summary-title">핵심 강점</p>
+            {strengthDomains.length > 0
+              ? strengthDomains.map(d => (
+                  <span
+                    key={d}
+                    className="page1-summary-tag"
+                    style={{ background: 'var(--color-primary-mid)', color: 'var(--color-primary)' }}
+                  >
+                    {DOMAIN_LABELS[d]}
+                  </span>
+                ))
+              : <span className="page1-summary-all">전 영역 균형</span>
+            }
+          </div>
+          <div className="page1-summary-box weak">
+            <p className="page1-summary-title">보완 포인트</p>
+            {weakDomains.length > 0
+              ? weakDomains.map(d => (
+                  <span
+                    key={d}
+                    className="page1-summary-tag"
+                    style={{ background: 'var(--color-gray-100)', color: 'var(--color-gray-600)' }}
+                  >
+                    {DOMAIN_LABELS[d]}
+                  </span>
+                ))
+              : <span className="page1-summary-all">전 영역 우수</span>
+            }
+          </div>
         </div>
-        <div className="page1-summary-box weak">
-          <p className="page1-summary-title">보완 포인트</p>
-          {weakDomains.map(d => (
-            <span
-              key={d}
-              className="page1-summary-tag"
-              style={{ background: 'var(--color-gray-100)', color: 'var(--color-gray-600)' }}
-            >
-              {DOMAIN_LABELS[d]}
-            </span>
-          ))}
+      )}
+      {strengthDomains.length === 0 && weakDomains.length === 0 && (
+        <div className="page1-all-excellent">
+          <span className="page1-all-icon">🏆</span>
+          <p>모든 영역이 고르게 우수합니다!</p>
         </div>
-      </div>
+      )}
 
       <div className="page1-overall">
         <h3 className="page1-overall-title">종합 총평</h3>

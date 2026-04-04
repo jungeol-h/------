@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useDiagnosis } from '../context/DiagnosisContext'
-import { questions, TOTAL_QUESTIONS } from '../data/questions'
+import { TOTAL_QUESTIONS } from '../data/questions'
 import ProgressBar from '../components/survey/ProgressBar'
 import QuestionCard from '../components/survey/QuestionCard'
 import LikertScale from '../components/survey/LikertScale'
@@ -10,7 +10,7 @@ import './SurveyPage.css'
 export default function SurveyPage() {
   const { state, dispatch } = useDiagnosis()
   const navigate = useNavigate()
-  const { currentIndex, answers, isCompleted } = state
+  const { currentIndex, answers, isCompleted, shuffledQuestions } = state
   const autoMoveTimer = useRef(null)
 
   useEffect(() => {
@@ -22,7 +22,6 @@ export default function SurveyPage() {
   function handleSelect(value) {
     dispatch({ type: 'SET_ANSWER', index: currentIndex, value })
 
-    // 300ms 후 자동 다음 문항 이동
     clearTimeout(autoMoveTimer.current)
     autoMoveTimer.current = setTimeout(() => {
       dispatch({ type: 'NEXT_QUESTION' })
@@ -36,7 +35,7 @@ export default function SurveyPage() {
 
   if (currentIndex >= TOTAL_QUESTIONS) return null
 
-  const question = questions[currentIndex]
+  const question = shuffledQuestions[currentIndex]
   const selected = answers[currentIndex]
 
   return (
@@ -44,7 +43,7 @@ export default function SurveyPage() {
       <div className="survey-header">
         <button
           className="survey-back-btn"
-          onClick={currentIndex === 0 ? () => navigate('/') : handlePrev}
+          onClick={currentIndex === 0 ? () => navigate('/pre-survey') : handlePrev}
           aria-label="이전"
         >
           ←
@@ -57,7 +56,7 @@ export default function SurveyPage() {
       </div>
 
       <div className="survey-card-wrap">
-        <QuestionCard question={question} />
+        <QuestionCard question={question} showDomain={false} />
       </div>
 
       <div className="survey-scale-wrap">

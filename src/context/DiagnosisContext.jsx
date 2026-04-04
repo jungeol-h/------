@@ -1,19 +1,44 @@
 import { createContext, useContext, useReducer } from 'react'
 import { buildResult } from '../utils/scoreCalculator'
-import { TOTAL_QUESTIONS } from '../data/questions'
+import { TOTAL_QUESTIONS, createShuffledQuestions } from '../data/questions'
 
 const DiagnosisContext = createContext(null)
 
-const initialState = {
-  studentName: '',
-  answers: new Array(TOTAL_QUESTIONS).fill(0), // 0 = 미선택
-  currentIndex: 0,
-  isCompleted: false,
-  result: null,
+function createInitialState() {
+  return {
+    // 개인정보
+    studentName: '',
+    school: '',
+    grade: '',
+    studentPhone: '',
+    parentPhone: '',
+    // 사전설문
+    preSurvey: {
+      hardestSubject: '',
+      mbti: '',
+      gradeLevel: '',
+      counselingTopic: '',
+      career: '',
+    },
+    // 진단 문항
+    answers: new Array(TOTAL_QUESTIONS).fill(0), // 0 = 미선택
+    shuffledQuestions: createShuffledQuestions(),
+    currentIndex: 0,
+    isCompleted: false,
+    result: null,
+  }
 }
+
+const initialState = createInitialState()
 
 function reducer(state, action) {
   switch (action.type) {
+    case 'SET_PERSONAL_INFO':
+      return { ...state, ...action.payload }
+
+    case 'SET_PRE_SURVEY':
+      return { ...state, preSurvey: { ...state.preSurvey, ...action.payload } }
+
     case 'SET_NAME':
       return { ...state, studentName: action.payload }
 
@@ -26,7 +51,7 @@ function reducer(state, action) {
     case 'NEXT_QUESTION': {
       const nextIndex = state.currentIndex + 1
       if (nextIndex >= TOTAL_QUESTIONS) {
-        const result = buildResult(state.answers, state.studentName)
+        const result = buildResult(state.answers, state.studentName, state.shuffledQuestions)
         return { ...state, currentIndex: nextIndex, isCompleted: true, result }
       }
       return { ...state, currentIndex: nextIndex }
@@ -35,8 +60,10 @@ function reducer(state, action) {
     case 'PREV_QUESTION':
       return { ...state, currentIndex: Math.max(0, state.currentIndex - 1) }
 
-    case 'RESET':
-      return { ...initialState, answers: new Array(TOTAL_QUESTIONS).fill(0) }
+    case 'RESET': {
+      const fresh = createInitialState()
+      return fresh
+    }
 
     default:
       return state

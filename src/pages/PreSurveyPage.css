@@ -1,0 +1,146 @@
+.presurvey-page {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  max-width: 480px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 24px 24px 40px;
+  gap: 24px;
+}
+
+.presurvey-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.survey-back-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: var(--color-gray-100);
+  border-radius: 50%;
+  font-size: 1rem;
+  cursor: pointer;
+  color: var(--color-gray-700);
+  flex-shrink: 0;
+}
+
+.presurvey-step {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+  padding: 4px 12px;
+  border-radius: 100px;
+}
+
+.presurvey-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.presurvey-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-gray-900);
+  margin: 0;
+}
+
+.presurvey-desc {
+  font-size: 0.9rem;
+  color: var(--color-gray-500);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.presurvey-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  flex: 1;
+}
+
+.presurvey-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+}
+
+.presurvey-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-gray-800);
+}
+
+.presurvey-input,
+.presurvey-select,
+.presurvey-textarea {
+  width: 100%;
+  padding: 13px 16px;
+  border: 1.5px solid var(--color-gray-200);
+  border-radius: var(--radius);
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.15s;
+  background: white;
+  color: var(--color-gray-900);
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.presurvey-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 40px;
+  cursor: pointer;
+}
+
+.presurvey-textarea {
+  resize: none;
+  line-height: 1.6;
+}
+
+.presurvey-input:focus,
+.presurvey-select:focus,
+.presurvey-textarea:focus {
+  border-color: var(--color-primary);
+}
+
+.presurvey-count {
+  font-size: 0.78rem;
+  color: var(--color-gray-400);
+  text-align: right;
+}
+
+.presurvey-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.presurvey-next-btn {
+  padding: 18px;
+  font-size: 1.05rem;
+}
+
+.presurvey-skip-btn {
+  background: none;
+  border: none;
+  padding: 10px;
+  font-size: 0.9rem;
+  color: var(--color-gray-400);
+  cursor: pointer;
+  text-align: center;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

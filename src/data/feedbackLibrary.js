@@ -67,8 +67,8 @@ export const feedbackLibrary = {
     },
     C: {
       strength: '성취도 변화 가능성이 큼',
-      weakness: '시간관리 및 남는 공부 만들기 필요',
-      coaching: '공부 후 5분이라도 요약하고 틀린 문제의 이유를 적는 시간이 반드시 포함되어야 합니다.',
+      weakness: '시간 관리 및 효율적인 학습 방식 정착 필요',
+      coaching: '공부 후 5분이라도 요약하고 틀린 문제의 이유를 적는 시간을 반드시 확보해 보세요.',
     },
     D: {
       strength: '교정 시 빠른 변화 가능',

@@ -2,13 +2,17 @@ import { questions, DOMAIN_ORDER } from '../data/questions'
 import { feedbackLibrary, practiceCards as practiceCardData } from '../data/feedbackLibrary'
 import { buildOverallComment, buildMindCoaching, buildPracticeCoaching } from '../data/coachingTemplates'
 
-// Step 1: answers 배열(24개) → 영역별 점수 (100점 환산)
-export function calcDomainScores(answers) {
+// Step 1: answers 배열 → 영역별 점수 (100점 환산)
+// shuffledQuestions: 셔플된 문항 배열 (originalIndex 포함) — 없으면 순서대로 처리
+export function calcDomainScores(answers, shuffledQuestions) {
   const domainAnswers = {}
+  const orderedQuestions = shuffledQuestions || questions.map((q, idx) => ({ ...q, originalIndex: idx }))
 
-  questions.forEach((q, idx) => {
-    if (!domainAnswers[q.domain]) domainAnswers[q.domain] = []
-    domainAnswers[q.domain].push(answers[idx] || 3)
+  orderedQuestions.forEach((q, shuffleIdx) => {
+    const domain = q.domain
+    if (!domainAnswers[domain]) domainAnswers[domain] = []
+    const value = answers[shuffleIdx] || 3
+    domainAnswers[domain].push(value)
   })
 
   const scores = {}
@@ -129,20 +133,31 @@ export function selectPracticeCards(domainScores) {
   return sorted.map(domain => practiceCardData[domain]?.[0]).filter(Boolean)
 }
 
-// 강점/보완 영역 분류
+// 강점/보완 영역 분류 (동점이면 강점/보완 없음)
 function getStrengthAndWeakDomains(domainScores) {
   const sorted = DOMAIN_ORDER
     .map(d => ({ domain: d, score: domainScores[d] }))
     .sort((a, b) => b.score - a.score)
 
-  const strengthDomains = sorted.slice(0, 2).map(d => d.domain)
-  const weakDomains = sorted.slice(-2).map(d => d.domain)
+  const maxScore = sorted[0].score
+  const minScore = sorted[sorted.length - 1].score
+
+  if (maxScore === minScore) {
+    return { strengthDomains: [], weakDomains: [] }
+  }
+
+  const strengthDomains = sorted.filter(d => d.score === maxScore).map(d => d.domain).slice(0, 2)
+  const weakDomains = sorted
+    .filter(d => d.score === minScore && !strengthDomains.includes(d.domain))
+    .map(d => d.domain)
+    .slice(0, 2)
+
   return { strengthDomains, weakDomains }
 }
 
 // 전체 결과 객체 생성
-export function buildResult(answers, studentName = '') {
-  const domainScores = calcDomainScores(answers)
+export function buildResult(answers, studentName = '', shuffledQuestions = null) {
+  const domainScores = calcDomainScores(answers, shuffledQuestions)
   const domainGrades = calcDomainGrades(domainScores)
   const coreIndicators = calcCoreIndicators(domainScores)
   const finalType = calcFinalType(domainScores)
@@ -151,8 +166,10 @@ export function buildResult(answers, studentName = '') {
 
   const sortedByScore = Object.entries(domainScores).sort((a, b) => a[1] - b[1])
   const lowestDomain = sortedByScore[0][0]
+  const lowestScore = sortedByScore[0][1]
   const secondLowestDomain = sortedByScore[1][0]
   const strengthDomain = sortedByScore[sortedByScore.length - 1][0]
+  const allSameScore = sortedByScore.every(([, s]) => s === lowestScore)
 
   const overallComment = buildOverallComment({
     finalType,
@@ -165,6 +182,7 @@ export function buildResult(answers, studentName = '') {
     lowestDomain,
     secondLowestDomain,
     strengthDomain,
+    allSameScore,
   })
 
   const practiceCoaching = buildPracticeCoaching({
@@ -172,7 +190,6 @@ export function buildResult(answers, studentName = '') {
     secondaryCard: selectedCards[1],
   })
 
-  // 영역별 피드백 (등급별)
   const domainFeedbacks = {}
   for (const domain of DOMAIN_ORDER) {
     const grade = domainGrades[domain]
