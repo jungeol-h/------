@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useDiagnosis } from '../context/DiagnosisContext'
 import ResultTabNav from '../components/result/ResultTabNav'
 import Page1Summary from '../components/result/Page1Summary'
@@ -9,19 +8,13 @@ import './ResultPage.css'
 
 export default function ResultPage() {
   const { state, dispatch } = useDiagnosis()
-  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState(1)
-
-  if (!state.result) {
-    navigate('/survey')
-    return null
-  }
 
   const { result } = state
 
   function handleRestart() {
     dispatch({ type: 'RESET' })
-    navigate('/')
+    window.location.href = '/'
   }
 
   return (

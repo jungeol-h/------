@@ -24,7 +24,7 @@ function formatPhone(value) {
 }
 
 export default function PersonalInfoPage() {
-  const { dispatch } = useDiagnosis()
+  const { state, dispatch } = useDiagnosis()
   const navigate = useNavigate()
 
   const [form, setForm] = useState({
@@ -65,7 +65,9 @@ export default function PersonalInfoPage() {
       setErrors(newErrors)
       return
     }
-    dispatch({ type: 'RESET' })
+    if (state.result) {
+      dispatch({ type: 'RESET' })
+    }
     dispatch({ type: 'SET_PERSONAL_INFO', payload: form })
     navigate('/pre-survey')
   }

@@ -1,8 +1,22 @@
-import { createContext, useContext, useReducer } from 'react'
+import { createContext, useContext, useReducer, useEffect } from 'react'
 import { buildResult } from '../utils/scoreCalculator'
 import { TOTAL_QUESTIONS, createShuffledQuestions } from '../data/questions'
 
 const DiagnosisContext = createContext(null)
+
+const SESSION_KEY = 'diagnosis_state'
+
+function loadFromSession() {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY)
+    return raw ? JSON.parse(raw) : null
+  } catch { return null }
+}
+
+function saveToSession(state) {
+  try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(state)) }
+  catch {}
+}
 
 function createInitialState() {
   return {
@@ -29,7 +43,7 @@ function createInitialState() {
   }
 }
 
-const initialState = createInitialState()
+const initialState = loadFromSession() ?? createInitialState()
 
 function reducer(state, action) {
   switch (action.type) {
@@ -75,6 +89,14 @@ function reducer(state, action) {
 
 export function DiagnosisProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, initialState)
+
+  useEffect(() => {
+    if (!state.studentName && !state.result) {
+      sessionStorage.removeItem(SESSION_KEY)
+    } else {
+      saveToSession(state)
+    }
+  }, [state])
 
   return (
     <DiagnosisContext.Provider value={{ state, dispatch }}>

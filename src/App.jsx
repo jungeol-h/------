@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { DiagnosisProvider } from './context/DiagnosisContext'
+import ProtectedRoute from './components/ProtectedRoute'
 import IntroPage from './pages/IntroPage'
 import PersonalInfoPage from './pages/PersonalInfoPage'
 import PreSurveyPage from './pages/PreSurveyPage'
@@ -12,9 +13,34 @@ export default function App() {
       <Routes>
         <Route path="/" element={<IntroPage />} />
         <Route path="/info" element={<PersonalInfoPage />} />
-        <Route path="/pre-survey" element={<PreSurveyPage />} />
-        <Route path="/survey" element={<SurveyPage />} />
-        <Route path="/result" element={<ResultPage />} />
+
+        <Route
+          path="/pre-survey"
+          element={
+            <ProtectedRoute condition={s => s.studentName !== ''} redirectTo="/info">
+              <PreSurveyPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/survey"
+          element={
+            <ProtectedRoute condition={s => s.studentName !== ''} redirectTo="/info">
+              <SurveyPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/result"
+          element={
+            <ProtectedRoute condition={s => s.isCompleted && s.result !== null} redirectTo="/survey">
+              <ResultPage />
+            </ProtectedRoute>
+          }
+        />
+
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </DiagnosisProvider>
