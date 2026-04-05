@@ -78,52 +78,39 @@ export default function SurveyPage() {
 
       {/* 애니메이션 래퍼 */}
       <div className={`survey-content-wrap${isFadingOut ? ' fade-out' : ''}`}>
-        {/* 페이지 표시 */}
-        <div className="survey-page-indicator">
-          {page + 1} / {TOTAL_PAGES} 페이지
-        </div>
-
-        {/* 테이블형 문항 */}
-        <div className="survey-table-wrap">
-          <table className="survey-table">
-            <thead>
-              <tr>
-                <th className="survey-th-question">문항</th>
-                {LIKERT_LABELS.map((label, i) => (
-                  <th key={i} className="survey-th-option">{label}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {pageQuestions.map((q, localIdx) => {
-                const globalIdx = startIdx + localIdx
-                const selected = answers[globalIdx]
-                return (
-                  <tr key={q.id} className="survey-tr">
-                    <td className="survey-td-question">
-                      <span className="survey-q-num">{globalIdx + 1}</span>
-                      <span className="survey-q-text">{q.text}</span>
-                    </td>
-                    {[1, 2, 3, 4, 5].map(val => (
-                      <td key={val} className="survey-td-option">
-                        <label className="survey-radio-label">
-                          <input
-                            type="radio"
-                            name={`q-${globalIdx}`}
-                            value={val}
-                            checked={selected === val}
-                            onChange={() => handleSelect(globalIdx, val)}
-                            className="survey-radio"
-                          />
-                          <span className={`survey-radio-circle${selected === val ? ' selected' : ''}`} />
-                        </label>
-                      </td>
+        {/* 카드형 문항 */}
+        <div className="survey-questions">
+          {pageQuestions.map((q, localIdx) => {
+            const globalIdx = startIdx + localIdx
+            const selected = answers[globalIdx]
+            return (
+              <div key={q.id} className="survey-card">
+                <div className="survey-q-header">
+                  <span className="survey-q-num">Q{globalIdx + 1}</span>
+                </div>
+                <p className="survey-q-text">{q.text}</p>
+                <div className="survey-options-row">
+                  <span className="survey-scale-label left">{LIKERT_LABELS[0]}</span>
+                  <div className="survey-options">
+                    {[1, 2, 3, 4, 5].map((val, i) => (
+                      <label key={val} className={`survey-option-label${selected === val ? ' selected' : ''}`}>
+                        <input
+                          type="radio"
+                          name={`q-${globalIdx}`}
+                          value={val}
+                          checked={selected === val}
+                          onChange={() => handleSelect(globalIdx, val)}
+                          className="survey-radio"
+                        />
+                        <span className={`survey-option-circle step-${i}`} />
+                      </label>
                     ))}
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                  </div>
+                  <span className="survey-scale-label right">{LIKERT_LABELS[4]}</span>
+                </div>
+              </div>
+            )
+          })}
         </div>
 
         {/* 항상 하단에 이전 버튼 표시, 마지막 페이지엔 결과보기 버튼도 표시 */}
