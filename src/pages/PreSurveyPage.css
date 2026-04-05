@@ -212,11 +212,13 @@
   font-size: 1.2rem;
   font-weight: 800;
   color: var(--color-gray-700);
+  -webkit-text-fill-color: var(--color-gray-700);
   transition: color 0.2s;
 }
 
 .mbti-btn.active .mbti-letter {
   color: var(--color-primary);
+  -webkit-text-fill-color: var(--color-primary);
 }
 
 .mbti-label {
