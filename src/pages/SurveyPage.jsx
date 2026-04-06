@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useDiagnosis } from '../context/DiagnosisContext'
+import { useAdminConfig } from '../context/AdminConfigContext'
 import { questions, LIKERT_LABELS, TOTAL_QUESTIONS } from '../data/questions'
 import { buildResult } from '../utils/scoreCalculator'
 import './SurveyPage.css'
@@ -10,6 +11,7 @@ const TOTAL_PAGES = Math.ceil(TOTAL_QUESTIONS / QUESTIONS_PER_PAGE)
 
 export default function SurveyPage() {
   const { state, dispatch } = useDiagnosis()
+  const { config } = useAdminConfig()
   const navigate = useNavigate()
   const [page, setPage] = useState(0) // 0-indexed
   const [answers, setAnswers] = useState(() => state.answers || new Array(TOTAL_QUESTIONS).fill(0))
@@ -45,7 +47,7 @@ export default function SurveyPage() {
       setIsFadingOut(false)
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } else {
-      const result = buildResult(currentAnswers, state.studentName)
+      const result = buildResult(currentAnswers, state.studentName, state.shuffledQuestions, config)
       dispatch({ type: 'SET_SURVEY_RESULT', payload: { answers: currentAnswers, result } })
       navigate('/result')
     }

@@ -72,7 +72,8 @@ function reducer(state, action) {
     case 'NEXT_QUESTION': {
       const nextIndex = state.currentIndex + 1
       if (nextIndex >= TOTAL_QUESTIONS) {
-        const result = buildResult(state.answers, state.studentName, state.shuffledQuestions)
+        // action.config: AdminConfigContext에서 주입된 커스텀 설정 (없으면 기본값)
+        const result = buildResult(state.answers, state.studentName, state.shuffledQuestions, action.config ?? null)
         return { ...state, currentIndex: nextIndex, isCompleted: true, result }
       }
       return { ...state, currentIndex: nextIndex }

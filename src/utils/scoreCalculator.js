@@ -167,8 +167,9 @@ export function calcSupplements(domainGrades) {
 }
 
 // Step 7: 실천 카드 선택 (보완 영역 2개 + 종합 1개)
-export function selectPracticeCards(domainScores, domainGrades) {
+export function selectPracticeCards(domainScores, domainGrades, cardData) {
   const grades = domainGrades || calcDomainGrades(domainScores)
+  const cards_db = cardData || practiceCardData
 
   // 보완 영역 (A 제외, 낮은 순)
   const sortedDomains = DOMAIN_ORDER
@@ -182,7 +183,7 @@ export function selectPracticeCards(domainScores, domainGrades) {
   // 세트 1, 2: 보완 영역 상위 2개
   const topTwo = sortedDomains.slice(0, 2)
   for (const domain of topTwo) {
-    const card = practiceCardData[domain]?.[0]
+    const card = cards_db[domain]?.[0]
     if (card) cards.push(card)
   }
 
@@ -194,14 +195,14 @@ export function selectPracticeCards(domainScores, domainGrades) {
       .map(d => d.domain)
     for (const domain of allSorted) {
       if (!topTwo.includes(domain)) {
-        const card = practiceCardData[domain]?.[0]
+        const card = cards_db[domain]?.[0]
         if (card) { cards.push(card); break }
       }
     }
   }
 
   // 세트 3: 종합 학습 향상 카드
-  const overallCard = practiceCardData['overall']?.[0]
+  const overallCard = cards_db['overall']?.[0]
   if (overallCard) cards.push(overallCard)
 
   return cards
@@ -230,13 +231,17 @@ function getStrengthAndWeakDomains(domainScores) {
 }
 
 // 전체 결과 객체 생성
-export function buildResult(answers, studentName = '', shuffledQuestions = null) {
+// config: { feedbackLibrary, practiceCards } — AdminConfigContext에서 주입, 없으면 기본값
+export function buildResult(answers, studentName = '', shuffledQuestions = null, config = null) {
+  const resolvedFeedbackLib = config?.feedbackLibrary || feedbackLibrary
+  const resolvedPracticeCards = config?.practiceCards || practiceCardData
+
   const domainScores = calcDomainScores(answers, shuffledQuestions)
   const domainGrades = calcDomainGrades(domainScores)
   const coreIndicators = calcCoreIndicators(domainGrades)
   const finalType = calcFinalType(domainGrades)
   const supplements = calcSupplements(domainGrades)
-  const selectedCards = selectPracticeCards(domainScores, domainGrades)
+  const selectedCards = selectPracticeCards(domainScores, domainGrades, resolvedPracticeCards)
   const { strengthDomains, weakDomains } = getStrengthAndWeakDomains(domainScores)
 
   const sortedByScore = Object.entries(domainScores).sort((a, b) => a[1] - b[1])
@@ -288,7 +293,7 @@ export function buildResult(answers, studentName = '', shuffledQuestions = null)
   const domainFeedbacks = {}
   for (const domain of DOMAIN_ORDER) {
     const grade = domainGrades[domain]
-    domainFeedbacks[domain] = feedbackLibrary[domain]?.[grade] || feedbackLibrary[domain]?.['D']
+    domainFeedbacks[domain] = resolvedFeedbackLib[domain]?.[grade] || resolvedFeedbackLib[domain]?.['D']
   }
 
   return {

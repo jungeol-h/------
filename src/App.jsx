@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { DiagnosisProvider } from './context/DiagnosisContext'
+import { AdminConfigProvider } from './context/AdminConfigContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import IntroPage from './pages/IntroPage'
 import PersonalInfoPage from './pages/PersonalInfoPage'
@@ -7,9 +8,11 @@ import PreSurveyPage from './pages/PreSurveyPage'
 import SurveyPage from './pages/SurveyPage'
 import ResultPage from './pages/ResultPage'
 import CompletePage from './pages/CompletePage'
+import AdminPage from './pages/AdminPage'
 
 export default function App() {
   return (
+    <AdminConfigProvider>
     <DiagnosisProvider>
       <Routes>
         <Route path="/" element={<IntroPage />} />
@@ -51,8 +54,10 @@ export default function App() {
           }
         />
 
+        <Route path="/admin" element={<AdminPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </DiagnosisProvider>
+    </AdminConfigProvider>
   )
 }
