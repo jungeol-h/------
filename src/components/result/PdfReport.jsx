@@ -125,7 +125,7 @@ export default function PdfReport({ result, reportRef }) {
   const today = new Date()
   const dateStr = `${today.getFullYear()}. ${today.getMonth() + 1}. ${today.getDate()}.`
 
-  // 실천과제: practiceCards의 core 항목 수집
+  // 실천과제: 카드별 제목 + 핵심과제만 표시 (PDF 공간 제한)
   const displayTasks = []
   if (practiceCards) {
     practiceCards.forEach(card => {

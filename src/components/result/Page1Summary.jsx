@@ -3,7 +3,7 @@ import { DOMAIN_LABELS, DOMAIN_COLORS } from '../../data/questions'
 import './Page1Summary.css'
 
 export default function Page1Summary({ result }) {
-  const { finalType, domainScores, strengthDomains, weakDomains, studentName, overallComment } = result
+  const { finalType, domainScores, strengthDomains, weakDomains, supplements, studentName, overallComment } = result
 
   return (
     <div className="page1">
@@ -56,14 +56,14 @@ export default function Page1Summary({ result }) {
           </div>
           <div className="page1-summary-box weak">
             <p className="page1-summary-title">보완 포인트</p>
-            {weakDomains.length > 0
-              ? weakDomains.map(d => (
+            {supplements && supplements.length > 0
+              ? supplements.map(s => (
                   <span
-                    key={d}
+                    key={s.domain}
                     className="page1-summary-tag"
                     style={{ background: 'var(--color-gray-100)', color: 'var(--color-gray-600)' }}
                   >
-                    {DOMAIN_LABELS[d]}
+                    {s.formatted}
                   </span>
                 ))
               : <span className="page1-summary-all">전 영역 우수</span>

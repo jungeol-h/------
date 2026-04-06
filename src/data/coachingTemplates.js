@@ -1,33 +1,88 @@
 import { DOMAIN_LABELS } from './questions'
-import { withEulReul, withGwaWa, joinWithGwaWa } from '../utils/koreanUtils'
+import { withEulReul, withEunNeun } from '../utils/koreanUtils'
 
-export function buildOverallComment({ finalType, strengthDomains, weakDomains, practiceCards }) {
-  const typeName = finalType.replace(' 학습자', '')
-  const taskStr = practiceCards.slice(0, 3).map(c => c.core).join(', ')
-
-  // 모든 영역이 우수한 경우 (강점/보완 구분 없음)
+// 전체 상태 표현 (문장 1용)
+function getStateDescription(strengthDomains, weakDomains) {
   if (strengthDomains.length === 0 && weakDomains.length === 0) {
-    return `현재 학습 상태는 전 영역에서 고르게 높은 수준을 보이고 있으며, ${typeName} 형태로 나타나고 있습니다. 모든 영역에서 안정적인 기반을 갖추고 있어 지금의 흐름을 꾸준히 유지하는 것이 가장 중요합니다.\n\n이미 좋은 습관과 실력을 갖추고 있지만, 더 높은 단계로 나아가기 위해 ${withEulReul(taskStr)} 지속적으로 실천해 보세요. 지금의 균형 잡힌 학습 패턴이 장기적인 성과로 이어질 가능성이 매우 높습니다.`
+    return '전반적인 학습 태도'
   }
-
-  const strengthStr = joinWithGwaWa(strengthDomains.map(d => DOMAIN_LABELS[d]))
-  const weakStr = joinWithGwaWa(weakDomains.map(d => DOMAIN_LABELS[d]))
-
-  return `현재 학습 상태는 전반적으로 성장 가능성이 높은 단계에 있으며, 학습의 흐름이 ${typeName} 형태로 나타나고 있습니다. 특히 ${strengthStr}에서는 안정적인 기반을 갖추고 있어, 올바른 방향이 잡히면 성과로 빠르게 연결될 수 있는 상태입니다.\n\n반면 ${weakStr}에서는 학습의 효율과 지속성이 제한될 가능성이 있습니다. 이 부분은 단순한 의지의 문제가 아니라, 학습 구조와 실행 방식의 개선이 필요한 단계입니다.\n\n앞으로는 ${withEulReul(weakStr)} 중심으로 학습을 재구성해야 합니다. 특히 ${withEulReul(taskStr)} 꾸준히 실천하면 학습의 흐름이 안정되고 성과로 이어질 가능성이 매우 높습니다.`
+  if (weakDomains.length === 0) {
+    return '학습에 필요한 여러 요소'
+  }
+  return '학습 의지와 태도'
 }
 
-// PDF 결과지용 총평 요약 (2~3줄)
-export function buildOverallSummary({ finalType, strengthDomains, weakDomains }) {
-  const typeName = finalType.replace(' 학습자', '')
-
-  if (strengthDomains.length === 0 && weakDomains.length === 0) {
-    return `전 영역에서 고르게 높은 수준을 보이는 ${typeName} 학습자입니다. 지금의 균형 잡힌 흐름을 유지하면서 더 높은 목표를 향해 나아가세요.`
+// 강점 표현 (문장 2용)
+function getStrengthSentence(strengthDomains) {
+  if (strengthDomains.length === 0) {
+    return '꾸준히 노력하려는 자세는 좋은 강점입니다.'
   }
+  const labels = strengthDomains.map(d => DOMAIN_LABELS[d])
+  const last = labels[labels.length - 1]
+  // 마지막 항목에 조사 붙임, 나머지는 그대로 연결
+  const allWithParticle = labels.slice(0, -1).join(', ')
+  const withParticle = withEunNeun(last)
+  const domainStr = allWithParticle ? `${allWithParticle}, ${withParticle}` : withParticle
+  return `특히 ${domainStr} 좋은 강점입니다.`
+}
 
-  const strengthStr = strengthDomains.map(d => DOMAIN_LABELS[d]).join('·')
-  const weakStr = weakDomains.map(d => DOMAIN_LABELS[d]).join('·')
+// 보완 표현 (문장 3용)
+function getWeakSentence(weakDomains, supplements) {
+  // supplements가 있으면 우선 사용
+  if (supplements && supplements.length > 0) {
+    const parts = supplements.map(s => s.domainLabel)
+    const last = parts[parts.length - 1]
+    const allWithParticle = parts.slice(0, -1).join(', ')
+    const withParticle = withEunNeun(last)
+    const domainStr = allWithParticle ? `${allWithParticle}, ${withParticle}` : withParticle
+    return `다만 ${domainStr} 더 보완이 필요합니다.`
+  }
+  if (weakDomains.length === 0) {
+    return '다만 현재 수준을 꾸준히 유지하는 것이 필요합니다.'
+  }
+  const labels = weakDomains.map(d => DOMAIN_LABELS[d])
+  const last = labels[labels.length - 1]
+  const allWithParticle = labels.slice(0, -1).join(', ')
+  const withParticle = withEunNeun(last)
+  const domainStr = allWithParticle ? `${allWithParticle}, ${withParticle}` : withParticle
+  return `다만 ${domainStr} 더 보완이 필요합니다.`
+}
 
-  return `${strengthStr}에서 안정적인 기반을 갖춘 ${typeName} 학습자입니다. ${weakStr} 영역의 보완이 이루어지면 학습 흐름이 크게 안정되고 성과로 연결될 가능성이 높습니다.`
+// 실천 방향 표현 (문장 4용)
+function getActionSentence(supplements, practiceCards) {
+  if (supplements && supplements.length > 0) {
+    const domain = supplements[0].domainLabel
+    return `앞으로는 ${withEulReul(domain)} 개선하는 데 집중하면 좋겠습니다.`
+  }
+  if (practiceCards && practiceCards.length > 0 && practiceCards[0]?.title) {
+    return `앞으로는 ${withEulReul(practiceCards[0].title)} 꾸준히 실천하면 좋겠습니다.`
+  }
+  return '앞으로는 매일 작은 실천을 꾸준히 이어가면 좋겠습니다.'
+}
+
+export function buildOverallComment({ finalType, strengthDomains, weakDomains, supplements, practiceCards }) {
+  const stateDesc = getStateDescription(strengthDomains, weakDomains)
+
+  const s1 = `지금은 ${stateDesc}이 어느 정도 갖춰진 상태입니다.`
+  const s2 = getStrengthSentence(strengthDomains)
+  const s3 = getWeakSentence(weakDomains, supplements)
+  const s4 = getActionSentence(supplements, practiceCards)
+
+  return `${s1} ${s2} ${s3} ${s4}`
+}
+
+// PDF 결과지용 총평 요약 (4문장 동일 구조)
+export function buildOverallSummary({ finalType, strengthDomains, weakDomains, supplements }) {
+  const stateDesc = getStateDescription(strengthDomains, weakDomains)
+
+  const s1 = `지금은 ${stateDesc}이 어느 정도 갖춰진 상태입니다.`
+  const s2 = getStrengthSentence(strengthDomains)
+  const s3 = getWeakSentence(weakDomains, supplements)
+  const s4 = supplements && supplements.length > 0
+    ? `앞으로는 ${withEulReul(supplements[0].domainLabel)} 집중적으로 보완하면 좋겠습니다.`
+    : '앞으로는 매일 작은 실천을 꾸준히 이어가면 좋겠습니다.'
+
+  return `${s1} ${s2} ${s3} ${s4}`
 }
 
 // PDF 결과지용 마인드 코칭 요약 (1~2줄)
@@ -39,7 +94,7 @@ export function buildMindSummary({ lowestDomain, secondLowestDomain, strengthDom
   const lowest = DOMAIN_LABELS[lowestDomain] || lowestDomain
   const strength = DOMAIN_LABELS[strengthDomain] || strengthDomain
 
-  return `${lowest} 영역에서 성장 여지가 있으며, ${strength}의 강점을 기반으로 빠른 성장이 가능합니다. 과정과 기준을 중심으로 학습을 점검해 보세요.`
+  return `${lowest} 영역에서 성장 여지가 있으며, ${strength}의 강점을 살려 빠른 성장이 가능합니다. 과정과 기준을 중심으로 학습을 점검해 보세요.`
 }
 
 // PDF 결과지용 실천 코칭 요약 (1~2줄)
@@ -53,19 +108,19 @@ export function buildPracticeSummary({ primaryCard, secondaryCard }) {
 export function buildMindCoaching({ lowestDomain, secondLowestDomain, strengthDomain, allSameScore }) {
   // 모든 영역이 동일한 점수(만점 포함)인 경우
   if (allSameScore) {
-    return `모든 영역에서 균형 잡힌 학습 태도를 갖추고 있는 상태입니다. 자아효능감, 학습의지, 효율성, 성실성, 학습환경, 비전 모두 안정적으로 유지되고 있어요. 앞으로는 지금의 흐름을 유지하면서 더 높은 목표를 향해 나아가는 것이 중요합니다. 이미 좋은 기반이 갖춰져 있으니, 과정을 즐기며 성장해 나가세요.`
+    return `모든 영역에서 균형 잡힌 학습 태도를 갖추고 있는 상태입니다. 자아효능감, 학습의지, 효율성, 성실성, 학습환경, 비전 모두 안정적으로 유지되고 있어요. 앞으로는 지금의 흐름을 유지하면서 더 높은 목표를 향해 나아가는 것이 중요합니다. 이미 좋은 습관이 갖춰져 있으니, 과정을 즐기며 성장해 나가세요.`
   }
 
   const lowest = DOMAIN_LABELS[lowestDomain] || lowestDomain
   const second = DOMAIN_LABELS[secondLowestDomain] || secondLowestDomain
   const strength = DOMAIN_LABELS[strengthDomain] || strengthDomain
 
-  return `지금 상태는 ${lowest}의 부분에서 조금 더 성장할 여지가 있는 단계입니다. 특히 ${second}도 함께 점검하면 전반적인 학습 흐름이 더욱 안정될 수 있습니다. 현재의 탁월한 강점인 ${withEulReul(strength)} 기반으로 충분히 빠르고 쉽게 성장이 가능한 상태입니다. 앞으로는 단기적인 결과보다 과정과 기준을 중심으로 학습을 점검하고 스스로를 바라보는 태도를 만들어야 합니다.`
+  return `지금 상태는 ${lowest}에서 조금 더 성장할 여지가 있는 단계입니다. 특히 ${second}도 함께 점검하면 전반적인 학습 습관이 더욱 안정될 수 있습니다. 현재의 탁월한 강점인 ${strength}을 살려 충분히 빠르고 쉽게 성장이 가능한 상태입니다. 앞으로는 단기적인 결과보다 과정과 기준을 중심으로 학습을 점검하고 스스로를 바라보는 태도를 만들어야 합니다.`
 }
 
 export function buildPracticeCoaching({ primaryCard, secondaryCard }) {
   const primaryTask = primaryCard?.core || '핵심 실천 과제'
   const secondaryTask = secondaryCard?.core || '추가 실천 과제'
 
-  return `지금 시점에서는 너무 많은 것을 한 번에 바꾸려 하기보다, 가장 핵심적이고 구체적인 한 가지 행동부터 안정시키는 것이 중요합니다. 특히 "${withEulReul(primaryTask)}" 먼저 단단히 실천하시면 전체 학습 흐름이 긍정적으로 달라질 수 있습니다. 이 과정을 반복하면서 추가적으로 "${secondaryTask}"까지 연결한다면 학습의 안정성이 크게 높아집니다. 앞으로는 하루 단위의 아주 작은 실천을 기준으로 꾸준히 반복하는 것이 가장 핵심적인 전략입니다.`
+  return `지금 시점에서는 너무 많은 것을 한 번에 바꾸려 하기보다, 가장 핵심적이고 구체적인 한 가지 행동부터 안정시키는 것이 중요합니다. 특히 "${withEulReul(primaryTask)}" 먼저 단단히 실천하면 전체 학습 습관이 긍정적으로 달라질 수 있습니다. 이 과정을 반복하면서 추가적으로 "${secondaryTask}"까지 연결한다면 학습 습관의 안정이 크게 높아집니다. 앞으로는 하루 단위의 아주 작은 실천을 기준으로 꾸준히 반복하는 것이 가장 핵심적인 전략입니다.`
 }

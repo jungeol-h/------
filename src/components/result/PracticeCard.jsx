@@ -16,7 +16,12 @@ export default function PracticeCard({ card, index }) {
       <div className="practice-card-section">
         <div>
           <p className="practice-card-label">강화 과제</p>
-          <p className="practice-card-text">{card.boost}</p>
+          {Array.isArray(card.boost)
+            ? card.boost.map((b, i) => (
+                <p key={i} className="practice-card-text">{b}</p>
+              ))
+            : <p className="practice-card-text">{card.boost}</p>
+          }
         </div>
       </div>
     </div>
