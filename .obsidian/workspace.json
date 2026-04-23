@@ -1,0 +1,228 @@
+{
+  "main": {
+    "id": "096f1e9af4a798df",
+    "type": "split",
+    "children": [
+      {
+        "id": "7967011e2b9edf12",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "7a1c506a582479a2",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "docs/전체 개발 스코프/개념 정리/리포트.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "리포트"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "72e045c46bcefb3e",
+    "type": "split",
+    "children": [
+      {
+        "id": "c8483b949710f109",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "84b406f95a233014",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "파일 탐색기"
+            }
+          },
+          {
+            "id": "009f1b356717adfc",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "진로 탐구",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "검색"
+            }
+          },
+          {
+            "id": "a295a00302746406",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "북마크"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "07cffcb0adf384bc",
+    "type": "split",
+    "children": [
+      {
+        "id": "beb6e7a28f52f07d",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "86d5aef11f03938f",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "docs/전체 개발 스코프/개념 정리/리포트.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "리포트 의 백링크"
+            }
+          },
+          {
+            "id": "ccb0f42cafb2b711",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "docs/전체 개발 스코프/개념 정리/리포트.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "리포트 의 나가는 링크"
+            }
+          },
+          {
+            "id": "c4ed22d59ee8cc9f",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "태그"
+            }
+          },
+          {
+            "id": "6b73672e3a8d1bd6",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "모든 속성"
+            }
+          },
+          {
+            "id": "ca020e8cbedce895",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "docs/전체 개발 스코프/개념 정리/리포트.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "리포트 의 개요"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:빠른 전환기 열기": false,
+      "graph:그래프 뷰 열기": false,
+      "canvas:새 캔버스 만들기": false,
+      "daily-notes:오늘의 일일 노트 열기": false,
+      "templates:템플릿 삽입": false,
+      "command-palette:명령어 팔레트 열기": false,
+      "bases:새 베이스 생성하기": false
+    }
+  },
+  "active": "84b406f95a233014",
+  "lastOpenFiles": [
+    "dist/assets/index-UERr1biK.css",
+    "dist/assets/index-C4k6ktyC.js",
+    "src/platform/pages/admin/UserManagementTab.jsx",
+    "src/platform/pages/admin/StatisticsTab.jsx",
+    "src/platform/pages/admin/AdminHomeTab.jsx",
+    "src/platform/pages/admin/AdminDashboard.jsx",
+    "src/platform/pages/manager/CounselingTab.jsx",
+    "src/platform/pages/manager/StudentListTab.jsx",
+    "src/platform/pages/manager/ManagerHomeTab.jsx",
+    "src/platform/pages/manager/ManagerDashboard.jsx",
+    "src/platform/pages/student/CareerTab.jsx",
+    "node_modules/enhanced-resolve/README.md",
+    "node_modules/@emnapi/wasi-threads/README.md",
+    "node_modules/@tailwindcss/vite/README.md",
+    "node_modules/@tailwindcss/node/README.md",
+    "node_modules/@tailwindcss/oxide-darwin-arm64/README.md",
+    "node_modules/@tybys/wasm-util/README.md",
+    "node_modules/graceful-fs/README.md",
+    "node_modules/@emnapi/runtime/README.md",
+    "node_modules/tapable/README.md",
+    "node_modules/@emnapi/core/README.md",
+    "node_modules/magic-string/README.md",
+    "node_modules/jiti/README.md",
+    "node_modules/tailwindcss/README.md",
+    "src/legacy/assets/vite.svg",
+    "src/legacy/assets/react.svg",
+    "src/legacy/assets/hero.png",
+    "CLAUDE.md",
+    "docs/1차 프로토타입 개발/3. 데이터 모델링 및 시연 시나리오.md",
+    "docs/1차 프로토타입 개발/2. 프로토타입 기능 명세 및 더미 스펙.md",
+    "docs/1차 프로토타입 개발/1. 프로토타입 개발 목표 및 기존 레포 전략.md",
+    "docs/전체 개발 스코프/개념 정리/통계 및 분석.md",
+    "docs/전체 개발 스코프/개념 정리/회원 관리.md",
+    "docs/전체 개발 스코프/개념 정리/알림.md",
+    "docs/전체 개발 스코프/개념 정리/리포트.md",
+    "docs/전체 개발 스코프/기능 명세서(초안).md",
+    "docs/전체 개발 스코프/유저별/교육자/진로진학 컨설턴트.md",
+    "CLAUDE(Deprecated).md",
+    "docs/deprecated(Archived)/진단 설계 로직(RAW).md"
+  ]
+}
