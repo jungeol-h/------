@@ -1,6 +1,3 @@
 {
-  "rewrites": [
-    { "source": "/andong", "destination": "/index.html" },
-    { "source": "/andong/(.*)", "destination": "/index.html" }
-  ]
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
 }
