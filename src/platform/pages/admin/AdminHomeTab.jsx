@@ -1,6 +1,5 @@
+import { Users, TrendingUp, AlertTriangle, Bell, Printer } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
-
-const ROLE_LABELS = { student: '학생', teacher: '강사', manager: '학습매니저', admin: '관리자' }
 
 function PrintReport({ data }) {
   const avgSelfIndex = Math.round(data.students.reduce((s, st) => s + st.selfIndex, 0) / data.students.length)
@@ -14,7 +13,6 @@ function PrintReport({ data }) {
         <p className="text-base mt-1 text-gray-600">운영 현황 리포트 — {todayStr}</p>
       </div>
 
-      {/* 핵심 지표 */}
       <section className="mb-6">
         <h2 className="text-lg font-bold border-b border-gray-300 pb-1 mb-3">1. 핵심 현황</h2>
         <table className="w-full text-sm">
@@ -41,7 +39,6 @@ function PrintReport({ data }) {
         </table>
       </section>
 
-      {/* 학생 목록 */}
       <section className="mb-6">
         <h2 className="text-lg font-bold border-b border-gray-300 pb-1 mb-3">2. 학생 현황</h2>
         <table className="w-full text-sm border-collapse">
@@ -73,7 +70,6 @@ function PrintReport({ data }) {
         </table>
       </section>
 
-      {/* 학교별 */}
       <section className="mb-6">
         <h2 className="text-lg font-bold border-b border-gray-300 pb-1 mb-3">3. 학교별 현황</h2>
         <table className="w-full text-sm border-collapse">
@@ -114,10 +110,10 @@ export default function AdminHomeTab() {
   const avgSelfIndex = Math.round(data.students.reduce((s, st) => s + st.selfIndex, 0) / data.students.length)
 
   const statCards = [
-    { label: '전체 학생', value: totalStudents, unit: '명', color: 'text-blue-600', bg: 'bg-blue-50', icon: '👥' },
-    { label: '평균 자기주도지수', value: avgSelfIndex, unit: '점', color: 'text-indigo-600', bg: 'bg-indigo-50', icon: '📈' },
-    { label: '위험/주의 학생', value: riskStudents, unit: '명', color: 'text-orange-600', bg: 'bg-orange-50', icon: '⚠️' },
-    { label: '미해결 알림', value: unresolved, unit: '건', color: 'text-red-600', bg: 'bg-red-50', icon: '🚨' },
+    { label: '전체 학생', value: totalStudents, unit: '명', color: 'text-blue-600', bg: 'bg-blue-50', icon: Users },
+    { label: '평균 자기주도지수', value: avgSelfIndex, unit: '점', color: 'text-indigo-600', bg: 'bg-indigo-50', icon: TrendingUp },
+    { label: '위험/주의 학생', value: riskStudents, unit: '명', color: 'text-orange-600', bg: 'bg-orange-50', icon: AlertTriangle },
+    { label: '미해결 알림', value: unresolved, unit: '건', color: 'text-red-600', bg: 'bg-red-50', icon: Bell },
   ]
 
   return (
@@ -131,9 +127,9 @@ export default function AdminHomeTab() {
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          {statCards.map(({ label, value, unit, color, bg, icon }) => (
+          {statCards.map(({ label, value, unit, color, bg, icon: Icon }) => (
             <div key={label} className={`${bg} rounded-2xl p-4`}>
-              <div className="text-2xl mb-1">{icon}</div>
+              <Icon size={22} className={`${color} mb-2`} strokeWidth={1.8} />
               <p className={`text-2xl font-bold ${color}`}>{value}<span className="text-sm font-normal">{unit}</span></p>
               <p className="text-xs text-gray-500 mt-0.5">{label}</p>
             </div>
@@ -144,7 +140,7 @@ export default function AdminHomeTab() {
         <div className="bg-white rounded-2xl p-4 shadow-sm">
           <h3 className="font-bold text-gray-800 mb-3">학교별 현황</h3>
           <div className="space-y-3">
-            {data.schoolStats.map(({ school, studentCount, avgSelfIndex: avg, riskCount }) => (
+            {data.schoolStats.map(({ school, avgSelfIndex: avg, riskCount }) => (
               <div key={school} className="flex items-center gap-3">
                 <span className="text-sm font-medium text-gray-700 w-20">{school}</span>
                 <div className="flex-1 bg-gray-100 rounded-full h-2">
@@ -159,11 +155,14 @@ export default function AdminHomeTab() {
           </div>
         </div>
 
-        {/* 최근 알림 */}
+        {/* 미해결 알림 */}
         {unresolved > 0 && (
           <div className="bg-red-50 border border-red-200 rounded-2xl p-4">
-            <h3 className="font-bold text-red-800 mb-2">🚨 미해결 알림 {unresolved}건</h3>
-            <div className="space-y-2">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertTriangle size={16} className="text-red-500" />
+              <h3 className="font-bold text-red-800">미해결 알림 {unresolved}건</h3>
+            </div>
+            <div className="space-y-1">
               {data.alerts.filter(a => !a.resolved).map(a => {
                 const student = data.students.find(s => s.id === a.studentId)
                 return (
@@ -179,9 +178,10 @@ export default function AdminHomeTab() {
         {/* 인쇄 */}
         <button
           onClick={() => window.print()}
-          className="w-full py-4 bg-violet-500 text-white rounded-2xl font-bold hover:bg-violet-600 active:scale-95 transition-all shadow-md"
+          className="w-full py-4 bg-violet-500 text-white rounded-2xl font-bold hover:bg-violet-600 active:scale-95 transition-all shadow-md flex items-center justify-center gap-2"
         >
-          🖨️ 리포트 인쇄
+          <Printer size={18} />
+          리포트 인쇄
         </button>
       </div>
     </>

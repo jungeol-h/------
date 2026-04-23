@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
+import { Home, Users, MessageSquare } from 'lucide-react'
 import PageLayout from '../../components/layout/PageLayout.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
@@ -7,9 +8,9 @@ import StudentListTab from './StudentListTab.jsx'
 import CounselingTab from './CounselingTab.jsx'
 
 const TABS = [
-  { path: '/manager/home', label: '홈', icon: '🏠' },
-  { path: '/manager/students', label: '학생', icon: '👥' },
-  { path: '/manager/counseling', label: '상담', icon: '💬' },
+  { path: '/manager/home', label: '홈', icon: Home },
+  { path: '/manager/students', label: '학생', icon: Users },
+  { path: '/manager/counseling', label: '상담', icon: MessageSquare },
 ]
 
 export default function ManagerDashboard() {

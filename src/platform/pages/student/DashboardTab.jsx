@@ -1,8 +1,9 @@
+import { Trophy, Clock, BookOpen, AlertCircle, CheckCircle2, Circle } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 
-const EMOTION_EMOJI = { '좋음': '😊', '보통': '😐', '힘듦': '😓' }
+const EMOTION_COLOR = { '좋음': 'text-green-500', '보통': 'text-yellow-500', '힘듦': 'text-red-500' }
 
 const WEEKLY_MOCK = [
   { day: '월', min: 60 }, { day: '화', min: 90 }, { day: '수', min: 45 },
@@ -30,7 +31,7 @@ export default function DashboardTab() {
     <div className="py-6 space-y-4">
       {/* 환영 배너 */}
       <div className="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl p-5 text-white">
-        <p className="text-sm opacity-80">안녕하세요 👋</p>
+        <p className="text-sm opacity-80">안녕하세요</p>
         <h2 className="text-xl font-bold mt-0.5">{student?.name || currentUser?.name} 학생</h2>
         <p className="text-sm opacity-70 mt-1">{student?.school} · {student?.grade}</p>
       </div>
@@ -42,7 +43,9 @@ export default function DashboardTab() {
             <p className="text-xs text-gray-500">자기주도지수</p>
             <p className="text-3xl font-bold text-blue-600 mt-1">{student?.selfIndex ?? '--'}</p>
           </div>
-          <div className="text-4xl">🏆</div>
+          <div className="w-12 h-12 bg-yellow-50 rounded-xl flex items-center justify-center">
+            <Trophy size={28} className="text-yellow-500" />
+          </div>
         </div>
         <div className="mt-3 bg-gray-100 rounded-full h-2">
           <div
@@ -56,19 +59,25 @@ export default function DashboardTab() {
       {/* 요약 카드 3개 */}
       <div className="grid grid-cols-3 gap-3">
         <div className="bg-white rounded-2xl p-3 shadow-sm text-center">
-          <p className="text-2xl">{EMOTION_EMOJI[todayMind?.emotion] || '❓'}</p>
-          <p className="text-xs text-gray-500 mt-1">오늘 마인드</p>
+          <div className={`flex justify-center mb-1 ${EMOTION_COLOR[todayMind?.emotion] || 'text-gray-300'}`}>
+            <BookOpen size={22} />
+          </div>
+          <p className="text-xs text-gray-500">오늘 마인드</p>
           <p className="text-sm font-semibold text-gray-800">{todayMind?.emotion || '미입력'}</p>
         </div>
         <div className="bg-white rounded-2xl p-3 shadow-sm text-center">
-          <p className="text-2xl font-bold text-indigo-600">{todayLearning}</p>
-          <p className="text-xs text-gray-500 mt-1">오늘 학습</p>
-          <p className="text-sm font-semibold text-gray-800">분</p>
+          <div className="flex justify-center mb-1 text-indigo-400">
+            <Clock size={22} />
+          </div>
+          <p className="text-xs text-gray-500">오늘 학습</p>
+          <p className="text-sm font-semibold text-gray-800">{todayLearning}분</p>
         </div>
         <div className="bg-white rounded-2xl p-3 shadow-sm text-center">
-          <p className="text-2xl font-bold text-orange-500">{pendingTasks}</p>
-          <p className="text-xs text-gray-500 mt-1">미완료 과제</p>
-          <p className="text-sm font-semibold text-gray-800">개</p>
+          <div className="flex justify-center mb-1 text-orange-400">
+            <AlertCircle size={22} />
+          </div>
+          <p className="text-xs text-gray-500">미완료 과제</p>
+          <p className="text-sm font-semibold text-gray-800">{pendingTasks}개</p>
         </div>
       </div>
 
@@ -106,7 +115,10 @@ export default function DashboardTab() {
         </div>
         {myTasks.slice(0, 3).map(t => (
           <div key={t.id} className="flex items-center gap-2 mt-2 text-sm">
-            <span>{t.status === 'done' ? '✅' : '⏳'}</span>
+            {t.status === 'done'
+              ? <CheckCircle2 size={16} className="text-green-500 flex-shrink-0" />
+              : <Circle size={16} className="text-gray-300 flex-shrink-0" />
+            }
             <span className={t.status === 'done' ? 'text-gray-400 line-through' : 'text-gray-700'}>{t.title}</span>
             <span className="ml-auto text-xs text-gray-400">{t.dueDate}</span>
           </div>

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { X, User } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
@@ -43,7 +44,7 @@ function StudentDetailModal({ student, data, onClose }) {
                 <p className="text-xs text-gray-400">{student.school} · {student.grade}</p>
               </div>
             </div>
-            <button onClick={onClose} className="text-gray-400 text-xl p-1">✕</button>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1"><X size={20} /></button>
           </div>
 
           {/* 핵심 지표 */}

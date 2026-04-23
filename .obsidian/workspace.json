@@ -186,16 +186,17 @@
   "active": "84b406f95a233014",
   "lastOpenFiles": [
     "dist/index.html",
-    "dist/assets/index-Vt9XZEOh.css",
-    "dist/assets/index-C9OcFRmd.js",
+    "dist/assets/index-OKN1Vs7o.css",
+    "dist/assets/index-CIHrSdMF.js",
     "dist/assets",
-    "dist/assets/index-BM5ximvl.js",
-    "dist/assets/index-UERr1biK.css",
-    "dist/assets/index-C4k6ktyC.js",
-    "src/platform/pages/admin/UserManagementTab.jsx",
-    "src/platform/pages/admin/StatisticsTab.jsx",
-    "src/platform/pages/admin/AdminHomeTab.jsx",
-    "src/platform/pages/admin/AdminDashboard.jsx",
+    "node_modules/lucide-react/dist/lucide-react.suffixed.d.ts",
+    "node_modules/lucide-react/dist/lucide-react.prefixed.d.ts",
+    "node_modules/lucide-react/dynamicIconImports.d.ts",
+    "node_modules/lucide-react/dist/lucide-react.d.ts",
+    "node_modules/lucide-react/dynamic.d.ts",
+    "node_modules/lucide-react/dynamicIconImports.d.mts",
+    "node_modules/lucide-react/dynamic.d.mts",
+    "node_modules/lucide-react/README.md",
     "node_modules/enhanced-resolve/README.md",
     "node_modules/@emnapi/wasi-threads/README.md",
     "node_modules/@tailwindcss/vite/README.md",
@@ -222,7 +223,6 @@
     "docs/전체 개발 스코프/개념 정리/리포트.md",
     "docs/전체 개발 스코프/기능 명세서(초안).md",
     "docs/전체 개발 스코프/유저별/교육자/진로진학 컨설턴트.md",
-    "CLAUDE(Deprecated).md",
-    "docs/deprecated(Archived)/진단 설계 로직(RAW).md"
+    "CLAUDE(Deprecated).md"
   ]
 }

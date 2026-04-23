@@ -1,11 +1,12 @@
 import { useState } from 'react'
+import { Smile, Meh, Frown, Check } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
 
 const EMOTIONS = [
-  { value: '좋음', emoji: '😊', label: '좋음', color: 'border-green-400 bg-green-50' },
-  { value: '보통', emoji: '😐', label: '보통', color: 'border-yellow-400 bg-yellow-50' },
-  { value: '힘듦', emoji: '😓', label: '힘듦', color: 'border-red-400 bg-red-50' },
+  { value: '좋음', icon: Smile, label: '좋음', activeColor: 'border-green-400 bg-green-50', iconColor: 'text-green-500' },
+  { value: '보통', icon: Meh, label: '보통', activeColor: 'border-yellow-400 bg-yellow-50', iconColor: 'text-yellow-500' },
+  { value: '힘듦', icon: Frown, label: '힘듦', activeColor: 'border-red-400 bg-red-50', iconColor: 'text-red-500' },
 ]
 
 export default function MindTab() {
@@ -39,26 +40,26 @@ export default function MindTab() {
     <div className="py-6 space-y-5">
       <div>
         <h2 className="text-lg font-bold text-gray-900">오늘 마음은 어때요?</h2>
-        <p className="text-sm text-gray-500 mt-0.5">솔직하게 기록해 주세요 💚</p>
+        <p className="text-sm text-gray-500 mt-0.5">솔직하게 기록해 주세요</p>
       </div>
 
       {/* 감정 선택 */}
       <div className="grid grid-cols-3 gap-3">
-        {EMOTIONS.map(({ value, emoji, label, color }) => (
+        {EMOTIONS.map(({ value, icon: Icon, label, activeColor, iconColor }) => (
           <button
             key={value}
             onClick={() => setEmotion(value)}
             className={`flex flex-col items-center py-4 rounded-2xl border-2 transition-all ${
-              emotion === value ? color + ' scale-105 shadow-md' : 'border-gray-200 bg-white'
+              emotion === value ? activeColor + ' scale-105 shadow-md' : 'border-gray-200 bg-white'
             }`}
           >
-            <span className="text-3xl">{emoji}</span>
-            <span className="text-sm font-semibold mt-1 text-gray-700">{label}</span>
+            <Icon size={32} className={emotion === value ? iconColor : 'text-gray-300'} strokeWidth={1.5} />
+            <span className="text-sm font-semibold mt-1.5 text-gray-700">{label}</span>
           </button>
         ))}
       </div>
 
-      {/* 동기 슬라이더 */}
+      {/* 슬라이더 */}
       <div className="bg-white rounded-2xl p-4 shadow-sm space-y-4">
         <div>
           <div className="flex justify-between text-sm mb-2">
@@ -106,13 +107,17 @@ export default function MindTab() {
       <button
         onClick={handleSubmit}
         disabled={!emotion}
-        className={`w-full py-4 rounded-2xl font-bold text-base transition-all ${
+        className={`w-full py-4 rounded-2xl font-bold text-base transition-all flex items-center justify-center gap-2 ${
           emotion
             ? 'bg-blue-500 text-white hover:bg-blue-600 active:scale-95 shadow-md'
             : 'bg-gray-100 text-gray-400 cursor-not-allowed'
         }`}
       >
-        {submitted ? '✅ 저장됐어요!' : '마인드 저장하기'}
+        {submitted ? (
+          <><Check size={18} /> 저장됐어요!</>
+        ) : (
+          '마인드 저장하기'
+        )}
       </button>
 
       {/* 최근 기록 */}
@@ -122,9 +127,10 @@ export default function MindTab() {
           <div className="space-y-2">
             {myRecords.map(r => {
               const em = EMOTIONS.find(e => e.value === r.emotion)
+              const Icon = em?.icon
               return (
                 <div key={r.id} className="bg-white rounded-xl p-3 flex items-center gap-3 shadow-sm">
-                  <span className="text-2xl">{em?.emoji || '❓'}</span>
+                  {Icon && <Icon size={24} className={em?.iconColor} strokeWidth={1.5} />}
                   <div className="flex-1">
                     <div className="flex justify-between">
                       <span className="text-sm font-semibold text-gray-800">{r.emotion}</span>

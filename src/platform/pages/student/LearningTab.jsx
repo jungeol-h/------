@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { Play, Pause, RotateCcw, Save, BarChart3, BookOpen } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
 
@@ -95,22 +96,25 @@ export default function LearningTab() {
               running ? 'bg-yellow-400 text-yellow-900' : 'bg-white text-indigo-600'
             }`}
           >
-            {running ? '⏸ 일시정지' : elapsed > 0 ? '▶ 재개' : '▶ 시작'}
+            <span className="flex items-center justify-center gap-1.5">
+          {running ? <><Pause size={16} /> 일시정지</> : elapsed > 0 ? <><Play size={16} /> 재개</> : <><Play size={16} /> 시작</>}
+        </span>
           </button>
           {elapsed >= 10 && (
             <button
               onClick={handleSave}
-              className="flex-1 py-3 rounded-xl font-bold text-sm bg-green-400 text-green-900 active:scale-95 transition-all"
+              className="flex-1 py-3 rounded-xl font-bold text-sm bg-green-400 text-green-900 active:scale-95 transition-all flex items-center justify-center gap-1.5"
             >
-              {saved ? '✅ 저장됨' : '💾 기록 저장'}
+              <Save size={15} />
+              {saved ? '저장됨' : '기록 저장'}
             </button>
           )}
           {elapsed > 0 && (
             <button
               onClick={() => { setElapsed(0); setRunning(false) }}
-              className="px-4 py-3 rounded-xl font-bold text-sm bg-white/20 hover:bg-white/30 transition-all"
+              className="px-4 py-3 rounded-xl font-bold text-sm bg-white/20 hover:bg-white/30 transition-all flex items-center justify-center"
             >
-              ↺
+              <RotateCcw size={15} />
             </button>
           )}
         </div>
@@ -118,7 +122,9 @@ export default function LearningTab() {
 
       {/* 누적 통계 */}
       <div className="bg-white rounded-2xl p-4 shadow-sm flex items-center gap-4">
-        <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-2xl">📊</div>
+        <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+          <BarChart3 size={24} className="text-blue-500" />
+        </div>
         <div>
           <p className="text-xs text-gray-500">총 학습시간</p>
           <p className="text-2xl font-bold text-blue-600">{totalMinutes}<span className="text-sm font-normal text-gray-500">분</span></p>
@@ -138,7 +144,9 @@ export default function LearningTab() {
           <div className="space-y-3">
             {records.map(r => (
               <div key={r.id} className="bg-white rounded-2xl p-4 shadow-sm flex items-center gap-4">
-                <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-lg">📚</div>
+                <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                  <BookOpen size={18} className="text-blue-500" />
+                </div>
                 <div className="flex-1">
                   <div className="flex justify-between">
                     <span className="font-semibold text-gray-800">{r.subject}</span>
