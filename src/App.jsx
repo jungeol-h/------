@@ -9,7 +9,7 @@ import ProtectedRoute from './platform/components/layout/ProtectedRoute.jsx'
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/andong">
       <AuthProvider>
         <DataProvider>
           <Routes>
