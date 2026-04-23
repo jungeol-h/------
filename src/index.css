@@ -7,3 +7,10 @@
     font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   }
 }
+
+/* 인쇄 스타일 */
+@media print {
+  body > #root > * { display: none; }
+  #print-report { display: block !important; }
+  @page { margin: 20mm; size: A4; }
+}

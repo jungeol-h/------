@@ -8,17 +8,53 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **안동형 자기주도학습·진로성장 관리 시스템** — 사업 심사위원 시연용 프론트엔드 중심 1차 프로토타입.
 
-### 현재 상태 (2026-04-24)
-- 기존 **학습 진단 사이트** 코드가 `src/`에 있음 → **`src/legacy/`로 이동 예정**
-- 신규 **다중 역할 교육 플랫폼** 프로토타입을 앱 메인으로 구축 예정
-- 상세 구현 계획: `~/.claude/plans/elegant-knitting-nest.md` 참조
+### 현재 상태 (2026-04-24) — Phase A 완료
+- 기존 학습 진단 코드 → `src/legacy/` 이동 완료
+- 신규 플랫폼 `src/platform/` 아래 구축 완료 (Phase A)
+- 시연 핵심 시나리오 전 흐름 동작 중
+
+### 신규 플랫폼 구조 (`src/platform/`)
+```
+context/
+  AuthContext.jsx     — 퀵 로그인(6버튼: 학생/매니저/관리자 활성, 3개 준비중), LocalStorage 유지
+  DataContext.jsx     — Mock 데이터 CRUD + LocalStorage 동기화
+mocks/
+  mockData.js         — 학생5, 교육자3, 마인드/학습/알림 등 더미 데이터
+components/layout/
+  PageLayout.jsx, Header.jsx, TabBar.jsx, ProtectedRoute.jsx
+pages/
+  LoginPage.jsx
+  student/            — 5탭: 홈/학습/과제/마인드/진로 (MindTab 시연 기능 완성)
+  manager/            — 3탭: 홈/학생목록/상담 (알림→코칭→해제 흐름 완성)
+  admin/              — 3탭: 홈/통계/사용자 (Recharts 차트 + 인쇄)
+```
+
+### 라우팅 구조 (`src/App.jsx`)
+```
+/           → LoginPage (퀵 로그인)
+/student/*  → StudentDashboard (5탭)
+/manager/*  → ManagerDashboard (3탭)
+/admin/*    → AdminDashboard (3탭)
+```
 
 ### 신규 플랫폼 핵심 결정사항
-- **1차 역할:** 학생, 학습매니저, 관리자 (3개 먼저)
+- **1차 역할:** 학생, 학습매니저, 관리자 (3개. 학부모/강사/컨설턴트는 후순위)
 - **레이아웃:** 모바일 탭 바 (하단 네비게이션)
-- **CSS:** Tailwind CSS 도입
+- **CSS:** Tailwind CSS (@tailwindcss/vite) 완료
 - **데이터:** Mock 데이터 + LocalStorage (백엔드 없음)
 - **시연 흐름:** 학생(마인드 "힘듦" 입력) → 매니저(🚨알림/코칭) → 관리자(통계/인쇄)
+
+### 배포 전략 (미확정)
+- `gooooookee.com`이 이 레포를 루트(`/`)로 서빙 중
+- 옵션 A: 새 레포 + 서브도메인 `andong.gooooookee.com` (권장)
+- 옵션 B: 서브패스 `gooooookee.com/andong` (Vercel Pro 필요)
+- 현재 코드: `base: '/'`, basename 없음 → 루트 배포 가능 상태
+
+### 다음 작업 (Phase B~)
+- 배포 전략 확정
+- 학습 타이머 UI, 진로 탭 강화, 학생 리포트 탭
+- 매니저 학습 데이터 모니터링 차트
+- 관리자 M:N 매핑 테이블, 인쇄용 A4 리포트
 
 ---
 
@@ -37,13 +73,14 @@ npm run preview   # 빌드 결과 미리보기
 
 - **React 19** + **Vite 8** (JSX, not TypeScript)
 - **react-router-dom v7** — BrowserRouter 기반 SPA 라우팅
-- **Recharts** — 레이더 차트 등 데이터 시각화
-- **Supabase** — `admin_config` 테이블에 피드백/연습카드 설정 저장 (연결 실패 시 로컬 기본값 fallback)
-- **html2canvas / jsPDF / html-to-image** — PDF 리포트 출력
+- **Tailwind CSS v4** — @tailwindcss/vite 플러그인
+- **Recharts** — 바/라인 차트 등 데이터 시각화
+- **Supabase** — legacy 코드에서만 사용 (`src/legacy/lib/supabase.js`)
+- **html2canvas / jsPDF / html-to-image** — PDF 리포트 출력 (legacy + 신규 공용)
 
 ---
 
-## 기존 학습 진단 사이트 아키텍처 (→ src/legacy/ 이동 예정)
+## 기존 학습 진단 사이트 아키텍처 (`src/legacy/`)
 
 ### 라우팅 구조 (`src/App.jsx`)
 
