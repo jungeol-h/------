@@ -107,6 +107,16 @@ export const monthlyStats = [
   { month: '4월', selfIndex: 83, taskRate: 82, mindTotal: 25, centerHours: 56 },
 ]
 
+// ─── 진로 검사 결과 ────────────────────────────────────────
+export const careerResults = []
+
+// ─── TODO 리스트 ───────────────────────────────────────────
+export const todoItems = [
+  { id: 'td1', studentId: 's1', date: '2026-04-28', subject: '수학', plannedMin: 60, done: false },
+  { id: 'td2', studentId: 's1', date: '2026-04-28', subject: '영어', plannedMin: 30, done: true },
+  { id: 'td3', studentId: 's1', date: '2026-04-27', subject: '과학', plannedMin: 45, done: true },
+]
+
 // ─── 학교별 통계 ───────────────────────────────────────────
 export const schoolStats = [
   { school: '안동중', studentCount: 2, avgSelfIndex: 88, riskCount: 0 },

@@ -33,6 +33,8 @@ const initialData = {
   alerts: mock.alerts,
   monthlyStats: mock.monthlyStats,
   schoolStats: mock.schoolStats,
+  todoItems: mock.todoItems,
+  careerResults: mock.careerResults,
 }
 
 function getInitialData() {
@@ -44,6 +46,14 @@ function getInitialData() {
   // diaryRecords 없는 구버전 캐시 초기화
   if (loaded && !loaded.diaryRecords) {
     return initialData
+  }
+  // todoItems 없는 구버전 캐시 초기화
+  if (loaded && !loaded.todoItems) {
+    return { ...loaded, todoItems: mock.todoItems }
+  }
+  // careerResults 없는 구버전 캐시 초기화
+  if (loaded && !loaded.careerResults) {
+    return { ...loaded, careerResults: mock.careerResults }
   }
   return loaded || initialData
 }
@@ -156,6 +166,50 @@ export function DataProvider({ children }) {
     setData(prev => ({ ...prev, learningRecords: [...prev.learningRecords, newRecord] }))
   }
 
+  // 진로 검사 결과 저장
+  const saveCareerResult = (studentId, { selectedVerbs, selectedActivities, selectedCategories, primaryCat, typeName, finalScores, fields }) => {
+    const newResult = {
+      id: `cr${Date.now()}`,
+      studentId,
+      date: new Date().toISOString().slice(0, 10),
+      selectedVerbs,
+      selectedActivities,
+      selectedCategories,
+      primaryCat,
+      typeName,
+      finalScores,
+      fields,
+    }
+    setData(prev => ({
+      ...prev,
+      careerResults: [
+        ...prev.careerResults.filter(r => r.studentId !== studentId),
+        newResult,
+      ],
+    }))
+  }
+
+  // TODO 아이템 추가
+  const addTodoItem = (studentId, { subject, plannedMin }) => {
+    const newItem = {
+      id: `td${Date.now()}`,
+      studentId,
+      date: new Date().toISOString().slice(0, 10),
+      subject,
+      plannedMin,
+      done: false,
+    }
+    setData(prev => ({ ...prev, todoItems: [...prev.todoItems, newItem] }))
+  }
+
+  // TODO 완료 토글
+  const toggleTodo = (itemId) => {
+    setData(prev => ({
+      ...prev,
+      todoItems: prev.todoItems.map(t => t.id === itemId ? { ...t, done: !t.done } : t),
+    }))
+  }
+
   // 데이터 초기화
   const resetData = () => {
     setData(initialData)
@@ -163,7 +217,7 @@ export function DataProvider({ children }) {
   }
 
   return (
-    <DataContext.Provider value={{ data, addMindRecord, addDiaryRecord, resolveAlert, toggleTask, addLearningRecord, resetData }}>
+    <DataContext.Provider value={{ data, addMindRecord, addDiaryRecord, resolveAlert, toggleTask, addLearningRecord, addTodoItem, toggleTodo, saveCareerResult, resetData }}>
       {children}
     </DataContext.Provider>
   )
