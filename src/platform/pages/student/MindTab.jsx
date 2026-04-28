@@ -1,23 +1,41 @@
 import { useState } from 'react'
-import { Smile, Meh, Frown, Check } from 'lucide-react'
+import { Check, BookHeart, NotebookPen } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
 
-const EMOTIONS = [
-  { value: '좋음', icon: Smile, label: '좋음', activeColor: 'border-green-400 bg-green-50', iconColor: 'text-green-500' },
-  { value: '보통', icon: Meh, label: '보통', activeColor: 'border-yellow-400 bg-yellow-50', iconColor: 'text-yellow-500' },
-  { value: '힘듦', icon: Frown, label: '힘듦', activeColor: 'border-red-400 bg-red-50', iconColor: 'text-red-500' },
+function scoreColor(total) {
+  if (total > 3) return 'text-blue-600'
+  if (total < -3) return 'text-red-600'
+  return 'text-gray-600'
+}
+
+function scoreLabel(n) {
+  if (n > 0) return `+${n}`
+  return String(n)
+}
+
+const SLIDERS = [
+  { key: 'mood', label: '기분', accent: 'accent-rose-500' },
+  { key: 'motivation', label: '학습 동기', accent: 'accent-blue-500' },
+  { key: 'confidence', label: '자신감', accent: 'accent-indigo-500' },
 ]
 
 export default function MindTab() {
   const { currentUser } = useAuth()
-  const { data, addMindRecord } = useData()
+  const { data, addMindRecord, addDiaryRecord } = useData()
 
-  const [emotion, setEmotion] = useState('')
-  const [motivation, setMotivation] = useState(3)
-  const [confidence, setConfidence] = useState(3)
+  const [subView, setSubView] = useState('mind')
+
+  // 마음 기록 상태
+  const [scores, setScores] = useState({ mood: 0, motivation: 0, confidence: 0 })
   const [memo, setMemo] = useState('')
-  const [submitted, setSubmitted] = useState(false)
+  const [mindSubmitted, setMindSubmitted] = useState(false)
+
+  // 일기 상태
+  const [praise, setPraise] = useState('')
+  const [reflection, setReflection] = useState('')
+  const [resolution, setResolution] = useState('')
+  const [diarySubmitted, setDiarySubmitted] = useState(false)
 
   const myRecords = data.mindRecords
     .filter(r => r.studentId === currentUser?.id)
@@ -25,125 +43,194 @@ export default function MindTab() {
     .reverse()
     .slice(0, 5)
 
-  const handleSubmit = () => {
-    if (!emotion) return
-    addMindRecord(currentUser.id, { emotion, motivation, confidence, memo })
-    setSubmitted(true)
-    setTimeout(() => setSubmitted(false), 2000)
-    setEmotion('')
-    setMotivation(3)
-    setConfidence(3)
+  const handleMindSubmit = () => {
+    addMindRecord(currentUser.id, { ...scores, memo })
+    setMindSubmitted(true)
+    setTimeout(() => setMindSubmitted(false), 2000)
+    setScores({ mood: 0, motivation: 0, confidence: 0 })
     setMemo('')
+  }
+
+  const handleDiarySubmit = () => {
+    addDiaryRecord(currentUser.id, { praise, reflection, resolution })
+    setDiarySubmitted(true)
+    setTimeout(() => setDiarySubmitted(false), 2000)
+    setPraise('')
+    setReflection('')
+    setResolution('')
   }
 
   return (
     <div className="py-6 space-y-5">
-      <div>
-        <h2 className="text-lg font-bold text-gray-900">오늘 마음은 어때요?</h2>
-        <p className="text-sm text-gray-500 mt-0.5">솔직하게 기록해 주세요</p>
+      {/* 서브뷰 토글 */}
+      <div className="flex bg-gray-100 rounded-2xl p-1 gap-1">
+        <button
+          onClick={() => setSubView('mind')}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+            subView === 'mind' ? 'bg-blue-500 text-white shadow-sm' : 'text-gray-500'
+          }`}
+        >
+          <BookHeart size={16} />
+          마음 기록
+        </button>
+        <button
+          onClick={() => setSubView('diary')}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+            subView === 'diary' ? 'bg-blue-500 text-white shadow-sm' : 'text-gray-500'
+          }`}
+        >
+          <NotebookPen size={16} />
+          오늘의 일기
+        </button>
       </div>
 
-      {/* 감정 선택 */}
-      <div className="grid grid-cols-3 gap-3">
-        {EMOTIONS.map(({ value, icon: Icon, label, activeColor, iconColor }) => (
-          <button
-            key={value}
-            onClick={() => setEmotion(value)}
-            className={`flex flex-col items-center py-4 rounded-2xl border-2 transition-all ${
-              emotion === value ? activeColor + ' scale-105 shadow-md' : 'border-gray-200 bg-white'
-            }`}
-          >
-            <Icon size={32} className={emotion === value ? iconColor : 'text-gray-300'} strokeWidth={1.5} />
-            <span className="text-sm font-semibold mt-1.5 text-gray-700">{label}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* 슬라이더 */}
-      <div className="bg-white rounded-2xl p-4 shadow-sm space-y-4">
-        <div>
-          <div className="flex justify-between text-sm mb-2">
-            <span className="font-medium text-gray-700">학습 동기</span>
-            <span className="font-bold text-blue-600">{motivation}점</span>
+      {subView === 'mind' ? (
+        <>
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">마인드 체크</h2>
+            <p className="text-sm text-gray-500 mt-0.5">솔직하게 기록해 주세요</p>
           </div>
-          <input
-            type="range" min="1" max="5" value={motivation}
-            onChange={e => setMotivation(Number(e.target.value))}
-            className="w-full accent-blue-500"
-          />
-          <div className="flex justify-between text-xs text-gray-400 mt-1">
-            <span>전혀 없음</span><span>매우 높음</span>
-          </div>
-        </div>
-        <div>
-          <div className="flex justify-between text-sm mb-2">
-            <span className="font-medium text-gray-700">자신감</span>
-            <span className="font-bold text-indigo-600">{confidence}점</span>
-          </div>
-          <input
-            type="range" min="1" max="5" value={confidence}
-            onChange={e => setConfidence(Number(e.target.value))}
-            className="w-full accent-indigo-500"
-          />
-          <div className="flex justify-between text-xs text-gray-400 mt-1">
-            <span>전혀 없음</span><span>매우 높음</span>
-          </div>
-        </div>
-      </div>
 
-      {/* 메모 */}
-      <div className="bg-white rounded-2xl p-4 shadow-sm">
-        <label className="text-sm font-medium text-gray-700">한마디 (선택)</label>
-        <textarea
-          value={memo}
-          onChange={e => setMemo(e.target.value)}
-          placeholder="오늘 기분을 자유롭게 적어보세요..."
-          rows={3}
-          className="w-full mt-2 text-sm border border-gray-200 rounded-xl p-3 resize-none focus:outline-none focus:ring-2 focus:ring-blue-300"
-        />
-      </div>
-
-      {/* 저장 버튼 */}
-      <button
-        onClick={handleSubmit}
-        disabled={!emotion}
-        className={`w-full py-4 rounded-2xl font-bold text-base transition-all flex items-center justify-center gap-2 ${
-          emotion
-            ? 'bg-blue-500 text-white hover:bg-blue-600 active:scale-95 shadow-md'
-            : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-        }`}
-      >
-        {submitted ? (
-          <><Check size={18} /> 저장됐어요!</>
-        ) : (
-          '마인드 저장하기'
-        )}
-      </button>
-
-      {/* 최근 기록 */}
-      {myRecords.length > 0 && (
-        <div>
-          <h3 className="text-sm font-bold text-gray-700 mb-3">최근 기록</h3>
-          <div className="space-y-2">
-            {myRecords.map(r => {
-              const em = EMOTIONS.find(e => e.value === r.emotion)
-              const Icon = em?.icon
-              return (
-                <div key={r.id} className="bg-white rounded-xl p-3 flex items-center gap-3 shadow-sm">
-                  {Icon && <Icon size={24} className={em?.iconColor} strokeWidth={1.5} />}
-                  <div className="flex-1">
-                    <div className="flex justify-between">
-                      <span className="text-sm font-semibold text-gray-800">{r.emotion}</span>
-                      <span className="text-xs text-gray-400">{r.date}</span>
-                    </div>
-                    <span className="text-xs text-gray-500">동기 {r.motivation}점 · 자신감 {r.confidence}점</span>
-                    {r.memo && <p className="text-xs text-gray-500 mt-0.5">"{r.memo}"</p>}
-                  </div>
+          {/* 슬라이더 3개 */}
+          <div className="bg-white rounded-2xl p-4 shadow-sm space-y-5">
+            {SLIDERS.map(({ key, label, accent }) => (
+              <div key={key}>
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="font-medium text-gray-700">{label}</span>
+                  <span className={`font-bold text-base ${scores[key] > 0 ? 'text-blue-600' : scores[key] < 0 ? 'text-red-500' : 'text-gray-400'}`}>
+                    {scoreLabel(scores[key])}점
+                  </span>
                 </div>
-              )
-            })}
+                <input
+                  type="range" min="-5" max="5" step="1"
+                  value={scores[key]}
+                  onChange={e => setScores(prev => ({ ...prev, [key]: Number(e.target.value) }))}
+                  className={`w-full ${accent}`}
+                />
+                <div className="flex justify-between text-xs text-gray-400 mt-1">
+                  <span>매우 낮음</span><span>매우 높음</span>
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
+
+          {/* 합산 미리보기 */}
+          <div className="bg-gray-50 rounded-xl px-4 py-3 flex items-center justify-between">
+            <span className="text-sm text-gray-500">오늘의 마음 점수</span>
+            <span className={`text-lg font-bold ${scoreColor(scores.mood + scores.motivation + scores.confidence)}`}>
+              {scoreLabel(scores.mood + scores.motivation + scores.confidence)}점 / 15점
+            </span>
+          </div>
+
+          {/* 메모 */}
+          <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <label className="text-sm font-medium text-gray-700">제 얘기 좀 들어주세요. (선택)</label>
+            <textarea
+              value={memo}
+              onChange={e => setMemo(e.target.value)}
+              placeholder="오늘 기분을 자유롭게 적어보세요..."
+              rows={3}
+              className="w-full mt-2 text-sm border border-gray-200 rounded-xl p-3 resize-none focus:outline-none focus:ring-2 focus:ring-blue-300"
+            />
+          </div>
+
+          {/* 저장 버튼 */}
+          <button
+            onClick={handleMindSubmit}
+            className="w-full py-4 rounded-2xl font-bold text-base bg-blue-500 text-white hover:bg-blue-600 active:scale-95 shadow-md transition-all flex items-center justify-center gap-2"
+          >
+            {mindSubmitted ? <><Check size={18} /> 저장됐어요!</> : '마인드 저장하기'}
+          </button>
+
+          {/* 최근 기록 */}
+          {myRecords.length > 0 && (
+            <div>
+              <h3 className="text-sm font-bold text-gray-700 mb-3">최근 기록</h3>
+              <div className="space-y-2">
+                {myRecords.map(r => {
+                  const total = (r.mood ?? 0) + (r.motivation ?? 0) + (r.confidence ?? 0)
+                  return (
+                    <div key={r.id} className="bg-white rounded-xl p-3 flex items-center gap-3 shadow-sm">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                        total > 3 ? 'bg-blue-50' : total < -3 ? 'bg-red-50' : 'bg-gray-50'
+                      }`}>
+                        <span className={`text-sm font-bold ${scoreColor(total)}`}>{scoreLabel(total)}</span>
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex justify-between">
+                          <span className={`text-sm font-semibold ${scoreColor(total)}`}>합계 {scoreLabel(total)}점</span>
+                          <span className="text-xs text-gray-400">{r.date}</span>
+                        </div>
+                        <span className="text-xs text-gray-500">
+                          기분 {scoreLabel(r.mood ?? 0)} · 동기 {scoreLabel(r.motivation ?? 0)} · 자신감 {scoreLabel(r.confidence ?? 0)}
+                        </span>
+                        {r.memo && <p className="text-xs text-gray-500 mt-0.5">"{r.memo}"</p>}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">오늘의 일기</h2>
+            <p className="text-sm text-gray-500 mt-0.5">하루를 세 줄로 돌아봐요</p>
+          </div>
+
+          <div className="bg-white rounded-2xl p-4 shadow-sm space-y-4">
+            <div>
+              <label className="text-sm font-semibold text-green-600">오늘 내가 칭찬할 점</label>
+              <textarea
+                value={praise}
+                onChange={e => setPraise(e.target.value)}
+                placeholder="오늘 잘한 것, 뿌듯한 것을 적어보세요"
+                rows={2}
+                className="w-full mt-2 text-sm border border-gray-200 rounded-xl p-3 resize-none focus:outline-none focus:ring-2 focus:ring-green-300"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-semibold text-orange-500">반성할 점</label>
+              <textarea
+                value={reflection}
+                onChange={e => setReflection(e.target.value)}
+                placeholder="아쉬웠던 것, 더 잘할 수 있었던 것을 적어보세요"
+                rows={2}
+                className="w-full mt-2 text-sm border border-gray-200 rounded-xl p-3 resize-none focus:outline-none focus:ring-2 focus:ring-orange-300"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-semibold text-blue-600">내일의 다짐</label>
+              <textarea
+                value={resolution}
+                onChange={e => setResolution(e.target.value)}
+                placeholder="내일 꼭 실천할 것을 적어보세요"
+                rows={2}
+                className="w-full mt-2 text-sm border border-gray-200 rounded-xl p-3 resize-none focus:outline-none focus:ring-2 focus:ring-blue-300"
+              />
+            </div>
+          </div>
+
+          <button
+            onClick={handleDiarySubmit}
+            className="w-full py-4 rounded-2xl font-bold text-base bg-indigo-500 text-white hover:bg-indigo-600 active:scale-95 shadow-md transition-all flex items-center justify-center gap-2"
+          >
+            {diarySubmitted ? <><Check size={18} /> 저장됐어요!</> : '일기 저장하기'}
+          </button>
+
+          {/* 오늘 일기 존재 여부 표시 */}
+          {(() => {
+            const today = new Date().toISOString().slice(0, 10)
+            const todayDiary = data.diaryRecords.find(d => d.studentId === currentUser?.id && d.date === today)
+            return todayDiary ? (
+              <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-sm text-green-700">
+                오늘 일기가 저장되어 있어요. 수정하면 덮어써집니다.
+              </div>
+            ) : null
+          })()}
+        </>
       )}
     </div>
   )

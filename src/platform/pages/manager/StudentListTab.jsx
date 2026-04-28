@@ -10,7 +10,17 @@ const RISK_LABELS = {
   danger: { label: '위험', color: 'text-red-600 bg-red-100' },
 }
 
-const EMOTION_COLOR = { '좋음': 'text-green-600', '보통': 'text-yellow-600', '힘듦': 'text-red-600' }
+function mindScoreColor(total) {
+  if (total === null || total === undefined) return 'text-gray-400'
+  if (total > 3) return 'text-blue-600'
+  if (total < -3) return 'text-red-600'
+  return 'text-gray-600'
+}
+
+function mindScoreLabel(total) {
+  if (total === null || total === undefined) return '미입력'
+  return total > 0 ? `+${total}` : String(total)
+}
 
 const WEEKLY_MOCK_BY_STUDENT = {
   s1: [{ day: '월', min: 60 }, { day: '화', min: 90 }, { day: '수', min: 45 }, { day: '목', min: 100 }, { day: '금', min: 75 }],
@@ -88,14 +98,17 @@ function StudentDetailModal({ student, data, onClose }) {
             <div>
               <h4 className="text-sm font-bold text-gray-700 mb-2">최근 마인드 기록</h4>
               <div className="space-y-2">
-                {mindHistory.slice().reverse().map(m => (
-                  <div key={m.id} className="flex items-center gap-3 text-sm py-1.5 border-b border-gray-100 last:border-0">
-                    <span className="text-xs text-gray-400 w-20 flex-shrink-0">{m.date}</span>
-                    <span className={`font-semibold ${EMOTION_COLOR[m.emotion] || ''}`}>{m.emotion}</span>
-                    <span className="text-gray-400 text-xs">동기 {m.motivation} / 자신감 {m.confidence}</span>
-                    {m.memo && <span className="text-xs text-gray-500 truncate">"{m.memo}"</span>}
-                  </div>
-                ))}
+                {mindHistory.slice().reverse().map(m => {
+                  const total = (m.mood ?? 0) + (m.motivation ?? 0) + (m.confidence ?? 0)
+                  return (
+                    <div key={m.id} className="flex items-center gap-3 text-sm py-1.5 border-b border-gray-100 last:border-0">
+                      <span className="text-xs text-gray-400 w-20 flex-shrink-0">{m.date}</span>
+                      <span className={`font-semibold text-sm ${mindScoreColor(total)}`}>합계 {mindScoreLabel(total)}</span>
+                      <span className="text-gray-400 text-xs">기분 {m.mood ?? 0} / 동기 {m.motivation ?? 0} / 자신감 {m.confidence ?? 0}</span>
+                      {m.memo && <span className="text-xs text-gray-500 truncate">"{m.memo}"</span>}
+                    </div>
+                  )
+                })}
               </div>
             </div>
           )}
@@ -164,10 +177,15 @@ export default function StudentListTab() {
                   <p className="text-xs text-gray-400">학습시간</p>
                 </div>
                 <div>
-                  <p className={`text-sm font-bold ${EMOTION_COLOR[lastMind?.emotion] || 'text-gray-500'}`}>
-                    {lastMind?.emotion || '미입력'}
-                  </p>
-                  <p className="text-xs text-gray-400">마지막 마인드</p>
+                  {(() => {
+                    const total = lastMind ? (lastMind.mood ?? 0) + (lastMind.motivation ?? 0) + (lastMind.confidence ?? 0) : null
+                    return (
+                      <>
+                        <p className={`text-sm font-bold ${mindScoreColor(total)}`}>{mindScoreLabel(total)}</p>
+                        <p className="text-xs text-gray-400">마음 점수</p>
+                      </>
+                    )
+                  })()}
                 </div>
                 <div>
                   <p className="text-sm font-bold text-gray-700">{lastMind?.date || '-'}</p>

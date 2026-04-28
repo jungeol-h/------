@@ -20,6 +20,35 @@ const CAREER_PROFILES = {
   '생명/환경': { emoji: '🌿', title: '자연탐구형', desc: '생명과 환경에 대한 관심이 높습니다. 의료·생명공학·환경 분야가 잘 맞아요.', careers: ['의사', '생명공학자', '환경공학자', '수의사'] },
 }
 
+const REPORT_STAGES = ['주제선택', '자료수집', '개요작성', '초고쓰기', '첨삭1', '고쳐쓰기', '첨삭2', '완성']
+const CURRENT_STAGE = 3
+
+function ReportProgress() {
+  return (
+    <div className="bg-white rounded-2xl p-4 shadow-sm">
+      <div className="flex justify-between items-center mb-3">
+        <h4 className="font-semibold text-gray-800">진로 탐구 보고서 진행률</h4>
+        <span className="text-sm font-bold text-violet-600">{CURRENT_STAGE}/8 단계</span>
+      </div>
+      <div className="flex gap-1 mb-2">
+        {REPORT_STAGES.map((_, i) => (
+          <div
+            key={i}
+            className={`flex-1 h-2 rounded-full ${i < CURRENT_STAGE ? 'bg-violet-500' : 'bg-gray-200'}`}
+          />
+        ))}
+      </div>
+      <div className="flex gap-1">
+        {REPORT_STAGES.map((stage, i) => (
+          <div key={i} className="flex-1 text-center">
+            <p className={`text-[9px] leading-tight ${i < CURRENT_STAGE ? 'text-violet-600 font-semibold' : 'text-gray-400'}`}>{stage}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 const ACTIVITY_RECORDS = [
   { date: '2026-04-15', title: '이공계 진로 탐색 세미나', badge: '강연' },
   { date: '2026-04-10', title: '자기소개서 기초 특강', badge: '특강' },
@@ -53,7 +82,7 @@ export default function CareerTab() {
 
   return (
     <div className="py-6 space-y-4">
-      <h2 className="text-lg font-bold text-gray-900">진로 탐색</h2>
+      <h2 className="text-lg font-bold text-gray-900">진로 설계</h2>
 
       {step === 'intro' && (
         <>
@@ -81,6 +110,9 @@ export default function CareerTab() {
               ))}
             </div>
           </div>
+
+          {/* 진로 탐구 보고서 진행률 */}
+          <ReportProgress />
         </>
       )}
 

@@ -30,7 +30,7 @@ export default function Header({ title, badge }) {
           {ROLE_LABELS[currentUser?.role] || ''}
         </span>
         <h1 className="flex-1 font-bold text-gray-900 text-base truncate">
-          {title || '안동형 자기주도학습'}
+          {title || '나르샤'}
         </h1>
         {badge > 0 && (
           <div className="relative flex-shrink-0">

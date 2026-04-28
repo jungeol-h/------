@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { AlertTriangle, ChevronRight, X, CheckCheck } from 'lucide-react'
+import { AlertTriangle, ChevronRight, X, CheckCheck, Clock, ClipboardList, MessageCircle } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
 
@@ -79,6 +79,9 @@ export default function ManagerHomeTab() {
         <div className="space-y-2">
           {myStudents.map(s => {
             const hasAlert = myAlerts.some(a => a.studentId === s.id)
+            const totalMin = data.learningRecords.filter(r => r.studentId === s.id).reduce((sum, r) => sum + r.duration, 0)
+            const pendingCount = data.tasks.filter(t => t.studentId === s.id && t.status === 'pending').length
+            const counselingCount = data.counselingRecords.filter(r => r.studentId === s.id).length
             return (
               <div key={s.id} className="bg-white rounded-2xl p-4 shadow-sm flex items-center gap-3">
                 <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center text-lg flex-shrink-0">
@@ -93,9 +96,19 @@ export default function ManagerHomeTab() {
                   </div>
                   <span className="text-xs text-gray-400">{s.school} · {s.grade}</span>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-bold text-blue-600">{s.selfIndex}</p>
-                  <p className="text-xs text-gray-400">자기주도지수</p>
+                <div className="flex flex-col gap-1 text-right min-w-[68px]">
+                  <div className="flex items-center gap-1 justify-end text-xs text-gray-600">
+                    <Clock size={11} className="text-indigo-400" />
+                    <span>{totalMin}분</span>
+                  </div>
+                  <div className="flex items-center gap-1 justify-end text-xs">
+                    <ClipboardList size={11} className={pendingCount > 0 ? 'text-red-400' : 'text-gray-300'} />
+                    <span className={pendingCount > 0 ? 'text-red-600 font-bold' : 'text-gray-600'}>{pendingCount}개</span>
+                  </div>
+                  <div className="flex items-center gap-1 justify-end text-xs text-gray-600">
+                    <MessageCircle size={11} className="text-emerald-400" />
+                    <span>{counselingCount}회</span>
+                  </div>
                 </div>
               </div>
             )

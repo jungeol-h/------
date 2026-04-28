@@ -8,10 +8,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **안동형 자기주도학습·진로성장 관리 시스템** — 사업 심사위원 시연용 프론트엔드 중심 1차 프로토타입.
 
-### 현재 상태 (2026-04-24) — Phase A 완료
+### 현재 상태 (2026-04-24) — Phase A~D + UI 폴리싱 완료
 - 기존 학습 진단 코드 → `src/legacy/` 이동 완료
-- 신규 플랫폼 `src/platform/` 아래 구축 완료 (Phase A)
+- 신규 플랫폼 `src/platform/` 아래 구축 완료
 - 시연 핵심 시나리오 전 흐름 동작 중
+- **배포:** `andong.gooooookee.com` (서브도메인, Vercel)
 
 ### 신규 플랫폼 구조 (`src/platform/`)
 ```
@@ -24,9 +25,9 @@ components/layout/
   PageLayout.jsx, Header.jsx, TabBar.jsx, ProtectedRoute.jsx
 pages/
   LoginPage.jsx
-  student/            — 5탭: 홈/학습/과제/마인드/진로 (MindTab 시연 기능 완성)
-  manager/            — 3탭: 홈/학생목록/상담 (알림→코칭→해제 흐름 완성)
-  admin/              — 3탭: 홈/통계/사용자 (Recharts 차트 + 인쇄)
+  student/            — 5탭: 홈/학습/과제/마인드/진로
+  manager/            — 3탭: 홈/학생목록/상담
+  admin/              — 3탭: 홈/통계/사용자
 ```
 
 ### 라우팅 구조 (`src/App.jsx`)
@@ -37,24 +38,26 @@ pages/
 /admin/*    → AdminDashboard (3탭)
 ```
 
+### 구현 완료 기능 (Phase A~D)
+- **학생:** 학습 타이머(스톱워치), 과목/집중도 기록, 주간 학습 BarChart, 마인드 기록(Smile/Meh/Frown 아이콘), 진로 흥미 설문 → 유형 결과, 과제 체크
+- **매니저:** 알림→코칭 모달→해제 흐름, 학생 카드 미니 LineChart, 학생 상세 모달(주간 차트 + 마인드 기록)
+- **관리자:** 통계 Recharts 차트(출석/자기주도지수/참여도), M:N 배정 현황 테이블, A4 인쇄 리포트(`window.print()`)
+
+### UI 결정사항
+- **아이콘:** `lucide-react` 사용. 이모지 아이콘 사용 금지 (UI 아이콘 용도로)
+- **z-index:** Header/TabBar = `z-40`, 모달 = `z-50` (TabBar가 모달을 가리지 않도록)
+- **TabBar:** `icon` prop은 lucide 컴포넌트 참조값 (JSX 아님). `<Icon size={22} />` 형태로 렌더링
+
 ### 신규 플랫폼 핵심 결정사항
 - **1차 역할:** 학생, 학습매니저, 관리자 (3개. 학부모/강사/컨설턴트는 후순위)
 - **레이아웃:** 모바일 탭 바 (하단 네비게이션)
 - **CSS:** Tailwind CSS (@tailwindcss/vite) 완료
 - **데이터:** Mock 데이터 + LocalStorage (백엔드 없음)
-- **시연 흐름:** 학생(마인드 "힘듦" 입력) → 매니저(🚨알림/코칭) → 관리자(통계/인쇄)
+- **시연 흐름:** 학생(마인드 "힘듦" 입력) → 매니저(알림/코칭) → 관리자(통계/인쇄)
 
-### 배포 전략 (미확정)
-- `gooooookee.com`이 이 레포를 루트(`/`)로 서빙 중
-- 옵션 A: 새 레포 + 서브도메인 `andong.gooooookee.com` (권장)
-- 옵션 B: 서브패스 `gooooookee.com/andong` (Vercel Pro 필요)
-- 현재 코드: `base: '/'`, basename 없음 → 루트 배포 가능 상태
-
-### 다음 작업 (Phase B~)
-- 배포 전략 확정
-- 학습 타이머 UI, 진로 탭 강화, 학생 리포트 탭
-- 매니저 학습 데이터 모니터링 차트
-- 관리자 M:N 매핑 테이블, 인쇄용 A4 리포트
+### 배포
+- **URL:** `andong.gooooookee.com` (서브도메인, Vercel, 완료)
+- **코드:** `vite.config.js` base=`/`, BrowserRouter basename 없음, vercel.json SPA fallback
 
 ---
 
@@ -75,6 +78,7 @@ npm run preview   # 빌드 결과 미리보기
 - **react-router-dom v7** — BrowserRouter 기반 SPA 라우팅
 - **Tailwind CSS v4** — @tailwindcss/vite 플러그인
 - **Recharts** — 바/라인 차트 등 데이터 시각화
+- **lucide-react** — UI 아이콘 (이모지 대체)
 - **Supabase** — legacy 코드에서만 사용 (`src/legacy/lib/supabase.js`)
 - **html2canvas / jsPDF / html-to-image** — PDF 리포트 출력 (legacy + 신규 공용)
 
@@ -133,9 +137,10 @@ ResultPage는 탭 방식으로 3개 페이지를 렌더링:
 
 ## 프로토타입 개발 제약 사항
 
-- **백엔드/DB 신규 구축 금지** — 더미 데이터는 `src/mocks/mockData.js`(또는 `.ts`)에 하드코딩
+- **백엔드/DB 신규 구축 금지** — 더미 데이터는 `src/platform/mocks/mockData.js`에 하드코딩
 - **PDF 출력** — Puppeteer 등 서버 렌더링 사용 금지, `window.print()` 또는 html2canvas/jsPDF만 사용
-- **신규 플랫폼 로그인** — 퀵-로그인 5개 버튼(학생/학부모/강사/학습매니저/관리자)으로 역할 전환
+- **아이콘** — UI 아이콘은 반드시 `lucide-react` 사용. 이모지를 아이콘 대용으로 쓰지 말 것
+- **신규 플랫폼 로그인** — 퀵-로그인 버튼(학생/학습매니저/관리자 활성, 3개 준비중)으로 역할 전환
 - **상세 기획 문서 위치:**
   - `docs/1차 프로토타입 개발/` — 더미 스펙, 시연 시나리오, 퀵-로그인 명세
   - `docs/전체 개발 스코프/유저별/` — 권한별 화면/유저스토리 명세

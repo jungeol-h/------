@@ -12,7 +12,7 @@ const TABS = [
   { path: '/student/learning', label: '학습', icon: BookOpen },
   { path: '/student/task', label: '과제', icon: ClipboardList },
   { path: '/student/mind', label: '마인드', icon: Heart },
-  { path: '/student/career', label: '진로', icon: Compass },
+  { path: '/student/career', label: '진로 설계', icon: Compass },
 ]
 
 export default function StudentDashboard() {

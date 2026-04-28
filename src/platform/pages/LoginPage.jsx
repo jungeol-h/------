@@ -37,8 +37,8 @@ export default function LoginPage() {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-500 rounded-2xl mb-4 shadow-lg">
             <GraduationCap size={36} className="text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">안동형 자기주도학습</h1>
-          <p className="text-sm text-gray-500 mt-1">진로성장 관리 시스템</p>
+          <h1 className="text-2xl font-bold text-gray-900">나르샤</h1>
+          <p className="text-sm text-gray-500 mt-1">안동시 자기주도 학습 센터 NAVI</p>
           <span className="inline-block mt-3 px-3 py-1 bg-yellow-100 text-yellow-700 text-xs font-medium rounded-full">
             시연용 프로토타입
           </span>
@@ -86,7 +86,7 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-xs text-gray-400 mt-8">
-          안동시 교육지원청 · 2026
+          안동시 장학회 · 2026
         </p>
       </div>
     </div>

@@ -3,7 +3,11 @@ import { Play, Pause, RotateCcw, Save, BarChart3, BookOpen } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
 
-const SUBJECTS = ['수학', '영어', '국어', '과학', '사회', '기타']
+const SUBJECTS = [
+  '국어', '영어', '수학', '과학', '사회', '도덕',
+  '역사(한국사)', '기술가정', '한문', '정보',
+  '교양 독서', '진로 독서', '진로 탐구',
+]
 
 function formatTime(sec) {
   const m = String(Math.floor(sec / 60)).padStart(2, '0')
