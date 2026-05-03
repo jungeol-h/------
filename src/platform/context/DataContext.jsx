@@ -35,6 +35,7 @@ const initialData = {
   schoolStats: mock.schoolStats,
   todoItems: mock.todoItems,
   careerResults: mock.careerResults,
+  diagnosisResults: mock.diagnosisResults,
 }
 
 function getInitialData() {
@@ -54,6 +55,10 @@ function getInitialData() {
   // careerResults 없는 구버전 캐시 초기화
   if (loaded && !loaded.careerResults) {
     return { ...loaded, careerResults: mock.careerResults }
+  }
+  // diagnosisResults 없는 구버전 캐시 초기화
+  if (loaded && !loaded.diagnosisResults) {
+    return { ...loaded, diagnosisResults: mock.diagnosisResults }
   }
   return loaded || initialData
 }
@@ -210,6 +215,23 @@ export function DataProvider({ children }) {
     }))
   }
 
+  // 학습 진단 결과 저장 (학생당 1개 유지, 새 결과가 이전을 교체)
+  const saveDiagnosisResult = (studentId, resultData) => {
+    const newResult = {
+      id: `dr${Date.now()}`,
+      studentId,
+      date: new Date().toISOString().slice(0, 10),
+      ...resultData,
+    }
+    setData(prev => ({
+      ...prev,
+      diagnosisResults: [
+        ...prev.diagnosisResults.filter(r => r.studentId !== studentId),
+        newResult,
+      ],
+    }))
+  }
+
   // 데이터 초기화
   const resetData = () => {
     setData(initialData)
@@ -217,7 +239,7 @@ export function DataProvider({ children }) {
   }
 
   return (
-    <DataContext.Provider value={{ data, addMindRecord, addDiaryRecord, resolveAlert, toggleTask, addLearningRecord, addTodoItem, toggleTodo, saveCareerResult, resetData }}>
+    <DataContext.Provider value={{ data, addMindRecord, addDiaryRecord, resolveAlert, toggleTask, addLearningRecord, addTodoItem, toggleTodo, saveCareerResult, saveDiagnosisResult, resetData }}>
       {children}
     </DataContext.Provider>
   )

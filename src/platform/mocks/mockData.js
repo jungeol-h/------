@@ -110,6 +110,9 @@ export const monthlyStats = [
 // ─── 진로 검사 결과 ────────────────────────────────────────
 export const careerResults = []
 
+// ─── 학습 진단 결과 ────────────────────────────────────────
+export const diagnosisResults = []
+
 // ─── TODO 리스트 ───────────────────────────────────────────
 export const todoItems = [
   { id: 'td1', studentId: 's1', date: '2026-04-28', subject: '수학', plannedMin: 60, done: false },
