@@ -149,10 +149,10 @@ export function getTypeName(stageGrades) {
   const second = sorted[1]
 
   const TYPE_NAMES = {
-    basic:    '기초 완성형',
-    organize: '정리 강점형',
-    apply:    '실행 중심형',
-    expand:   '비전 주도형',
+    basic:    '기초 완성 단계',
+    organize: '정리 강점 단계',
+    apply:    '실행 중심 단계',
+    expand:   '비전 주도 단계',
   }
 
   if (top.point - second.point <= 1 && top.point >= 3) {
