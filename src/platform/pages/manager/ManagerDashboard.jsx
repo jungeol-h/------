@@ -14,11 +14,15 @@ const TABS = [
   { path: '/manager/counseling', label: '상담', icon: MessageSquare },
 ]
 
-function StudentTitle() {
+function StudentDetailWrapper({ tabs, back }) {
   const { studentId } = useParams()
   const { data } = useData()
   const student = data.students.find(s => s.id === studentId)
-  return student?.name ?? '학생 정보'
+  return (
+    <PageLayout title={student?.name ?? '학생 정보'} back={back} tabs={tabs}>
+      <StudentDetailPage />
+    </PageLayout>
+  )
 }
 
 export default function ManagerDashboard() {
@@ -40,9 +44,7 @@ export default function ManagerDashboard() {
   return (
     <Routes>
       <Route path="student/:studentId" element={
-        <PageLayout title={<StudentTitle />} back="/manager/students" tabs={TABS}>
-          <StudentDetailPage />
-        </PageLayout>
+        <StudentDetailWrapper tabs={TABS} back="/manager/students" />
       } />
       <Route path="*" element={
         <PageLayout title="학습매니저" badge={unresolved} tabs={TABS}>

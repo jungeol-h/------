@@ -13,11 +13,15 @@ const TABS = [
   { path: '/admin/users', label: '사용자', icon: UserCog },
 ]
 
-function StudentTitle() {
+function StudentDetailWrapper({ tabs, back }) {
   const { studentId } = useParams()
   const { data } = useData()
   const student = data.students.find(s => s.id === studentId)
-  return student?.name ?? '학생 정보'
+  return (
+    <PageLayout title={student?.name ?? '학생 정보'} back={back} tabs={tabs}>
+      <StudentDetailPage />
+    </PageLayout>
+  )
 }
 
 export default function AdminDashboard() {
@@ -37,9 +41,7 @@ export default function AdminDashboard() {
   return (
     <Routes>
       <Route path="student/:studentId" element={
-        <PageLayout title={<StudentTitle />} back="/admin/users" tabs={TABS}>
-          <StudentDetailPage />
-        </PageLayout>
+        <StudentDetailWrapper tabs={TABS} back="/admin/users" />
       } />
       <Route path="*" element={
         <PageLayout title="관리자" tabs={TABS}>

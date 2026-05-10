@@ -36,7 +36,7 @@ export default function Header({ title, badge, back }) {
           </span>
         )}
         <h1 className="flex-1 font-bold text-gray-900 text-base truncate">
-          {title || '산청 우정학사'}
+          {title ?? '산청 우정학사'}
         </h1>
         {badge > 0 && (
           <div className="relative flex-shrink-0">
