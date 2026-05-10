@@ -2,7 +2,7 @@ import { User, AlertCircle } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
 import { useNavigate } from 'react-router-dom'
 
-const ROLE_LABELS = { student: '학생', teacher: '강사', manager: '학습매니저', admin: '관리자' }
+const ROLE_LABELS = { student: '학생', manager: '학습매니저', admin: '관리자' }
 const RISK_LABELS = {
   normal:  { label: '정상', color: 'text-green-600 bg-green-100' },
   warning: { label: '주의', color: 'text-yellow-600 bg-yellow-100' },
@@ -14,110 +14,81 @@ export default function UserManagementTab() {
   const navigate = useNavigate()
 
   const managers = data.educators.filter(e => e.role === 'manager')
-  const allAssignedIds = new Set(data.assignments.map(a => a.studentId))
-  const unassigned = data.students.filter(s => !allAssignedIds.has(s.id))
 
   return (
     <div className="py-6 space-y-6">
       <h2 className="text-lg font-bold text-gray-900">사용자 관리</h2>
 
-      {/* ── 매니저별 담당 학생 ── */}
-      <section className="space-y-3">
-        <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide">매니저별 담당 학생</h3>
-        {managers.map(mgr => {
-          const assignedIds = data.assignments.filter(a => a.educatorId === mgr.id).map(a => a.studentId)
-          const assigned = data.students.filter(s => assignedIds.includes(s.id))
-          return (
-            <div key={mgr.id} className="bg-white rounded-2xl shadow-sm overflow-hidden">
-              {/* 매니저 헤더 */}
-              <div className="flex items-center gap-3 px-4 py-3 bg-emerald-50 border-b border-emerald-100">
-                <div className="w-8 h-8 bg-emerald-200 rounded-full flex items-center justify-center flex-shrink-0">
-                  <User size={16} className="text-emerald-700" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-bold text-gray-800 text-sm">{mgr.name}</p>
-                  <p className="text-xs text-emerald-600">학습매니저 · 담당 {assigned.length}명</p>
-                </div>
-              </div>
-              {/* 담당 학생 목록 */}
-              {assigned.length === 0 ? (
-                <p className="text-xs text-gray-400 px-4 py-3">배정된 학생이 없습니다</p>
-              ) : (
-                <div className="divide-y divide-gray-50">
-                  {assigned.map(s => {
-                    const risk = RISK_LABELS[s.riskLevel] || RISK_LABELS.normal
-                    const hasAlert = data.alerts.some(a => a.studentId === s.id && !a.resolved)
-                    return (
-                      <div
-                        key={s.id}
-                        onClick={() => navigate(`/admin/student/${s.id}`)}
-                        className="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-gray-50 active:bg-gray-100 transition-colors"
-                      >
-                        <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
-                          <User size={13} className="text-gray-400" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-semibold text-sm text-gray-800">{s.name}</span>
-                            <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${risk.color}`}>{risk.label}</span>
-                            {hasAlert && <AlertCircle size={12} className="text-red-500 flex-shrink-0" />}
-                          </div>
-                          <span className="text-xs text-gray-400">{s.school} · {s.grade}</span>
-                        </div>
-                        <span className="text-sm font-bold text-blue-600 flex-shrink-0">{s.selfIndex}점</span>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          )
-        })}
-
-        {/* 미배정 학생 */}
-        {unassigned.length > 0 && (
-          <div className="bg-orange-50 border border-orange-200 rounded-2xl p-4">
-            <p className="text-sm font-bold text-orange-700 mb-2">미배정 학생 ({unassigned.length}명)</p>
-            <div className="space-y-1">
-              {unassigned.map(s => (
-                <div
-                  key={s.id}
-                  onClick={() => navigate(`/admin/student/${s.id}`)}
-                  className="flex items-center gap-2 text-sm text-orange-700 cursor-pointer"
-                >
-                  <User size={13} className="text-orange-400 flex-shrink-0" />
-                  <span>{s.name}</span>
-                  <span className="text-xs opacity-70">{s.school} · {s.grade}</span>
-                </div>
-              ))}
-            </div>
+      {/* ── 학생 목록 ── */}
+      <section>
+        <h3 className="text-sm font-bold text-gray-500 mb-3">학생 ({data.students.length}명)</h3>
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+          <div className="grid grid-cols-[1fr_auto_auto_auto] text-xs text-gray-400 font-semibold px-3 py-2 border-b border-gray-100 bg-gray-50">
+            <span>이름 · 학교</span>
+            <span className="w-14 text-center">담당</span>
+            <span className="w-10 text-center">위험도</span>
+            <span className="w-12 text-right">지수</span>
           </div>
-        )}
+          {data.students.map(s => {
+            const risk = RISK_LABELS[s.riskLevel] || RISK_LABELS.normal
+            const hasAlert = data.alerts.some(a => a.studentId === s.id && !a.resolved)
+            const mgr = managers.find(m =>
+              data.assignments.some(a => a.studentId === s.id && a.educatorId === m.id)
+            )
+            return (
+              <div
+                key={s.id}
+                onClick={() => navigate(`/admin/student/${s.id}`)}
+                className="grid grid-cols-[1fr_auto_auto_auto] items-center px-3 py-2.5 border-b border-gray-50 last:border-0 cursor-pointer hover:bg-gray-50 active:bg-gray-100 transition-colors"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+                    <User size={13} className="text-gray-400" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1">
+                      <span className="font-semibold text-sm text-gray-800 truncate">{s.name}</span>
+                      {hasAlert && <AlertCircle size={11} className="text-red-500 flex-shrink-0" />}
+                    </div>
+                    <span className="text-xs text-gray-400 truncate">{s.school} · {s.grade}</span>
+                  </div>
+                </div>
+                <span className="w-14 text-center text-xs text-gray-500 truncate px-1">
+                  {mgr ? mgr.name : <span className="text-orange-400">미배정</span>}
+                </span>
+                <span className={`w-10 text-center text-xs font-semibold px-1 py-0.5 rounded-full ${risk.color}`}>
+                  {risk.label}
+                </span>
+                <span className="w-12 text-right text-sm font-bold text-blue-600">{s.selfIndex}점</span>
+              </div>
+            )
+          })}
+        </div>
       </section>
 
       {/* ── 교육자 목록 ── */}
-      <section className="space-y-3">
-        <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide">
-          교육자 ({data.educators.length}명)
-        </h3>
-        <div className="space-y-2">
+      <section>
+        <h3 className="text-sm font-bold text-gray-500 mb-3">교육자 ({data.educators.length}명)</h3>
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+          <div className="grid grid-cols-[1fr_auto_auto] text-xs text-gray-400 font-semibold px-3 py-2 border-b border-gray-100 bg-gray-50">
+            <span>이름</span>
+            <span className="w-20 text-center">역할</span>
+            <span className="w-14 text-right">담당</span>
+          </div>
           {data.educators.map(e => {
             const assignedCount = data.assignments.filter(a => a.educatorId === e.id).length
             return (
-              <div key={e.id} className="bg-white rounded-2xl p-3 shadow-sm flex items-center gap-3">
-                <div className="w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <User size={16} className="text-gray-400" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-semibold text-gray-800 text-sm">{e.name}</p>
-                  <p className="text-xs text-gray-400">{ROLE_LABELS[e.role] || e.role}</p>
-                </div>
-                {e.role === 'manager' && (
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-emerald-600">{assignedCount}명</p>
-                    <p className="text-xs text-gray-400">담당</p>
+              <div key={e.id} className="grid grid-cols-[1fr_auto_auto] items-center px-3 py-2.5 border-b border-gray-50 last:border-0">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+                    <User size={13} className="text-gray-400" />
                   </div>
-                )}
+                  <span className="font-semibold text-sm text-gray-800">{e.name}</span>
+                </div>
+                <span className="w-20 text-center text-xs text-gray-500">{ROLE_LABELS[e.role] || e.role}</span>
+                <span className="w-14 text-right text-sm font-bold text-emerald-600">
+                  {e.role === 'manager' ? `${assignedCount}명` : '-'}
+                </span>
               </div>
             )
           })}
