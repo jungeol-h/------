@@ -529,6 +529,7 @@ export default function StudentDetailPage() {
     <div className="min-h-screen bg-gray-50">
       {/* 헤더 */}
       <div className="bg-white border-b border-gray-200 px-4 pt-12 pb-4 sticky top-0 z-40">
+        <div className="max-w-lg mx-auto">
         <div className="flex items-center gap-3 mb-3">
           <button onClick={() => navigate(backPath)} className="p-1 -ml-1 text-gray-500 hover:text-gray-700">
             <ChevronLeft size={24} />
@@ -568,6 +569,7 @@ export default function StudentDetailPage() {
               {tab}
             </button>
           ))}
+        </div>
         </div>
       </div>
 
