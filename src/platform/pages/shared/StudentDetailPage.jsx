@@ -7,7 +7,7 @@ import {
 } from 'recharts'
 import { useData } from '../../context/DataContext.jsx'
 import { STAGE_META, STAGE_ORDER } from '../../data/stageFeedbackLibrary.js'
-import { DOMAIN_LABELS } from '../../../legacy/data/questions.js'
+import { DOMAIN_LABELS } from '../../data/questions.js'
 import {
   calcDomainScores, calcStageScores, calcStageGrades,
   getStageStatus, getStateType, buildCoachingReport, selectTasks, getTypeName, scoreToGrade,

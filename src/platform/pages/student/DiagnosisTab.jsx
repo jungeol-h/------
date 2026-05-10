@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, RotateCcw, CheckSquare, Square, Activity } f
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
-import { questions, DOMAIN_LABELS } from '../../../legacy/data/questions.js'
+import { questions, DOMAIN_LABELS } from '../../data/questions.js'
 import { STAGE_META, STAGE_ORDER } from '../../data/stageFeedbackLibrary.js'
 import {
   calcDomainScores,

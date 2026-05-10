@@ -1,4 +1,4 @@
-import { questions } from '../../legacy/data/questions.js'
+import { questions } from '../data/questions.js'
 import { stageFeedbackLibrary, STAGE_META, STAGE_ORDER, STAGE_TASKS } from '../data/stageFeedbackLibrary.js'
 
 // answers 배열(30개) → 6개 영역별 점수(0~100)
