@@ -63,13 +63,16 @@ async function fetchForManager(userId) {
     return { ...EMPTY, assignments }
   }
 
-  const [studentsRes, mindRes, alertsRes, counselingRes, tasksRes, learningRes] = await Promise.all([
+  const [studentsRes, mindRes, alertsRes, counselingRes, tasksRes, learningRes, diaryRes, careerRes, diagRes] = await Promise.all([
     supabase.from('users').select('*').in('id', studentIds),
     supabase.from('mind_records').select('*').in('student_id', studentIds).order('date', { ascending: false }).limit(200),
     supabase.from('alerts').select('*').eq('manager_id', userId).order('created_at', { ascending: false }),
     supabase.from('counseling_records').select('*').eq('manager_id', userId).order('date', { ascending: false }),
     supabase.from('tasks').select('*').in('student_id', studentIds),
     supabase.from('learning_records').select('*').in('student_id', studentIds).order('date', { ascending: false }).limit(500),
+    supabase.from('diary_records').select('*').in('student_id', studentIds).order('date', { ascending: false }).limit(200),
+    supabase.from('career_results').select('*').in('student_id', studentIds),
+    supabase.from('diagnosis_results').select('*').in('student_id', studentIds),
   ])
 
   return {
@@ -81,6 +84,9 @@ async function fetchForManager(userId) {
     counselingRecords: (counselingRes.data ?? []).map(toCounselingRecord),
     tasks: (tasksRes.data ?? []).map(toTask),
     learningRecords: (learningRes.data ?? []).map(toLearningRecord),
+    diaryRecords: (diaryRes.data ?? []).map(toDiaryRecord),
+    careerResults: (careerRes.data ?? []).map(toCareerResult),
+    diagnosisResults: (diagRes.data ?? []).map(toDiagnosisResult),
   }
 }
 
@@ -97,13 +103,16 @@ async function fetchForAdmin() {
   const studentIds = allUsers.filter((u) => u.role === 'student').map((u) => u.id)
 
   // 매니저 화면과 동일하게 학생 활동 데이터도 fetch
-  const [mindRes, learningRes, tasksRes] = studentIds.length > 0
+  const [mindRes, learningRes, tasksRes, diaryRes, careerRes, diagRes] = studentIds.length > 0
     ? await Promise.all([
         supabase.from('mind_records').select('*').in('student_id', studentIds).order('date', { ascending: false }).limit(500),
         supabase.from('learning_records').select('*').in('student_id', studentIds).order('date', { ascending: false }).limit(1000),
         supabase.from('tasks').select('*').in('student_id', studentIds),
+        supabase.from('diary_records').select('*').in('student_id', studentIds).order('date', { ascending: false }).limit(500),
+        supabase.from('career_results').select('*').in('student_id', studentIds),
+        supabase.from('diagnosis_results').select('*').in('student_id', studentIds),
       ])
-    : [{ data: [] }, { data: [] }, { data: [] }]
+    : [{ data: [] }, { data: [] }, { data: [] }, { data: [] }, { data: [] }, { data: [] }]
 
   return {
     ...EMPTY,
@@ -115,6 +124,9 @@ async function fetchForAdmin() {
     mindRecords: (mindRes.data ?? []).map(toMindRecord),
     learningRecords: (learningRes.data ?? []).map(toLearningRecord),
     tasks: (tasksRes.data ?? []).map(toTask),
+    diaryRecords: (diaryRes.data ?? []).map(toDiaryRecord),
+    careerResults: (careerRes.data ?? []).map(toCareerResult),
+    diagnosisResults: (diagRes.data ?? []).map(toDiagnosisResult),
     monthlyStats: (statsRes.data ?? []).map((r) => ({
       month: r.month,
       selfIndex: r.self_index,

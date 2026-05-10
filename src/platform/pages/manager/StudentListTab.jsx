@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { X, User, AlertCircle } from 'lucide-react'
+import { User, AlertCircle } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
+import { useNavigate } from 'react-router-dom'
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 
 const RISK_LABELS = {
   normal: { label: '정상', color: 'text-green-600 bg-green-100' },
@@ -22,108 +23,11 @@ function mindScoreLabel(total) {
   return total > 0 ? `+${total}` : String(total)
 }
 
-function StudentDetailModal({ student, data, getWeeklyLearning, onClose }) {
-  const mindHistory = data.mindRecords.filter((r) => r.studentId === student.id).slice(-7)
-  const chartData = getWeeklyLearning(student.id)
-  const risk = RISK_LABELS[student.riskLevel] || RISK_LABELS.normal
-  const tasks = data.tasks.filter((t) => t.studentId === student.id)
-  const doneTasks = tasks.filter((t) => t.status === 'done').length
-  const totalMin = data.learningRecords
-    .filter((r) => r.studentId === student.id)
-    .reduce((s, r) => s + r.duration, 0)
-
-  return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center px-4 pb-4">
-      <div className="bg-white rounded-3xl w-full max-w-lg max-h-[85vh] overflow-y-auto">
-        <div className="p-5 space-y-4">
-          {/* 헤더 */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
-                <User size={24} className="text-gray-400" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-gray-900 text-lg">{student.name}</span>
-                  <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${risk.color}`}>{risk.label}</span>
-                </div>
-                <p className="text-xs text-gray-400">{student.school} · {student.grade}</p>
-              </div>
-            </div>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1">
-              <X size={20} />
-            </button>
-          </div>
-
-          {/* 핵심 지표 */}
-          <div className="grid grid-cols-3 gap-2">
-            <div className="bg-blue-50 rounded-xl p-3 text-center">
-              <p className="text-xl font-bold text-blue-600">{student.selfIndex}</p>
-              <p className="text-xs text-gray-500 mt-0.5">자기주도지수</p>
-            </div>
-            <div className="bg-indigo-50 rounded-xl p-3 text-center">
-              <p className="text-xl font-bold text-indigo-600">{totalMin}분</p>
-              <p className="text-xs text-gray-500 mt-0.5">총 학습시간</p>
-            </div>
-            <div className="bg-green-50 rounded-xl p-3 text-center">
-              <p className="text-xl font-bold text-green-600">{doneTasks}/{tasks.length}</p>
-              <p className="text-xs text-gray-500 mt-0.5">과제 완료</p>
-            </div>
-          </div>
-
-          {/* 최근 7일 학습 차트 */}
-          <div>
-            <h4 className="text-sm font-bold text-gray-700 mb-2">최근 7일 학습시간 (분)</h4>
-            {chartData.some((d) => d.minutes > 0) ? (
-              <ResponsiveContainer width="100%" height={120}>
-                <LineChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                  <XAxis dataKey="day" tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
-                  <Tooltip
-                    formatter={(v) => [`${v}분`, '학습시간']}
-                    contentStyle={{ fontSize: 12, borderRadius: 8, border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
-                  />
-                  <Line
-                    type="monotone" dataKey="minutes" stroke="#6366f1" strokeWidth={2.5}
-                    dot={{ fill: '#6366f1', r: 3 }} activeDot={{ r: 5 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <p className="text-xs text-gray-400 text-center py-4">최근 7일 학습 기록 없음</p>
-            )}
-          </div>
-
-          {/* 마인드 기록 */}
-          {mindHistory.length > 0 && (
-            <div>
-              <h4 className="text-sm font-bold text-gray-700 mb-2">최근 마인드 기록</h4>
-              <div className="space-y-2">
-                {mindHistory.slice().reverse().map((m) => {
-                  const total = (m.mood ?? 0) + (m.motivation ?? 0) + (m.confidence ?? 0)
-                  return (
-                    <div key={m.id} className="flex items-center gap-3 text-sm py-1.5 border-b border-gray-100 last:border-0">
-                      <span className="text-xs text-gray-400 w-20 flex-shrink-0">{m.date}</span>
-                      <span className={`font-semibold text-sm ${mindScoreColor(total)}`}>합계 {mindScoreLabel(total)}</span>
-                      <span className="text-gray-400 text-xs">기분 {m.mood ?? 0} / 동기 {m.motivation ?? 0} / 자신감 {m.confidence ?? 0}</span>
-                      {m.memo && <span className="text-xs text-gray-500 truncate">"{m.memo}"</span>}
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
 
 export default function StudentListTab() {
   const { currentUser } = useAuth()
   const { data, getWeeklyLearning } = useData()
-  const [selected, setSelected] = useState(null)
+  const navigate = useNavigate()
 
   const myStudentIds = data.assignments
     .filter((a) => a.educatorId === currentUser?.id)
@@ -145,7 +49,7 @@ export default function StudentListTab() {
           return (
             <div
               key={s.id}
-              onClick={() => setSelected(s)}
+              onClick={() => navigate(`/manager/student/${s.id}`)}
               className="bg-white rounded-2xl p-4 shadow-sm cursor-pointer hover:shadow-md transition-all active:scale-[0.98]"
             >
               <div className="flex items-center gap-3 mb-3">
