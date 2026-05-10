@@ -7,18 +7,24 @@
 -- 1. 사용자 테이블 (학생 + 교육자 통합)
 -- ----------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS users (
-  id           TEXT PRIMARY KEY,         -- 's001', 'm01', 'a01'
-  login_id     TEXT UNIQUE NOT NULL,     -- 학생: 학번, 교육자: 아이디
-  password     TEXT NOT NULL,            -- 베타: 평문 (학생: 생년월일 통일)
-  name         TEXT NOT NULL,
-  role         TEXT NOT NULL,            -- 'student' | 'manager' | 'admin'
-  school       TEXT,
-  grade        TEXT,                     -- '중1' | '중2' | '중3'
-  self_index   INTEGER DEFAULT 70,
-  risk_level   TEXT DEFAULT 'normal',    -- 'normal' | 'warning' | 'danger'
-  status       TEXT DEFAULT 'active',
-  created_at   TIMESTAMPTZ DEFAULT NOW()
+  id              TEXT PRIMARY KEY,         -- 's001', 'm01', 'a01'
+  login_id        TEXT UNIQUE NOT NULL,     -- 학생: 이름, 교육자: 아이디
+  password        TEXT NOT NULL,            -- 학생: 010+전화번호 8자리
+  name            TEXT NOT NULL,
+  role            TEXT NOT NULL,            -- 'student' | 'manager' | 'admin'
+  school          TEXT,
+  grade           TEXT,                     -- '중1' | '중2' | '중3'
+  class_name      TEXT,                     -- '중1' | '중2S' | '중2A' | '중3'
+  parent_password TEXT,                     -- 학부모 전화번호 010+8자리
+  self_index      INTEGER DEFAULT 70,
+  risk_level      TEXT DEFAULT 'normal',    -- 'normal' | 'warning' | 'danger'
+  status          TEXT DEFAULT 'active',
+  created_at      TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- 기존 테이블에 컬럼 추가 (이미 생성된 경우)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS class_name      TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS parent_password TEXT;
 
 -- ----------------------------------------------------------------
 -- 2. 매니저-학생 배정
