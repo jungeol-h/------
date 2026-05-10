@@ -94,6 +94,17 @@ async function fetchForAdmin() {
   ])
 
   const allUsers = usersRes.data ?? []
+  const studentIds = allUsers.filter((u) => u.role === 'student').map((u) => u.id)
+
+  // 매니저 화면과 동일하게 학생 활동 데이터도 fetch
+  const [mindRes, learningRes, tasksRes] = studentIds.length > 0
+    ? await Promise.all([
+        supabase.from('mind_records').select('*').in('student_id', studentIds).order('date', { ascending: false }).limit(500),
+        supabase.from('learning_records').select('*').in('student_id', studentIds).order('date', { ascending: false }).limit(1000),
+        supabase.from('tasks').select('*').in('student_id', studentIds),
+      ])
+    : [{ data: [] }, { data: [] }, { data: [] }]
+
   return {
     ...EMPTY,
     students: allUsers.filter((u) => u.role === 'student').map(toUser),
@@ -101,6 +112,9 @@ async function fetchForAdmin() {
     assignments: (assnRes.data ?? []).map(toAssignment),
     alerts: (alertsRes.data ?? []).map(toAlert),
     counselingRecords: (counselingRes.data ?? []).map(toCounselingRecord),
+    mindRecords: (mindRes.data ?? []).map(toMindRecord),
+    learningRecords: (learningRes.data ?? []).map(toLearningRecord),
+    tasks: (tasksRes.data ?? []).map(toTask),
     monthlyStats: (statsRes.data ?? []).map((r) => ({
       month: r.month,
       selfIndex: r.self_index,
