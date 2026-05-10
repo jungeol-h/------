@@ -1,11 +1,10 @@
 import { useState, useMemo } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { ChevronLeft, User, AlertCircle } from 'lucide-react'
+import { useParams } from 'react-router-dom'
+import { User, AlertCircle } from 'lucide-react'
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid, Cell,
 } from 'recharts'
-import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
 import { STAGE_META, STAGE_ORDER } from '../../data/stageFeedbackLibrary.js'
 import { DOMAIN_LABELS } from '../../../legacy/data/questions.js'
@@ -504,8 +503,6 @@ const TABS = ['마인드', '일기', '학습', '과제', '진단', '진로']
 
 export default function StudentDetailPage() {
   const { studentId } = useParams()
-  const navigate = useNavigate()
-  const { currentUser } = useAuth()
   const { data, getWeeklyLearning } = useData()
   const [activeTab, setActiveTab] = useState(0)
 
@@ -515,33 +512,22 @@ export default function StudentDetailPage() {
   const managers = data.educators.filter((e) => managerIds.includes(e.id) && e.role === 'manager')
   const hasAlert = data.alerts.some((a) => a.studentId === studentId && !a.resolved)
 
-  const backPath = currentUser?.role === 'admin' ? '/admin/users' : '/manager/students'
-
   if (!student) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-gray-400">
-        <p className="text-sm">학생 정보를 찾을 수 없습니다.</p>
-      </div>
-    )
+    return <p className="text-sm text-gray-400 py-16 text-center">학생 정보를 찾을 수 없습니다.</p>
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* 헤더 */}
-      <div className="bg-white border-b border-gray-200 px-4 pt-12 pb-4 sticky top-0 z-40">
-        <div className="max-w-lg mx-auto">
-        <div className="flex items-center gap-3 mb-3">
-          <button onClick={() => navigate(backPath)} className="p-1 -ml-1 text-gray-500 hover:text-gray-700">
-            <ChevronLeft size={24} />
-          </button>
+    <div className="space-y-0">
+      {/* 학생 요약 */}
+      <div className="bg-white rounded-2xl p-4 shadow-sm mb-4">
+        <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
             <User size={20} className="text-gray-400" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-bold text-gray-900">{student.name}</span>
               <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${risk.color}`}>{risk.label}</span>
-              {hasAlert && <AlertCircle size={14} className="text-red-500" />}
+              {hasAlert && <AlertCircle size={13} className="text-red-500" />}
             </div>
             <p className="text-xs text-gray-400 truncate">
               {student.school} · {student.grade}
@@ -553,35 +539,31 @@ export default function StudentDetailPage() {
             <p className="text-xs text-gray-400">자기주도지수</p>
           </div>
         </div>
-
-        {/* 탭 바 */}
-        <div className="flex gap-1 overflow-x-auto scrollbar-none -mx-1 px-1">
-          {TABS.map((tab, i) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(i)}
-              className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                activeTab === i
-                  ? 'bg-blue-500 text-white'
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
-        </div>
       </div>
 
-      {/* 탭 내용 */}
-      <div className="px-4 py-5 max-w-lg mx-auto">
-        {activeTab === 0 && <MindSection studentId={studentId} data={data} getWeeklyLearning={getWeeklyLearning} />}
-        {activeTab === 1 && <DiarySection studentId={studentId} data={data} />}
-        {activeTab === 2 && <LearningSection studentId={studentId} data={data} />}
-        {activeTab === 3 && <TaskSection studentId={studentId} data={data} />}
-        {activeTab === 4 && <DiagnosisSection studentId={studentId} data={data} />}
-        {activeTab === 5 && <CareerSection studentId={studentId} data={data} />}
+      {/* 콘텐츠 탭 */}
+      <div className="flex gap-1 overflow-x-auto scrollbar-none -mx-4 px-4 mb-4">
+        {TABS.map((tab, i) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(i)}
+            className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              activeTab === i
+                ? 'bg-blue-500 text-white'
+                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
       </div>
+
+      {activeTab === 0 && <MindSection studentId={studentId} data={data} getWeeklyLearning={getWeeklyLearning} />}
+      {activeTab === 1 && <DiarySection studentId={studentId} data={data} />}
+      {activeTab === 2 && <LearningSection studentId={studentId} data={data} />}
+      {activeTab === 3 && <TaskSection studentId={studentId} data={data} />}
+      {activeTab === 4 && <DiagnosisSection studentId={studentId} data={data} />}
+      {activeTab === 5 && <CareerSection studentId={studentId} data={data} />}
     </div>
   )
 }

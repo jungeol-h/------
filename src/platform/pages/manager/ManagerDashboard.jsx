@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useParams } from 'react-router-dom'
 import { Home, Users, MessageSquare, Loader } from 'lucide-react'
 import PageLayout from '../../components/layout/PageLayout.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
@@ -6,12 +6,20 @@ import { useData } from '../../context/DataContext.jsx'
 import ManagerHomeTab from './ManagerHomeTab.jsx'
 import StudentListTab from './StudentListTab.jsx'
 import CounselingTab from './CounselingTab.jsx'
+import StudentDetailPage from '../shared/StudentDetailPage.jsx'
 
 const TABS = [
   { path: '/manager/home', label: '홈', icon: Home },
   { path: '/manager/students', label: '학생', icon: Users },
   { path: '/manager/counseling', label: '상담', icon: MessageSquare },
 ]
+
+function StudentTitle() {
+  const { studentId } = useParams()
+  const { data } = useData()
+  const student = data.students.find(s => s.id === studentId)
+  return student?.name ?? '학생 정보'
+}
 
 export default function ManagerDashboard() {
   const { currentUser } = useAuth()
@@ -30,13 +38,22 @@ export default function ManagerDashboard() {
   }
 
   return (
-    <PageLayout title="학습매니저" badge={unresolved} tabs={TABS}>
-      <Routes>
-        <Route index element={<Navigate to="home" replace />} />
-        <Route path="home" element={<ManagerHomeTab />} />
-        <Route path="students" element={<StudentListTab />} />
-        <Route path="counseling" element={<CounselingTab />} />
-      </Routes>
-    </PageLayout>
+    <Routes>
+      <Route path="student/:studentId" element={
+        <PageLayout title={<StudentTitle />} back="/manager/students" tabs={TABS}>
+          <StudentDetailPage />
+        </PageLayout>
+      } />
+      <Route path="*" element={
+        <PageLayout title="학습매니저" badge={unresolved} tabs={TABS}>
+          <Routes>
+            <Route index element={<Navigate to="home" replace />} />
+            <Route path="home" element={<ManagerHomeTab />} />
+            <Route path="students" element={<StudentListTab />} />
+            <Route path="counseling" element={<CounselingTab />} />
+          </Routes>
+        </PageLayout>
+      } />
+    </Routes>
   )
 }

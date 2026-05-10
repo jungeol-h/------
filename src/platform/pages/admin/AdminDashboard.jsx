@@ -1,16 +1,24 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useParams } from 'react-router-dom'
 import { Home, BarChart2, UserCog, Loader } from 'lucide-react'
 import PageLayout from '../../components/layout/PageLayout.jsx'
 import { useData } from '../../context/DataContext.jsx'
 import AdminHomeTab from './AdminHomeTab.jsx'
 import StatisticsTab from './StatisticsTab.jsx'
 import UserManagementTab from './UserManagementTab.jsx'
+import StudentDetailPage from '../shared/StudentDetailPage.jsx'
 
 const TABS = [
   { path: '/admin/home', label: '홈', icon: Home },
   { path: '/admin/statistics', label: '통계', icon: BarChart2 },
   { path: '/admin/users', label: '사용자', icon: UserCog },
 ]
+
+function StudentTitle() {
+  const { studentId } = useParams()
+  const { data } = useData()
+  const student = data.students.find(s => s.id === studentId)
+  return student?.name ?? '학생 정보'
+}
 
 export default function AdminDashboard() {
   const { loading } = useData()
@@ -27,13 +35,22 @@ export default function AdminDashboard() {
   }
 
   return (
-    <PageLayout title="관리자" tabs={TABS}>
-      <Routes>
-        <Route index element={<Navigate to="home" replace />} />
-        <Route path="home" element={<AdminHomeTab />} />
-        <Route path="statistics" element={<StatisticsTab />} />
-        <Route path="users" element={<UserManagementTab />} />
-      </Routes>
-    </PageLayout>
+    <Routes>
+      <Route path="student/:studentId" element={
+        <PageLayout title={<StudentTitle />} back="/admin/users" tabs={TABS}>
+          <StudentDetailPage />
+        </PageLayout>
+      } />
+      <Route path="*" element={
+        <PageLayout title="관리자" tabs={TABS}>
+          <Routes>
+            <Route index element={<Navigate to="home" replace />} />
+            <Route path="home" element={<AdminHomeTab />} />
+            <Route path="statistics" element={<StatisticsTab />} />
+            <Route path="users" element={<UserManagementTab />} />
+          </Routes>
+        </PageLayout>
+      } />
+    </Routes>
   )
 }

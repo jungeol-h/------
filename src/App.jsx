@@ -5,7 +5,6 @@ import LoginPage from './platform/pages/LoginPage.jsx'
 import StudentDashboard from './platform/pages/student/StudentDashboard.jsx'
 import ManagerDashboard from './platform/pages/manager/ManagerDashboard.jsx'
 import AdminDashboard from './platform/pages/admin/AdminDashboard.jsx'
-import StudentDetailPage from './platform/pages/shared/StudentDetailPage.jsx'
 import ProtectedRoute from './platform/components/layout/ProtectedRoute.jsx'
 
 export default function App() {
@@ -24,26 +23,10 @@ export default function App() {
               }
             />
             <Route
-              path="/manager/student/:studentId"
-              element={
-                <ProtectedRoute role="manager">
-                  <StudentDetailPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
               path="/manager/*"
               element={
                 <ProtectedRoute role="manager">
                   <ManagerDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/student/:studentId"
-              element={
-                <ProtectedRoute role="admin">
-                  <StudentDetailPage />
                 </ProtectedRoute>
               }
             />

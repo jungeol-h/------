@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { Bell, LogOut } from 'lucide-react'
+import { Bell, LogOut, ChevronLeft } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
 
 const ROLE_LABELS = {
@@ -14,7 +14,7 @@ const ROLE_COLORS = {
   admin: 'bg-violet-500',
 }
 
-export default function Header({ title, badge }) {
+export default function Header({ title, badge, back }) {
   const { currentUser, logout } = useAuth()
   const navigate = useNavigate()
 
@@ -26,9 +26,15 @@ export default function Header({ title, badge }) {
   return (
     <header className="fixed top-0 left-0 right-0 z-40 bg-white border-b border-gray-100 shadow-sm">
       <div className="max-w-lg mx-auto flex items-center px-4 h-14 gap-3">
-        <span className={`text-xs text-white font-bold px-2 py-1 rounded-full flex-shrink-0 ${ROLE_COLORS[currentUser?.role] || 'bg-gray-400'}`}>
-          {ROLE_LABELS[currentUser?.role] || ''}
-        </span>
+        {back ? (
+          <button onClick={() => navigate(back)} className="flex-shrink-0 -ml-1 p-1 text-gray-500 hover:text-gray-700">
+            <ChevronLeft size={22} />
+          </button>
+        ) : (
+          <span className={`text-xs text-white font-bold px-2 py-1 rounded-full flex-shrink-0 ${ROLE_COLORS[currentUser?.role] || 'bg-gray-400'}`}>
+            {ROLE_LABELS[currentUser?.role] || ''}
+          </span>
+        )}
         <h1 className="flex-1 font-bold text-gray-900 text-base truncate">
           {title || '산청 우정학사'}
         </h1>
