@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, useParams } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { Home, Users, MessageSquare, Loader } from 'lucide-react'
 import PageLayout from '../../components/layout/PageLayout.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
@@ -15,11 +15,8 @@ const TABS = [
 ]
 
 function StudentDetailWrapper({ tabs, back }) {
-  const { studentId } = useParams()
-  const { data } = useData()
-  const student = data.students.find(s => s.id === studentId)
   return (
-    <PageLayout title={student?.name ?? '학생 정보'} back={back} tabs={tabs}>
+    <PageLayout title="학생 정보" back={back} tabs={tabs}>
       <StudentDetailPage />
     </PageLayout>
   )
