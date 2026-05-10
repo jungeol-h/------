@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { User, AlertCircle } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
@@ -109,14 +108,6 @@ export default function StudentListTab() {
         })}
       </div>
 
-      {selected && (
-        <StudentDetailModal
-          student={selected}
-          data={data}
-          getWeeklyLearning={getWeeklyLearning}
-          onClose={() => setSelected(null)}
-        />
-      )}
     </div>
   )
 }
