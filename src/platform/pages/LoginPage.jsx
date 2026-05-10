@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { GraduationCap, Eye, EyeOff, Loader } from 'lucide-react'
+import { useNavigate, Link } from 'react-router-dom'
+import { GraduationCap, Eye, EyeOff, Loader, Download } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
 
 const ROLE_PATHS = {
@@ -35,6 +35,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col items-center justify-center px-4 py-12">
       <div className="w-full max-w-sm">
+
         {/* 헤더 */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-500 rounded-2xl mb-4 shadow-lg">
@@ -43,6 +44,21 @@ export default function LoginPage() {
           <h1 className="text-2xl font-bold text-gray-900">산청 우정학사</h1>
           <p className="text-sm text-gray-500 mt-1">자기주도학습 관리 시스템</p>
         </div>
+
+        {/* 앱 설치 배너 */}
+        <Link
+          to="/install-guide"
+          className="flex items-center gap-3 bg-violet-600 hover:bg-violet-700 text-white rounded-2xl px-4 py-3 mb-4 shadow-md transition-colors"
+        >
+          <div className="flex-shrink-0 w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center">
+            <Download size={16} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-sm leading-tight">앱으로 설치하기</p>
+            <p className="text-violet-200 text-xs mt-0.5">홈 화면에 추가해서 앱처럼 사용하세요</p>
+          </div>
+          <span className="text-violet-300 text-lg leading-none">›</span>
+        </Link>
 
         {/* 로그인 폼 */}
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-lg px-6 py-7 space-y-4">
@@ -100,7 +116,7 @@ export default function LoginPage() {
           <p>• 비밀번호를 모를 경우 담당 선생님에게 문의하세요</p>
         </div>
 
-        <p className="text-center text-xs text-gray-400 mt-6">
+        <p className="text-center text-xs text-gray-400 mt-5">
           산청 우정학사 · 2026
         </p>
       </div>

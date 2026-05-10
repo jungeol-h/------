@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { Bell, LogOut, ChevronLeft } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import FeedbackButton from '../FeedbackButton.jsx'
+import InstallButton from '../InstallButton.jsx'
 
 const ROLE_LABELS = {
   student: '학생',
@@ -47,6 +48,7 @@ export default function Header({ title, badge, back }) {
             </span>
           </div>
         )}
+        <InstallButton />
         <FeedbackButton />
         <button
           onClick={handleLogout}

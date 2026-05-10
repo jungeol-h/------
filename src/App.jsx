@@ -6,6 +6,7 @@ import StudentDashboard from './platform/pages/student/StudentDashboard.jsx'
 import ManagerDashboard from './platform/pages/manager/ManagerDashboard.jsx'
 import AdminDashboard from './platform/pages/admin/AdminDashboard.jsx'
 import ProtectedRoute from './platform/components/layout/ProtectedRoute.jsx'
+import InstallGuidePage from './platform/pages/InstallGuidePage.jsx'
 
 export default function App() {
   return (
@@ -38,6 +39,7 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+            <Route path="/install-guide" element={<InstallGuidePage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </DataProvider>
