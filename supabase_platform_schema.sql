@@ -196,6 +196,7 @@ CREATE TABLE IF NOT EXISTS monthly_stats (
 -- ================================================================
 -- RLS 설정 (베타 기간: anon key로 전체 허용)
 -- 실서비스 전환 시 student_id = auth.uid() 기반으로 강화 필요
+-- 재실행 안전: DROP IF EXISTS 후 재생성
 -- ================================================================
 ALTER TABLE users               ENABLE ROW LEVEL SECURITY;
 ALTER TABLE assignments         ENABLE ROW LEVEL SECURITY;
@@ -210,6 +211,20 @@ ALTER TABLE todo_items          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE career_results      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE diagnosis_results   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE monthly_stats       ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "anon_all" ON users;
+DROP POLICY IF EXISTS "anon_all" ON assignments;
+DROP POLICY IF EXISTS "anon_all" ON mind_records;
+DROP POLICY IF EXISTS "anon_all" ON diary_records;
+DROP POLICY IF EXISTS "anon_all" ON learning_records;
+DROP POLICY IF EXISTS "anon_all" ON attendance_records;
+DROP POLICY IF EXISTS "anon_all" ON tasks;
+DROP POLICY IF EXISTS "anon_all" ON counseling_records;
+DROP POLICY IF EXISTS "anon_all" ON alerts;
+DROP POLICY IF EXISTS "anon_all" ON todo_items;
+DROP POLICY IF EXISTS "anon_all" ON career_results;
+DROP POLICY IF EXISTS "anon_all" ON diagnosis_results;
+DROP POLICY IF EXISTS "anon_all" ON monthly_stats;
 
 CREATE POLICY "anon_all" ON users               FOR ALL TO anon USING (true) WITH CHECK (true);
 CREATE POLICY "anon_all" ON assignments         FOR ALL TO anon USING (true) WITH CHECK (true);
