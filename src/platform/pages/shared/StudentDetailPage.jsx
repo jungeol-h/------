@@ -526,6 +526,7 @@ export default function StudentDetailPage() {
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-bold text-gray-900">{student.name}</span>
               <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${risk.color}`}>{risk.label}</span>
               {hasAlert && <AlertCircle size={13} className="text-red-500" />}
             </div>
