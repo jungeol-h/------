@@ -30,7 +30,7 @@ export default function Header({ title, badge }) {
           {ROLE_LABELS[currentUser?.role] || ''}
         </span>
         <h1 className="flex-1 font-bold text-gray-900 text-base truncate">
-          {title || '나르샤'}
+          {title || '산청 우정학사'}
         </h1>
         {badge > 0 && (
           <div className="relative flex-shrink-0">
@@ -45,7 +45,7 @@ export default function Header({ title, badge }) {
           className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 border border-gray-200 rounded-lg px-2 py-1.5 flex-shrink-0"
         >
           <LogOut size={13} />
-          <span>전환</span>
+          <span>로그아웃</span>
         </button>
       </div>
     </header>

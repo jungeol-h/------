@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { User } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
 
 const ROLE_LABELS = { student: '학생', teacher: '강사', manager: '학습매니저', admin: '관리자' }
@@ -61,7 +62,7 @@ export default function UserManagementTab() {
                     const hasAlert = data.alerts.some(a => a.studentId === s.id && a.managerId === mgr.id && !a.resolved)
                     return (
                       <div key={s.id} className="flex items-center gap-3 py-2 border-b border-gray-100 last:border-0">
-                        <span className="text-xl">{s.avatar}</span>
+                        <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0"><User size={14} className="text-gray-400" /></div>
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <span className="font-semibold text-sm text-gray-800">{s.name}</span>
@@ -89,7 +90,7 @@ export default function UserManagementTab() {
                 <p className="text-sm font-bold text-orange-700 mb-2">⚠️ 미배정 학생 ({unassigned.length}명)</p>
                 {unassigned.map(s => (
                   <div key={s.id} className="flex items-center gap-2 text-sm text-orange-700">
-                    <span>{s.avatar}</span>
+                    <User size={14} className="text-orange-400" />
                     <span>{s.name}</span>
                     <span className="text-xs opacity-70">{s.school} · {s.grade}</span>
                   </div>
@@ -110,7 +111,7 @@ export default function UserManagementTab() {
             return (
               <div key={s.id} className="bg-white rounded-2xl p-3 shadow-sm">
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl">{s.avatar}</span>
+                  <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0"><User size={18} className="text-gray-400" /></div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <p className="font-semibold text-gray-800 text-sm">{s.name}</p>

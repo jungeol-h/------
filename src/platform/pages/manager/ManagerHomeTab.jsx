@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { AlertTriangle, ChevronRight, X, CheckCheck, Clock, ClipboardList, MessageCircle } from 'lucide-react'
+import { AlertTriangle, ChevronRight, X, CheckCheck, Clock, ClipboardList, MessageCircle, User } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
 
@@ -84,8 +84,8 @@ export default function ManagerHomeTab() {
             const counselingCount = data.counselingRecords.filter(r => r.studentId === s.id).length
             return (
               <div key={s.id} className="bg-white rounded-2xl p-4 shadow-sm flex items-center gap-3">
-                <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center text-lg flex-shrink-0">
-                  {s.avatar}
+                <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <User size={20} className="text-gray-400" />
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2">

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { X, User } from 'lucide-react'
+import { X, User, AlertCircle } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
@@ -22,21 +22,15 @@ function mindScoreLabel(total) {
   return total > 0 ? `+${total}` : String(total)
 }
 
-const WEEKLY_MOCK_BY_STUDENT = {
-  s1: [{ day: '월', min: 60 }, { day: '화', min: 90 }, { day: '수', min: 45 }, { day: '목', min: 100 }, { day: '금', min: 75 }],
-  s2: [{ day: '월', min: 80 }, { day: '화', min: 110 }, { day: '수', min: 60 }, { day: '목', min: 130 }, { day: '금', min: 95 }],
-  s3: [{ day: '월', min: 30 }, { day: '화', min: 20 }, { day: '수', min: 45 }, { day: '목', min: 15 }, { day: '금', min: 30 }],
-  s4: [{ day: '월', min: 70 }, { day: '화', min: 85 }, { day: '수', min: 60 }, { day: '목', min: 90 }, { day: '금', min: 80 }],
-  s5: [{ day: '월', min: 20 }, { day: '화', min: 10 }, { day: '수', min: 0 }, { day: '목', min: 15 }, { day: '금', min: 5 }],
-}
-
-function StudentDetailModal({ student, data, onClose }) {
-  const mindHistory = data.mindRecords.filter(r => r.studentId === student.id).slice(-7)
-  const chartData = WEEKLY_MOCK_BY_STUDENT[student.id] || []
+function StudentDetailModal({ student, data, getWeeklyLearning, onClose }) {
+  const mindHistory = data.mindRecords.filter((r) => r.studentId === student.id).slice(-7)
+  const chartData = getWeeklyLearning(student.id)
   const risk = RISK_LABELS[student.riskLevel] || RISK_LABELS.normal
-  const tasks = data.tasks.filter(t => t.studentId === student.id)
-  const doneTasks = tasks.filter(t => t.status === 'done').length
-  const totalMin = data.learningRecords.filter(r => r.studentId === student.id).reduce((s, r) => s + r.duration, 0)
+  const tasks = data.tasks.filter((t) => t.studentId === student.id)
+  const doneTasks = tasks.filter((t) => t.status === 'done').length
+  const totalMin = data.learningRecords
+    .filter((r) => r.studentId === student.id)
+    .reduce((s, r) => s + r.duration, 0)
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center px-4 pb-4">
@@ -45,7 +39,9 @@ function StudentDetailModal({ student, data, onClose }) {
           {/* 헤더 */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <span className="text-3xl">{student.avatar}</span>
+              <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+                <User size={24} className="text-gray-400" />
+              </div>
               <div>
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-gray-900 text-lg">{student.name}</span>
@@ -54,7 +50,9 @@ function StudentDetailModal({ student, data, onClose }) {
                 <p className="text-xs text-gray-400">{student.school} · {student.grade}</p>
               </div>
             </div>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1"><X size={20} /></button>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1">
+              <X size={20} />
+            </button>
           </div>
 
           {/* 핵심 지표 */}
@@ -73,24 +71,28 @@ function StudentDetailModal({ student, data, onClose }) {
             </div>
           </div>
 
-          {/* 주간 학습 차트 */}
+          {/* 최근 7일 학습 차트 */}
           <div>
-            <h4 className="text-sm font-bold text-gray-700 mb-2">이번 주 학습시간 (분)</h4>
-            <ResponsiveContainer width="100%" height={120}>
-              <LineChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                <XAxis dataKey="day" tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
-                <Tooltip
-                  formatter={(v) => [`${v}분`, '학습시간']}
-                  contentStyle={{ fontSize: 12, borderRadius: 8, border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
-                />
-                <Line
-                  type="monotone" dataKey="min" stroke="#6366f1" strokeWidth={2.5}
-                  dot={{ fill: '#6366f1', r: 3 }} activeDot={{ r: 5 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            <h4 className="text-sm font-bold text-gray-700 mb-2">최근 7일 학습시간 (분)</h4>
+            {chartData.some((d) => d.minutes > 0) ? (
+              <ResponsiveContainer width="100%" height={120}>
+                <LineChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                  <XAxis dataKey="day" tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+                  <Tooltip
+                    formatter={(v) => [`${v}분`, '학습시간']}
+                    contentStyle={{ fontSize: 12, borderRadius: 8, border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
+                  />
+                  <Line
+                    type="monotone" dataKey="minutes" stroke="#6366f1" strokeWidth={2.5}
+                    dot={{ fill: '#6366f1', r: 3 }} activeDot={{ r: 5 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="text-xs text-gray-400 text-center py-4">최근 7일 학습 기록 없음</p>
+            )}
           </div>
 
           {/* 마인드 기록 */}
@@ -98,7 +100,7 @@ function StudentDetailModal({ student, data, onClose }) {
             <div>
               <h4 className="text-sm font-bold text-gray-700 mb-2">최근 마인드 기록</h4>
               <div className="space-y-2">
-                {mindHistory.slice().reverse().map(m => {
+                {mindHistory.slice().reverse().map((m) => {
                   const total = (m.mood ?? 0) + (m.motivation ?? 0) + (m.confidence ?? 0)
                   return (
                     <div key={m.id} className="flex items-center gap-3 text-sm py-1.5 border-b border-gray-100 last:border-0">
@@ -120,23 +122,25 @@ function StudentDetailModal({ student, data, onClose }) {
 
 export default function StudentListTab() {
   const { currentUser } = useAuth()
-  const { data } = useData()
+  const { data, getWeeklyLearning } = useData()
   const [selected, setSelected] = useState(null)
 
-  const myStudentIds = data.assignments.filter(a => a.educatorId === currentUser?.id).map(a => a.studentId)
-  const myStudents = data.students.filter(s => myStudentIds.includes(s.id))
+  const myStudentIds = data.assignments
+    .filter((a) => a.educatorId === currentUser?.id)
+    .map((a) => a.studentId)
+  const myStudents = data.students.filter((s) => myStudentIds.includes(s.id))
 
   return (
     <div className="py-6 space-y-4">
       <h2 className="text-lg font-bold text-gray-900">담당 학생 ({myStudents.length}명)</h2>
       <div className="space-y-3">
-        {myStudents.map(s => {
+        {myStudents.map((s) => {
           const risk = RISK_LABELS[s.riskLevel] || RISK_LABELS.normal
-          const lastMind = data.mindRecords.filter(r => r.studentId === s.id).slice(-1)[0]
-          const records = data.learningRecords.filter(r => r.studentId === s.id)
+          const lastMind = data.mindRecords.filter((r) => r.studentId === s.id).slice(-1)[0]
+          const records = data.learningRecords.filter((r) => r.studentId === s.id)
           const totalMin = records.reduce((sum, r) => sum + r.duration, 0)
-          const chartData = WEEKLY_MOCK_BY_STUDENT[s.id] || []
-          const hasAlert = data.alerts.some(a => a.studentId === s.id && !a.resolved)
+          const chartData = getWeeklyLearning(s.id)
+          const hasAlert = data.alerts.some((a) => a.studentId === s.id && !a.resolved)
 
           return (
             <div
@@ -145,12 +149,14 @@ export default function StudentListTab() {
               className="bg-white rounded-2xl p-4 shadow-sm cursor-pointer hover:shadow-md transition-all active:scale-[0.98]"
             >
               <div className="flex items-center gap-3 mb-3">
-                <span className="text-3xl">{s.avatar}</span>
+                <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+                  <User size={20} className="text-gray-400" />
+                </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-gray-900">{s.name}</span>
                     <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${risk.color}`}>{risk.label}</span>
-                    {hasAlert && <span className="text-xs">🚨</span>}
+                    {hasAlert && <AlertCircle size={14} className="text-red-500" />}
                   </div>
                   <p className="text-xs text-gray-400">{s.school} · {s.grade}</p>
                 </div>
@@ -164,7 +170,7 @@ export default function StudentListTab() {
               <ResponsiveContainer width="100%" height={50}>
                 <LineChart data={chartData} margin={{ top: 2, right: 4, left: -30, bottom: 0 }}>
                   <Line
-                    type="monotone" dataKey="min"
+                    type="monotone" dataKey="minutes"
                     stroke={s.riskLevel === 'danger' ? '#ef4444' : s.riskLevel === 'warning' ? '#f59e0b' : '#6366f1'}
                     strokeWidth={2} dot={false}
                   />
@@ -178,7 +184,9 @@ export default function StudentListTab() {
                 </div>
                 <div>
                   {(() => {
-                    const total = lastMind ? (lastMind.mood ?? 0) + (lastMind.motivation ?? 0) + (lastMind.confidence ?? 0) : null
+                    const total = lastMind
+                      ? (lastMind.mood ?? 0) + (lastMind.motivation ?? 0) + (lastMind.confidence ?? 0)
+                      : null
                     return (
                       <>
                         <p className={`text-sm font-bold ${mindScoreColor(total)}`}>{mindScoreLabel(total)}</p>
@@ -201,6 +209,7 @@ export default function StudentListTab() {
         <StudentDetailModal
           student={selected}
           data={data}
+          getWeeklyLearning={getWeeklyLearning}
           onClose={() => setSelected(null)}
         />
       )}

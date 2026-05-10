@@ -1,15 +1,8 @@
 import { createContext, useContext, useState, useEffect } from 'react'
+import { supabase } from '../lib/supabase'
+import { toUser } from '../lib/supabaseHelpers'
 
 const AuthContext = createContext(null)
-
-const QUICK_USERS = {
-  student: { id: 's1', name: '김안동', role: 'student', school: '안동중', grade: '중2' },
-  manager: { id: 'e2', name: '박지현', role: 'manager' },
-  admin: { id: 'a1', name: '관리자', role: 'admin' },
-  parent: { id: 'p1', name: '김부모', role: 'parent' },
-  teacher: { id: 'e1', name: '최민수', role: 'teacher' },
-  consultant: { id: 'c1', name: '이컨설턴트', role: 'consultant' },
-}
 
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(() => {
@@ -20,6 +13,8 @@ export function AuthProvider({ children }) {
       return null
     }
   })
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     if (currentUser) {
@@ -29,18 +24,41 @@ export function AuthProvider({ children }) {
     }
   }, [currentUser])
 
-  const login = (role) => {
-    const user = QUICK_USERS[role]
-    if (user) setCurrentUser(user)
+  const login = async (loginId, password) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const { data, error: dbError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('login_id', loginId.trim())
+        .eq('password', password.trim())
+        .single()
+
+      if (dbError || !data) {
+        setError('학번 또는 비밀번호가 올바르지 않습니다.')
+        return false
+      }
+
+      const user = toUser(data)
+      setCurrentUser(user)
+      return true
+    } catch {
+      setError('로그인 중 오류가 발생했습니다. 다시 시도해주세요.')
+      return false
+    } finally {
+      setLoading(false)
+    }
   }
 
   const logout = () => {
     setCurrentUser(null)
     localStorage.removeItem('platform_user')
+    localStorage.removeItem('platform_data')
   }
 
   return (
-    <AuthContext.Provider value={{ currentUser, login, logout }}>
+    <AuthContext.Provider value={{ currentUser, login, logout, loading, error }}>
       {children}
     </AuthContext.Provider>
   )

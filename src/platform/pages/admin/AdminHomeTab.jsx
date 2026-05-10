@@ -11,7 +11,9 @@ const DUMMY_MENUS = [
 ]
 
 function PrintReport({ data }) {
-  const avgSelfIndex = Math.round(data.students.reduce((s, st) => s + st.selfIndex, 0) / data.students.length)
+  const avgSelfIndex = data.students.length > 0
+    ? Math.round(data.students.reduce((s, st) => s + st.selfIndex, 0) / data.students.length)
+    : 0
   const riskStudents = data.students.filter(s => s.riskLevel !== 'normal')
   const todayStr = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })
 
@@ -92,7 +94,9 @@ export default function AdminHomeTab() {
   const totalStudents = data.students.length
   const riskStudents = data.students.filter(s => s.riskLevel === 'danger' || s.riskLevel === 'warning').length
   const unresolved = data.alerts.filter(a => !a.resolved).length
-  const avgSelfIndex = Math.round(data.students.reduce((s, st) => s + st.selfIndex, 0) / data.students.length)
+  const avgSelfIndex = totalStudents > 0
+    ? Math.round(data.students.reduce((s, st) => s + st.selfIndex, 0) / totalStudents)
+    : 0
 
   const statCards = [
     { label: '전체 학생', value: totalStudents, unit: '명', color: 'text-blue-600', bg: 'bg-blue-50', icon: Users },

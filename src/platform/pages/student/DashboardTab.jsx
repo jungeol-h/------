@@ -16,7 +16,7 @@ export default function DashboardTab() {
   const { currentUser } = useAuth()
   const { data } = useData()
 
-  const student = data.students.find(s => s.id === currentUser?.id)
+  const student = data.students.find((s) => s.id === currentUser?.id) ?? currentUser
   const myRecords = data.learningRecords.filter(r => r.studentId === currentUser?.id)
   const myTasks = data.tasks.filter(t => t.studentId === currentUser?.id)
   const todayMind = data.mindRecords.filter(r => r.studentId === currentUser?.id).slice(-1)[0]

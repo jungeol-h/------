@@ -199,9 +199,9 @@ function ProgressBar({ step }) {
 export default function CareerTab() {
   const { currentUser } = useAuth()
   const { data, saveCareerResult } = useData()
-  const student = data.students.find(s => s.id === currentUser?.id)
+  const student = data.students.find((s) => s.id === currentUser?.id) ?? currentUser
 
-  const savedResult = data.careerResults?.find(r => r.studentId === currentUser?.id) || null
+  const savedResult = data.careerResults?.find((r) => r.studentId === currentUser?.id) || null
 
   const [step, setStep] = useState('intro') // intro | step1 | step2 | step3 | result
   const [selectedVerbs, setSelectedVerbs] = useState([])     // string[]

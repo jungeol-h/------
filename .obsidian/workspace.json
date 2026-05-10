@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "docs/2차 프로토타입 개발/클라이언트 제공 문서/진로 설계 검사 개발 명세서.md",
+                "file": "docs/1. 프로젝트/산청 우정학사 중등부 베타테스트/요청사항.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "진로 설계 검사 개발 명세서"
+              "title": "요청사항"
             }
           }
         ]
@@ -94,7 +94,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "docs/2차 프로토타입 개발/클라이언트 제공 문서/진로 설계 검사 개발 명세서.md",
+                "file": "docs/3. 자료/비전/페인포인트.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -104,7 +104,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "진로 설계 검사 개발 명세서 의 백링크"
+              "title": "페인포인트 의 백링크"
             }
           },
           {
@@ -113,12 +113,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "docs/2차 프로토타입 개발/클라이언트 제공 문서/진로 설계 검사 개발 명세서.md",
+                "file": "docs/3. 자료/비전/페인포인트.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "진로 설계 검사 개발 명세서 의 나가는 링크"
+              "title": "페인포인트 의 나가는 링크"
             }
           },
           {
@@ -156,13 +156,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "docs/2차 프로토타입 개발/클라이언트 제공 문서/진로 설계 검사 개발 명세서.md",
+                "file": "docs/3. 자료/비전/페인포인트.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "진로 설계 검사 개발 명세서 의 개요"
+              "title": "페인포인트 의 개요"
             }
           }
         ],
@@ -170,7 +170,8 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300
+    "width": 300,
+    "collapsed": true
   },
   "left-ribbon": {
     "hiddenItems": {
@@ -186,28 +187,41 @@
   "active": "fad6998be5931b1a",
   "lastOpenFiles": [
     "dist/index.html",
-    "dist/assets/index-DowMOHzp.css",
-    "dist/assets/index-BNZRxP13.js",
+    "dist/assets/index-23w_sCID.css",
+    "dist/assets/index-CrZKWOOV.js",
     "dist/assets",
-    "src/platform/pages/student/DiagnosisTab.jsx",
-    "src/platform/utils/diagnosisEngine.js",
-    "src/platform/data/stageFeedbackLibrary.js",
-    "src/platform/data",
-    "docs/2차 프로토타입 개발/클라이언트 제공 문서/(new)학습진단 웹페이지 수정 작업 명세서.md",
-    "docs/2차 프로토타입 개발/클라이언트 제공 문서/new.md",
-    "dist/assets/index-DMcLOmCA.js",
-    "dist/assets/index-Cuydn4Ff.css",
-    "dist/assets/index-DRu3CGAg.js",
-    "docs/2차 프로토타입 개발/1. 2차 프로토타입 개발 전략,  기능 명세.md",
-    "docs/2차 프로토타입 개발/클라이언트 제공 문서/1차 프로토타입에 대한 클라이언트 검토 정리.md",
-    "docs/1차 프로토타입 개발/2. 데이터 모델링 및 시연 시나리오.md",
-    "docs/1차 프로토타입 개발/1. 1차 프로토타입 개발 전략, 기능 명세.md",
-    "docs/2차 프로토타입 개발/클라이언트 제공 문서/진로 설계 검사 개발 명세서.md",
-    "docs/2차 프로토타입 개발/2. 2차 프로토 타입 기능 명세.md",
-    "docs/1차 프로토타입 개발/2. 1차 프로토타입 기능 명세 및 더미 스펙.md",
-    "docs/전체 개발 스코프/기능 명세서(초안).md",
-    "docs/전체 개발 스코프/개념 정리/알림.md",
-    "docs/전체 개발 스코프/개념 정리/리포트.md",
+    "dist/assets/index-B2rg5xGJ.js",
+    "dist/assets/index-CRMt6LUT.css",
+    "dist/assets/index-hxUr8Nvn.js",
+    "src/platform/lib/supabaseHelpers.js",
+    "src/platform/lib/supabase.js",
+    "src/platform/lib",
+    "supabase_beta_seed.sql",
+    "docs/3. 자료/기능 명세서(초안).md",
+    "docs/3. 자료/비전.md",
+    "docs/1. 프로젝트/산청 우정학사 중등부 베타테스트/요청사항.md",
+    "docs/3. 자료/개념 정리/유저 개념/학습자/학생.md",
+    "docs/4. 보관/01_학습진단_기본구조_및_진단문항.md",
+    "docs/4. 보관/프로젝트/2차 프로토타입 개발/클라이언트 제공 문서/진로 설계 검사 개발 명세서.md",
+    "docs/4. 보관/03_학습진단_결과지_생성엔진.md",
+    "docs/4. 보관/02_학습진단_코칭_라이브러리.md",
+    "docs/4. 보관/진단 설계 로직(RAW).md",
+    "docs/3. 자료/개념 정리/통계 및 분석.md",
+    "docs/3. 자료/개념 정리/회원 관리.md",
+    "docs/3. 자료/개념 정리/알림.md",
+    "docs/3. 자료/개념 정리/리포트.md",
+    "docs/3. 자료/개념 정리/유저 개념/교육자/학습매니저.md",
+    "docs/3. 자료/개념 정리/유저 개념/교육자/진로진학 컨설턴트.md",
+    "docs/3. 자료/개념 정리/유저 개념/교육자/관리자.md",
+    "docs/3. 자료/개념 정리/유저 개념/교육자/강사.md",
+    "docs/3. 자료/개념 정리/유저 개념/학습자/학부모.md",
+    "docs/3. 자료/개념 정리/유저 개념/학습자/개인 리포트.md",
+    "docs/3. 자료/개념 정리/유저별/학습자/학생.md",
+    "docs/3. 자료/개념 정리/유저별/학습자/학부모.md",
+    "docs/3. 자료/개념 정리/유저별/학습자/개인 리포트.md",
+    "docs/3. 자료/개념 정리/유저별/교육자/진로진학 컨설턴트.md",
+    "docs/3. 자료/개념 정리/유저별/교육자/학습매니저.md",
+    "docs/3. 자료/개념 정리/유저별/교육자/관리자.md",
     "docs/2차 프로토타입 개발/images/image10.jpg",
     "docs/2차 프로토타입 개발/images/image9.jpg",
     "docs/2차 프로토타입 개발/images/image8.jpg",
@@ -217,19 +231,6 @@
     "docs/2차 프로토타입 개발/images/image4.jpg",
     "docs/2차 프로토타입 개발/images/image3.jpg",
     "docs/2차 프로토타입 개발/images/image2.jpg",
-    "docs/2차 프로토타입 개발/images/image1.jpg",
-    "docs/2차 프로토타입 개발/1차 프로토타입에 대한 클라이언트 피드백.md",
-    "node_modules/lucide-react/README.md",
-    "node_modules/enhanced-resolve/README.md",
-    "node_modules/@emnapi/wasi-threads/README.md",
-    "node_modules/@tailwindcss/vite/README.md",
-    "node_modules/@tailwindcss/node/README.md",
-    "node_modules/@tailwindcss/oxide-darwin-arm64/README.md",
-    "node_modules/@tybys/wasm-util/README.md",
-    "node_modules/graceful-fs/README.md",
-    "node_modules/@emnapi/runtime/README.md",
-    "node_modules/tapable/README.md",
-    "node_modules/@emnapi/core/README.md",
-    "node_modules/magic-string/README.md"
+    "docs/2차 프로토타입 개발/images/image1.jpg"
   ]
 }

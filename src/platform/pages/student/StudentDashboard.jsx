@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { Home, BookOpen, ClipboardList, Heart, Compass, Activity } from 'lucide-react'
+import { Home, BookOpen, ClipboardList, Heart, Compass, Activity, Loader } from 'lucide-react'
 import PageLayout from '../../components/layout/PageLayout.jsx'
+import { useData } from '../../context/DataContext.jsx'
 import DashboardTab from './DashboardTab.jsx'
 import LearningTab from './LearningTab.jsx'
 import TaskTab from './TaskTab.jsx'
@@ -18,6 +19,19 @@ const TABS = [
 ]
 
 export default function StudentDashboard() {
+  const { loading } = useData()
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="flex flex-col items-center gap-3 text-gray-400">
+          <Loader size={32} className="animate-spin" />
+          <p className="text-sm">데이터 불러오는 중...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <PageLayout title="나의 학습" tabs={TABS}>
       <Routes>
