@@ -3,6 +3,7 @@ import { Play, Pause, RotateCcw, Save, ListChecks, ChevronLeft, Plus, Check, X }
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
+import SaveErrorBox from '../../components/common/SaveErrorBox.jsx'
 
 const SUBJECTS = [
   '국어', '영어', '수학', '과학', '사회', '도덕',
@@ -30,10 +31,25 @@ function TodoScreen({ studentId, onBack }) {
   const [newSubject, setNewSubject] = useState('수학')
   const [newMin, setNewMin] = useState(30)
   const [adding, setAdding] = useState(false)
+  const [todoError, setTodoError] = useState(null)
 
-  const handleAdd = () => {
-    addTodoItem(studentId, { subject: newSubject, plannedMin: newMin })
-    setAdding(false)
+  const handleAdd = async () => {
+    setTodoError(null)
+    try {
+      await addTodoItem(studentId, { subject: newSubject, plannedMin: newMin })
+      setAdding(false)
+    } catch (e) {
+      setTodoError(e)
+    }
+  }
+
+  const handleToggle = async (id) => {
+    setTodoError(null)
+    try {
+      await toggleTodo(id)
+    } catch (e) {
+      setTodoError(e)
+    }
   }
 
   const doneCount = todayItems.filter(t => t.done).length
@@ -74,7 +90,7 @@ function TodoScreen({ studentId, onBack }) {
         {todayItems.map(item => (
           <div
             key={item.id}
-            onClick={() => toggleTodo(item.id)}
+            onClick={() => handleToggle(item.id)}
             className={`flex items-center gap-3 p-4 rounded-2xl shadow-sm cursor-pointer transition-all active:scale-[0.98] ${
               item.done ? 'bg-indigo-50' : 'bg-white'
             }`}
@@ -93,6 +109,8 @@ function TodoScreen({ studentId, onBack }) {
           </div>
         ))}
       </div>
+
+      <SaveErrorBox error={todoError} userId={studentId} />
 
       {/* 추가 폼 */}
       {adding ? (
@@ -161,6 +179,7 @@ export default function LearningTab() {
   const [subject, setSubject] = useState('수학')
   const [focus, setFocus] = useState(80)
   const [saved, setSaved] = useState(false)
+  const [learnError, setLearnError] = useState(null)
   const intervalRef = useRef(null)
 
   useEffect(() => {
@@ -172,14 +191,19 @@ export default function LearningTab() {
     return () => clearInterval(intervalRef.current)
   }, [running])
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (elapsed < 10) return
+    setLearnError(null)
     const minutes = Math.max(1, Math.round(elapsed / 60))
-    addLearningRecord(currentUser.id, { subject, duration: minutes, focus })
-    setElapsed(0)
-    setRunning(false)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+    try {
+      await addLearningRecord(currentUser.id, { subject, duration: minutes, focus })
+      setElapsed(0)
+      setRunning(false)
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    } catch (e) {
+      setLearnError(e)
+    }
   }
 
   const records = data.learningRecords.filter(r => r.studentId === currentUser?.id)
@@ -290,6 +314,8 @@ export default function LearningTab() {
           )}
         </div>
       </div>
+
+      <SaveErrorBox error={learnError} userId={currentUser?.id} />
 
       {/* 누적 통계 */}
       <div className="bg-white rounded-2xl p-4 shadow-sm flex items-center gap-4">

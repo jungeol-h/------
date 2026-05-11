@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, RotateCcw, CheckSquare, Square, Activity } f
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
+import SaveErrorBox from '../../components/common/SaveErrorBox.jsx'
 import { questions, DOMAIN_LABELS } from '../../data/questions.js'
 import { STAGE_META, STAGE_ORDER } from '../../data/stageFeedbackLibrary.js'
 import {
@@ -215,18 +216,7 @@ export default function LearningDiagnosisTab() {
           })}
         </div>
 
-        {/* 저장 오류 */}
-        {saveError && (
-          <div className="bg-red-50 border border-red-300 rounded-xl p-3 text-xs text-red-700 space-y-1 break-all">
-            <p className="font-bold">⚠ 저장 실패 — 이 화면을 캡처해서 공유해주세요</p>
-            <p><span className="font-semibold">사용자:</span> {studentId}</p>
-            <p><span className="font-semibold">시각:</span> {new Date().toISOString()}</p>
-            <p><span className="font-semibold">코드:</span> {saveError.code ?? '—'}</p>
-            <p><span className="font-semibold">메시지:</span> {saveError.message ?? String(saveError)}</p>
-            {saveError.details && <p><span className="font-semibold">상세:</span> {saveError.details}</p>}
-            {saveError.hint && <p><span className="font-semibold">힌트:</span> {saveError.hint}</p>}
-          </div>
-        )}
+        <SaveErrorBox error={saveError} userId={studentId} />
 
         {/* 이전/다음 */}
         <div className="flex gap-2 pt-1">

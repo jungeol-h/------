@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { CheckCircle2, Circle, ClipboardList, Upload } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
+import SaveErrorBox from '../../components/common/SaveErrorBox.jsx'
 
 export default function TaskTab() {
   const { currentUser } = useAuth()
@@ -11,6 +12,16 @@ export default function TaskTab() {
   const done = tasks.filter(t => t.status === 'done')
 
   const [toast, setToast] = useState(false)
+  const [taskError, setTaskError] = useState(null)
+
+  const handleToggleTask = async (id) => {
+    setTaskError(null)
+    try {
+      await toggleTask(id)
+    } catch (e) {
+      setTaskError(e)
+    }
+  }
 
   const showToast = () => {
     setToast(true)
@@ -35,7 +46,7 @@ export default function TaskTab() {
               {pending.map(t => (
                 <div key={t.id} className="bg-white rounded-2xl p-4 shadow-sm border border-red-100">
                   <div className="flex items-center gap-3">
-                    <button onClick={() => toggleTask(t.id)} className="flex-shrink-0 text-red-300 hover:text-blue-400 transition-colors">
+                    <button onClick={() => handleToggleTask(t.id)} className="flex-shrink-0 text-red-300 hover:text-blue-400 transition-colors">
                       <Circle size={24} />
                     </button>
                     <div className="flex-1 min-w-0">
@@ -68,7 +79,7 @@ export default function TaskTab() {
               <div className="space-y-2">
                 {done.map(t => (
                   <div key={t.id} className="bg-gray-50 rounded-2xl p-4 flex items-center gap-3 opacity-60">
-                    <button onClick={() => toggleTask(t.id)} className="flex-shrink-0 text-green-500">
+                    <button onClick={() => handleToggleTask(t.id)} className="flex-shrink-0 text-green-500">
                       <CheckCircle2 size={24} />
                     </button>
                     <div className="flex-1">
@@ -82,6 +93,8 @@ export default function TaskTab() {
           )}
         </>
       )}
+
+      <SaveErrorBox error={taskError} userId={currentUser?.id} />
 
       {/* 파일 업로드 안내 토스트 */}
       {toast && (

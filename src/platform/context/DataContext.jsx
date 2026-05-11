@@ -189,7 +189,11 @@ export function DataProvider({ children }) {
     const id = `m${Date.now()}`
     const newRecord = { id, student_id: studentId, date: today, mood, motivation, confidence, memo }
 
-    await supabase.from('mind_records').insert(newRecord)
+    const { error: mindError } = await supabase.from('mind_records').insert(newRecord)
+    if (mindError) {
+      console.error('addMindRecord insert error:', mindError)
+      throw mindError
+    }
 
     const total = mood + motivation + confidence
     const isCritical = total <= -6 || mood <= -4 || motivation <= -4 || confidence <= -4
@@ -215,8 +219,9 @@ export function DataProvider({ children }) {
           resolved: false,
           coaching_comment: '',
         }
-        await supabase.from('alerts').insert(alertRow)
-        newAlertLocal = toAlert(alertRow)
+        const { error: alertError } = await supabase.from('alerts').insert(alertRow)
+        if (alertError) console.error('addMindRecord alert insert error:', alertError)
+        else newAlertLocal = toAlert(alertRow)
       }
     }
 
@@ -234,7 +239,11 @@ export function DataProvider({ children }) {
     const id = existing?.id ?? `d${Date.now()}`
     const row = { id, student_id: studentId, date: today, praise, reflection, resolution }
 
-    await supabase.from('diary_records').upsert(row, { onConflict: 'student_id,date' })
+    const { error: upsertError } = await supabase.from('diary_records').upsert(row, { onConflict: 'student_id,date' })
+    if (upsertError) {
+      console.error('addDiaryRecord upsert error:', upsertError)
+      throw upsertError
+    }
 
     const local = toDiaryRecord(row)
     setData((prev) => ({
@@ -247,10 +256,14 @@ export function DataProvider({ children }) {
 
   // 알림 해제 + 코칭 코멘트 → 상담 기록 생성
   const resolveAlert = useCallback(async (alertId, coachingComment = '') => {
-    await supabase
+    const { error: updateError } = await supabase
       .from('alerts')
       .update({ resolved: true, coaching_comment: coachingComment })
       .eq('id', alertId)
+    if (updateError) {
+      console.error('resolveAlert update error:', updateError)
+      throw updateError
+    }
 
     let newCounselingLocal = null
     if (coachingComment) {
@@ -265,8 +278,9 @@ export function DataProvider({ children }) {
           content: coachingComment,
           type: 'mind',
         }
-        await supabase.from('counseling_records').insert(counselRow)
-        newCounselingLocal = toCounselingRecord(counselRow)
+        const { error: counselError } = await supabase.from('counseling_records').insert(counselRow)
+        if (counselError) console.error('resolveAlert counseling insert error:', counselError)
+        else newCounselingLocal = toCounselingRecord(counselRow)
       }
     }
 
@@ -286,7 +300,11 @@ export function DataProvider({ children }) {
     const task = data.tasks.find((t) => t.id === taskId)
     if (!task) return
     const newStatus = task.status === 'done' ? 'pending' : 'done'
-    await supabase.from('tasks').update({ status: newStatus }).eq('id', taskId)
+    const { error: taskError } = await supabase.from('tasks').update({ status: newStatus }).eq('id', taskId)
+    if (taskError) {
+      console.error('toggleTask update error:', taskError)
+      throw taskError
+    }
     setData((prev) => ({
       ...prev,
       tasks: prev.tasks.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t)),
@@ -303,7 +321,11 @@ export function DataProvider({ children }) {
       duration,
       focus,
     }
-    await supabase.from('learning_records').insert(row)
+    const { error: learnError } = await supabase.from('learning_records').insert(row)
+    if (learnError) {
+      console.error('addLearningRecord insert error:', learnError)
+      throw learnError
+    }
     setData((prev) => ({
       ...prev,
       learningRecords: [toLearningRecord(row), ...prev.learningRecords],
@@ -320,7 +342,11 @@ export function DataProvider({ children }) {
       planned_min: plannedMin,
       done: false,
     }
-    await supabase.from('todo_items').insert(row)
+    const { error: todoError } = await supabase.from('todo_items').insert(row)
+    if (todoError) {
+      console.error('addTodoItem insert error:', todoError)
+      throw todoError
+    }
     setData((prev) => ({
       ...prev,
       todoItems: [toTodoItem(row), ...prev.todoItems],
@@ -332,7 +358,11 @@ export function DataProvider({ children }) {
     const item = data.todoItems.find((t) => t.id === itemId)
     if (!item) return
     const newDone = !item.done
-    await supabase.from('todo_items').update({ done: newDone }).eq('id', itemId)
+    const { error: toggleError } = await supabase.from('todo_items').update({ done: newDone }).eq('id', itemId)
+    if (toggleError) {
+      console.error('toggleTodo update error:', toggleError)
+      throw toggleError
+    }
     setData((prev) => ({
       ...prev,
       todoItems: prev.todoItems.map((t) => (t.id === itemId ? { ...t, done: newDone } : t)),

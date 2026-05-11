@@ -188,6 +188,8 @@
   "lastOpenFiles": [
     "dist/workbox-9c191d2f.js",
     "dist/sw.js",
+    "dist/assets/index-DNkclmvQ.js",
+    "src/platform/components/common/SaveErrorBox.jsx",
     "dist/assets/index-Dn76fO2X.css",
     "dist/assets/index-Ce28MAiU.js",
     "dist/registerSW.js",
@@ -195,8 +197,6 @@
     "dist/index.html",
     "dist/assets/index-CyH1rTGP.css",
     "dist/assets/index-Bnd3UEiN.js",
-    "dist/assets",
-    "dist/assets/index-BMSPf39p.js",
     "dist/pwa-512x512.png",
     "dist/pwa-192x192.png",
     "dist/apple-touch-icon.png",

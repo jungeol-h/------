@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { ChevronRight, ChevronLeft, RotateCcw, History } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
+import SaveErrorBox from '../../components/common/SaveErrorBox.jsx'
 
 // ─── 계열 정의 ────────────────────────────────────────────────
 const CATEGORIES = {
@@ -480,17 +481,7 @@ export default function CareerDesignTab() {
         })}
       </div>
 
-      {saveError && (
-        <div className="bg-red-50 border border-red-300 rounded-xl p-3 text-xs text-red-700 space-y-1 break-all">
-          <p className="font-bold">⚠ 저장 실패 — 이 화면을 캡처해서 공유해주세요</p>
-          <p><span className="font-semibold">사용자:</span> {currentUser?.id}</p>
-          <p><span className="font-semibold">시각:</span> {new Date().toISOString()}</p>
-          <p><span className="font-semibold">코드:</span> {saveError.code ?? '—'}</p>
-          <p><span className="font-semibold">메시지:</span> {saveError.message ?? String(saveError)}</p>
-          {saveError.details && <p><span className="font-semibold">상세:</span> {saveError.details}</p>}
-          {saveError.hint && <p><span className="font-semibold">힌트:</span> {saveError.hint}</p>}
-        </div>
-      )}
+      <SaveErrorBox error={saveError} userId={currentUser?.id} />
 
       <div className="flex gap-3 pt-2">
         <button onClick={() => setStep('step2')} className="px-5 py-3 rounded-xl text-gray-500 bg-gray-100 font-semibold text-sm flex items-center gap-1">

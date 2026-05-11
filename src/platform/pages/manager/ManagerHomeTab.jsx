@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { AlertTriangle, ChevronRight, X, CheckCheck, Clock, ClipboardList, MessageCircle, User } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
+import SaveErrorBox from '../../components/common/SaveErrorBox.jsx'
 
 export default function ManagerHomeTab() {
   const { currentUser } = useAuth()
@@ -13,12 +14,18 @@ export default function ManagerHomeTab() {
 
   const [modal, setModal] = useState(null)
   const [comment, setComment] = useState('')
+  const [resolveError, setResolveError] = useState(null)
 
-  const handleResolve = () => {
+  const handleResolve = async () => {
     if (!modal) return
-    resolveAlert(modal.id, comment)
-    setModal(null)
-    setComment('')
+    setResolveError(null)
+    try {
+      await resolveAlert(modal.id, comment)
+      setModal(null)
+      setComment('')
+    } catch (e) {
+      setResolveError(e)
+    }
   }
 
   return (
@@ -137,6 +144,7 @@ export default function ManagerHomeTab() {
               rows={4}
               className="w-full border border-gray-200 rounded-xl p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-300"
             />
+            <SaveErrorBox error={resolveError} userId={currentUser?.id} />
             <div className="flex gap-2">
               <button
                 onClick={() => setModal(null)}
