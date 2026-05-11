@@ -107,11 +107,11 @@ export const monthlyStats = [
   { month: '4월', selfIndex: 83, taskRate: 82, mindTotal: 25, centerHours: 56 },
 ]
 
-// ─── 진로 검사 결과 ────────────────────────────────────────
-export const careerResults = []
+// ─── 진로설계 결과 ─────────────────────────────────────────
+export const careerDesignResults = []
 
-// ─── 학습 진단 결과 ────────────────────────────────────────
-export const diagnosisResults = []
+// ─── 학습진단 결과 ─────────────────────────────────────────
+export const learningDiagnosisResults = []
 
 // ─── TODO 리스트 ───────────────────────────────────────────
 export const todoItems = [

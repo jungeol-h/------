@@ -11,7 +11,7 @@ import { DOMAIN_LABELS } from '../../data/questions.js'
 import {
   calcDomainScores, calcStageScores, calcStageGrades,
   getStageStatus, getStateType, buildCoachingReport, selectTasks, getTypeName, scoreToGrade,
-} from '../../utils/diagnosisEngine.js'
+} from '../../utils/learningDiagnosisEngine.js'
 
 const RISK_LABELS = {
   normal:  { label: '정상',  color: 'text-green-600 bg-green-100' },
@@ -259,10 +259,10 @@ function TaskSection({ studentId, data }) {
   )
 }
 
-// ─── 탭: 학습 진단 ────────────────────────────────────────────
-function DiagnosisSection({ studentId, data }) {
+// ─── 탭: 학습진단 ─────────────────────────────────────────────
+function LearningDiagnosisSection({ studentId, data }) {
   const [resultTab, setResultTab] = useState(0)
-  const diagResult = data.diagnosisResults?.find((r) => r.studentId === studentId)
+  const diagResult = data.learningDiagnosisResults?.find((r) => r.studentId === studentId)
 
   const result = useMemo(() => {
     if (!diagResult?.answers) return null
@@ -307,7 +307,7 @@ function DiagnosisSection({ studentId, data }) {
             <span key={t} className="text-xs bg-white/20 rounded-full px-2.5 py-0.5">{t}</span>
           ))}
         </div>
-        <p className="text-xs opacity-60 mt-2">진단일: {diagResult.date}</p>
+        <p className="text-xs opacity-60 mt-2">학습진단일: {diagResult.date}</p>
       </div>
 
       <div className="flex bg-gray-100 rounded-xl p-1 gap-1">
@@ -423,12 +423,12 @@ function DiagnosisSection({ studentId, data }) {
   )
 }
 
-// ─── 탭: 진로 설계 ────────────────────────────────────────────
-function CareerSection({ studentId, data }) {
-  const careerResult = data.careerResults?.find((r) => r.studentId === studentId)
+// ─── 탭: 진로설계 ─────────────────────────────────────────────
+function CareerDesignSection({ studentId, data }) {
+  const careerResult = data.careerDesignResults?.find((r) => r.studentId === studentId)
 
   if (!careerResult) {
-    return <p className="text-sm text-gray-400 py-8 text-center">진로 검사 결과가 없습니다.</p>
+    return <p className="text-sm text-gray-400 py-8 text-center">진로설계 결과가 없습니다.</p>
   }
 
   const { typeName, primaryCat, finalScores, fields, date } = careerResult
@@ -499,7 +499,7 @@ function CareerSection({ studentId, data }) {
 }
 
 // ─── 메인 ─────────────────────────────────────────────────────
-const TABS = ['마인드', '일기', '학습', '과제', '진단', '진로']
+const TABS = ['마인드', '일기', '학습', '과제', '학습진단', '진로설계']
 
 export default function StudentDetailPage() {
   const { studentId } = useParams()
@@ -563,8 +563,8 @@ export default function StudentDetailPage() {
       {activeTab === 1 && <DiarySection studentId={studentId} data={data} />}
       {activeTab === 2 && <LearningSection studentId={studentId} data={data} />}
       {activeTab === 3 && <TaskSection studentId={studentId} data={data} />}
-      {activeTab === 4 && <DiagnosisSection studentId={studentId} data={data} />}
-      {activeTab === 5 && <CareerSection studentId={studentId} data={data} />}
+      {activeTab === 4 && <LearningDiagnosisSection studentId={studentId} data={data} />}
+      {activeTab === 5 && <CareerDesignSection studentId={studentId} data={data} />}
     </div>
   )
 }

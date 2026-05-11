@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import {
   toUser, toMindRecord, toDiaryRecord, toLearningRecord,
   toTask, toCounselingRecord, toAlert, toTodoItem,
-  toCareerResult, toDiagnosisResult, toAssignment,
+  toCareerDesignResult, toLearningDiagnosisResult, toAssignment,
 } from '../lib/supabaseHelpers'
 import { useAuth } from './AuthContext'
 
@@ -23,8 +23,8 @@ const EMPTY = {
   monthlyStats: [],
   schoolStats: [],
   todoItems: [],
-  careerResults: [],
-  diagnosisResults: [],
+  careerDesignResults: [],
+  learningDiagnosisResults: [],
 }
 
 // 역할별 초기 데이터 fetch
@@ -45,8 +45,8 @@ async function fetchForStudent(userId) {
     tasks: (tasksRes.data ?? []).map(toTask),
     todoItems: (todoRes.data ?? []).map(toTodoItem),
     diaryRecords: (diaryRes.data ?? []).map(toDiaryRecord),
-    careerResults: (careerRes.data ?? []).map(toCareerResult),
-    diagnosisResults: (diagRes.data ?? []).map(toDiagnosisResult),
+    careerDesignResults: (careerRes.data ?? []).map(toCareerDesignResult),
+    learningDiagnosisResults: (diagRes.data ?? []).map(toLearningDiagnosisResult),
   }
 }
 
@@ -85,8 +85,8 @@ async function fetchForManager(userId) {
     tasks: (tasksRes.data ?? []).map(toTask),
     learningRecords: (learningRes.data ?? []).map(toLearningRecord),
     diaryRecords: (diaryRes.data ?? []).map(toDiaryRecord),
-    careerResults: (careerRes.data ?? []).map(toCareerResult),
-    diagnosisResults: (diagRes.data ?? []).map(toDiagnosisResult),
+    careerDesignResults: (careerRes.data ?? []).map(toCareerDesignResult),
+    learningDiagnosisResults: (diagRes.data ?? []).map(toLearningDiagnosisResult),
   }
 }
 
@@ -125,8 +125,8 @@ async function fetchForAdmin() {
     learningRecords: (learningRes.data ?? []).map(toLearningRecord),
     tasks: (tasksRes.data ?? []).map(toTask),
     diaryRecords: (diaryRes.data ?? []).map(toDiaryRecord),
-    careerResults: (careerRes.data ?? []).map(toCareerResult),
-    diagnosisResults: (diagRes.data ?? []).map(toDiagnosisResult),
+    careerDesignResults: (careerRes.data ?? []).map(toCareerDesignResult),
+    learningDiagnosisResults: (diagRes.data ?? []).map(toLearningDiagnosisResult),
     monthlyStats: (statsRes.data ?? []).map((r) => ({
       month: r.month,
       selfIndex: r.self_index,
@@ -339,8 +339,8 @@ export function DataProvider({ children }) {
     }))
   }, [data.todoItems])
 
-  // 진로 검사 결과 저장 (학생당 1개)
-  const saveCareerResult = useCallback(async (studentId, { selectedVerbs, selectedActivities, selectedCategories, primaryCat, typeName, finalScores, fields }) => {
+  // 진로설계 결과 저장 (학생당 1개)
+  const saveCareerDesignResult = useCallback(async (studentId, { selectedVerbs, selectedActivities, selectedCategories, primaryCat, typeName, finalScores, fields }) => {
     const row = {
       id: `cr${Date.now()}`,
       student_id: studentId,
@@ -355,18 +355,22 @@ export function DataProvider({ children }) {
     }
     // 기존 레코드 삭제 후 삽입 (학생당 1개 유지)
     await supabase.from('career_results').delete().eq('student_id', studentId)
-    await supabase.from('career_results').insert(row)
+    const { error: insertError } = await supabase.from('career_results').insert(row)
+    if (insertError) {
+      console.error('saveCareerDesignResult insert error:', insertError)
+      throw insertError
+    }
     setData((prev) => ({
       ...prev,
-      careerResults: [
-        ...prev.careerResults.filter((r) => r.studentId !== studentId),
-        toCareerResult(row),
+      careerDesignResults: [
+        ...prev.careerDesignResults.filter((r) => r.studentId !== studentId),
+        toCareerDesignResult(row),
       ],
     }))
   }, [])
 
-  // 학습 진단 결과 저장 (학생당 1개)
-  const saveDiagnosisResult = useCallback(async (studentId, resultData) => {
+  // 학습진단 결과 저장 (학생당 1개)
+  const saveLearningDiagnosisResult = useCallback(async (studentId, resultData) => {
     const row = {
       id: `dr${Date.now()}`,
       student_id: studentId,
@@ -379,12 +383,16 @@ export function DataProvider({ children }) {
       type_name: resultData.typeName ?? '',
     }
     await supabase.from('diagnosis_results').delete().eq('student_id', studentId)
-    await supabase.from('diagnosis_results').insert(row)
+    const { error: insertError } = await supabase.from('diagnosis_results').insert(row)
+    if (insertError) {
+      console.error('saveLearningDiagnosisResult insert error:', insertError)
+      throw insertError
+    }
     setData((prev) => ({
       ...prev,
-      diagnosisResults: [
-        ...prev.diagnosisResults.filter((r) => r.studentId !== studentId),
-        toDiagnosisResult(row),
+      learningDiagnosisResults: [
+        ...prev.learningDiagnosisResults.filter((r) => r.studentId !== studentId),
+        toLearningDiagnosisResult(row),
       ],
     }))
   }, [])
@@ -422,8 +430,8 @@ export function DataProvider({ children }) {
       addLearningRecord,
       addTodoItem,
       toggleTodo,
-      saveCareerResult,
-      saveDiagnosisResult,
+      saveCareerDesignResult,
+      saveLearningDiagnosisResult,
       getWeeklyLearning,
       resetData,
     }}>

@@ -9,7 +9,7 @@ export default function CounselingTab() {
     .slice()
     .reverse()
 
-  const TYPE_LABELS = { mind: '마인드', career: '진로', study: '학습' }
+  const TYPE_LABELS = { mind: '마인드', career: '진로설계', study: '학습' }
 
   return (
     <div className="py-6 space-y-4">

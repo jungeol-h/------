@@ -82,7 +82,7 @@ export const toTodoItem = (row) => ({
   done: row.done ?? false,
 })
 
-export const toCareerResult = (row) => ({
+export const toCareerDesignResult = (row) => ({
   id: row.id,
   studentId: row.student_id,
   date: row.date,
@@ -95,7 +95,7 @@ export const toCareerResult = (row) => ({
   fields: row.fields ?? [],
 })
 
-export const toDiagnosisResult = (row) => ({
+export const toLearningDiagnosisResult = (row) => ({
   id: row.id,
   studentId: row.student_id,
   date: row.date,

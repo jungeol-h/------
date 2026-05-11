@@ -6,16 +6,16 @@ import DashboardTab from './DashboardTab.jsx'
 import LearningTab from './LearningTab.jsx'
 import TaskTab from './TaskTab.jsx'
 import MindTab from './MindTab.jsx'
-import CareerTab from './CareerTab.jsx'
-import DiagnosisTab from './DiagnosisTab.jsx'
+import CareerDesignTab from './CareerDesignTab.jsx'
+import LearningDiagnosisTab from './LearningDiagnosisTab.jsx'
 
 const TABS = [
   { path: '/student/dashboard', label: '홈', icon: Home },
   { path: '/student/learning', label: '학습', icon: BookOpen },
   { path: '/student/task', label: '과제', icon: ClipboardList },
   { path: '/student/mind', label: '마인드', icon: Heart },
-  { path: '/student/diagnosis', label: '진단', icon: Activity },
-  { path: '/student/career', label: '진로 설계', icon: Compass },
+  { path: '/student/learning-diagnosis', label: '학습진단', icon: Activity },
+  { path: '/student/career-design', label: '진로설계', icon: Compass },
 ]
 
 export default function StudentDashboard() {
@@ -40,8 +40,8 @@ export default function StudentDashboard() {
         <Route path="learning" element={<LearningTab />} />
         <Route path="task" element={<TaskTab />} />
         <Route path="mind" element={<MindTab />} />
-        <Route path="diagnosis" element={<DiagnosisTab />} />
-        <Route path="career" element={<CareerTab />} />
+        <Route path="learning-diagnosis" element={<LearningDiagnosisTab />} />
+        <Route path="career-design" element={<CareerDesignTab />} />
       </Routes>
     </PageLayout>
   )

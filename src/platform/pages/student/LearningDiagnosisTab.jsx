@@ -15,7 +15,7 @@ import {
   selectTasks,
   getTypeName,
   scoreToGrade,
-} from '../../utils/diagnosisEngine.js'
+} from '../../utils/learningDiagnosisEngine.js'
 
 const LIKERT = ['전혀 아니다', '아니다', '보통이다', '그렇다', '매우 그렇다']
 const RESULT_TABS = ['요약', '코칭 리포트', '실행 과제']
@@ -23,18 +23,19 @@ const RESULT_TABS = ['요약', '코칭 리포트', '실행 과제']
 const GRADE_COLOR = { A: 'text-indigo-600', B: 'text-violet-600', C: 'text-purple-500', D: 'text-orange-500', E: 'text-red-500' }
 const GRADE_BG    = { A: 'bg-indigo-100 text-indigo-700', B: 'bg-violet-100 text-violet-700', C: 'bg-purple-100 text-purple-700', D: 'bg-orange-100 text-orange-700', E: 'bg-red-100 text-red-700' }
 
-export default function DiagnosisTab() {
+export default function LearningDiagnosisTab() {
   const { currentUser } = useAuth()
-  const { data, saveDiagnosisResult } = useData()
+  const { data, saveLearningDiagnosisResult } = useData()
 
   const studentId = currentUser?.id || 's1'
-  const prevResult = data.diagnosisResults?.find(r => r.studentId === studentId) || null
+  const prevResult = data.learningDiagnosisResults?.find(r => r.studentId === studentId) || null
 
   // step: 'intro' | number(0~29) | 'result'
   const [step, setStep] = useState(prevResult ? 'result' : 'intro')
   const [answers, setAnswers] = useState(prevResult?.answers || Array(30).fill(0))
   const [resultTab, setResultTab] = useState(0)
   const [checkedTasks, setCheckedTasks] = useState({})
+  const [saveError, setSaveError] = useState(null)
 
   // 진단 결과 계산 (메모이제이션)
   const result = useMemo(() => {
@@ -64,7 +65,7 @@ export default function DiagnosisTab() {
     setAnswers(next)
   }
 
-  function handleNext() {
+  async function handleNext() {
     if (answers[step] === 0) return
     if (step < 29) {
       setStep(step + 1)
@@ -75,14 +76,20 @@ export default function DiagnosisTab() {
       const stageGrades   = calcStageGrades(stageScores)
       const stateTypes    = getStateType(stageGrades)
       const typeName      = getTypeName(stageGrades)
-      saveDiagnosisResult(studentId, {
-        answers: [...answers],
-        domainScores,
-        stageScores,
-        stageGrades,
-        stateTypes,
-        typeName,
-      })
+      try {
+        setSaveError(null)
+        await saveLearningDiagnosisResult(studentId, {
+          answers: [...answers],
+          domainScores,
+          stageScores,
+          stageGrades,
+          stateTypes,
+          typeName,
+        })
+      } catch (e) {
+        setSaveError(e)
+        return
+      }
       setStep('result')
       setResultTab(0)
     }
@@ -110,7 +117,7 @@ export default function DiagnosisTab() {
           <div className="w-14 h-14 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-3">
             <Activity size={28} className="text-indigo-600" />
           </div>
-          <h2 className="text-lg font-bold text-gray-800 mb-1">학습 진단 검사</h2>
+          <h2 className="text-lg font-bold text-gray-800 mb-1">학습진단</h2>
           <p className="text-sm text-gray-500 leading-relaxed">
             30개 문항으로 학습 역량의 4단계를 진단하고<br />맞춤 코칭 리포트를 받아보세요
           </p>
@@ -131,7 +138,7 @@ export default function DiagnosisTab() {
 
         {prevResult && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700">
-            이전 진단 결과가 있습니다. 아래 버튼을 누르면 다시 진단합니다.
+            이전 학습진단 결과가 있습니다. 아래 버튼을 누르면 다시 진단합니다.
           </div>
         )}
 
@@ -148,7 +155,7 @@ export default function DiagnosisTab() {
             onClick={handleStart}
             className="w-full py-3 rounded-xl bg-indigo-600 text-white font-semibold text-sm"
           >
-            {prevResult ? '다시 진단하기' : '진단 시작하기'}
+            {prevResult ? '다시 진단하기' : '학습진단 시작하기'}
           </button>
         </div>
       </div>
@@ -207,6 +214,19 @@ export default function DiagnosisTab() {
             )
           })}
         </div>
+
+        {/* 저장 오류 */}
+        {saveError && (
+          <div className="bg-red-50 border border-red-300 rounded-xl p-3 text-xs text-red-700 space-y-1 break-all">
+            <p className="font-bold">⚠ 저장 실패 — 이 화면을 캡처해서 공유해주세요</p>
+            <p><span className="font-semibold">사용자:</span> {studentId}</p>
+            <p><span className="font-semibold">시각:</span> {new Date().toISOString()}</p>
+            <p><span className="font-semibold">코드:</span> {saveError.code ?? '—'}</p>
+            <p><span className="font-semibold">메시지:</span> {saveError.message ?? String(saveError)}</p>
+            {saveError.details && <p><span className="font-semibold">상세:</span> {saveError.details}</p>}
+            {saveError.hint && <p><span className="font-semibold">힌트:</span> {saveError.hint}</p>}
+          </div>
+        )}
 
         {/* 이전/다음 */}
         <div className="flex gap-2 pt-1">

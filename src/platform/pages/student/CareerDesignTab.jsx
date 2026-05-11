@@ -196,18 +196,19 @@ function ProgressBar({ step }) {
 }
 
 // ─── 메인 컴포넌트 ────────────────────────────────────────────
-export default function CareerTab() {
+export default function CareerDesignTab() {
   const { currentUser } = useAuth()
-  const { data, saveCareerResult } = useData()
+  const { data, saveCareerDesignResult } = useData()
   const student = data.students.find((s) => s.id === currentUser?.id) ?? currentUser
 
-  const savedResult = data.careerResults?.find((r) => r.studentId === currentUser?.id) || null
+  const savedResult = data.careerDesignResults?.find((r) => r.studentId === currentUser?.id) || null
 
   const [step, setStep] = useState('intro') // intro | step1 | step2 | step3 | result
   const [selectedVerbs, setSelectedVerbs] = useState([])     // string[]
   const [selectedActivities, setSelectedActivities] = useState([]) // string[]
   const [selectedCategories, setSelectedCategories] = useState([]) // string[], up to 2
   const [result, setResult] = useState(null)
+  const [saveError, setSaveError] = useState(null)
 
   const reset = () => {
     setStep('intro')
@@ -259,7 +260,7 @@ export default function CareerTab() {
   const scores = calcScores(selectedVerbs, selectedActivities)
   const top3 = topCategories(scores, 3)
 
-  const handleFinish = () => {
+  const handleFinish = async () => {
     const finalScores = { ...scores }
     selectedCategories.forEach(k => { finalScores[k] = (finalScores[k] || 0) + 5 })
     const primaryCat = Object.entries(finalScores).sort((a, b) => b[1] - a[1])[0]?.[0] || 'ENGINEERING'
@@ -267,19 +268,25 @@ export default function CareerTab() {
     const fields = FIELDS[primaryCat] || []
     const newResult = { primaryCat, typeName, finalScores, fields }
     setResult(newResult)
-    saveCareerResult(currentUser.id, {
-      selectedVerbs,
-      selectedActivities,
-      selectedCategories,
-      ...newResult,
-    })
+    try {
+      setSaveError(null)
+      await saveCareerDesignResult(currentUser.id, {
+        selectedVerbs,
+        selectedActivities,
+        selectedCategories,
+        ...newResult,
+      })
+    } catch (e) {
+      setSaveError(e)
+      return
+    }
     setStep('result')
   }
 
   // ── intro ──────────────────────────────────────────────────
   if (step === 'intro') return (
     <div className="py-6 space-y-4">
-      <h2 className="text-lg font-bold text-gray-900">진로 설계</h2>
+      <h2 className="text-lg font-bold text-gray-900">진로설계</h2>
 
       <div className="bg-gradient-to-br from-violet-500 to-purple-600 rounded-2xl p-6 text-white shadow-lg">
         <p className="text-sm font-semibold opacity-80 mb-1">동사 기반 진로 흥미 탐색</p>
@@ -472,6 +479,18 @@ export default function CareerTab() {
           )
         })}
       </div>
+
+      {saveError && (
+        <div className="bg-red-50 border border-red-300 rounded-xl p-3 text-xs text-red-700 space-y-1 break-all">
+          <p className="font-bold">⚠ 저장 실패 — 이 화면을 캡처해서 공유해주세요</p>
+          <p><span className="font-semibold">사용자:</span> {currentUser?.id}</p>
+          <p><span className="font-semibold">시각:</span> {new Date().toISOString()}</p>
+          <p><span className="font-semibold">코드:</span> {saveError.code ?? '—'}</p>
+          <p><span className="font-semibold">메시지:</span> {saveError.message ?? String(saveError)}</p>
+          {saveError.details && <p><span className="font-semibold">상세:</span> {saveError.details}</p>}
+          {saveError.hint && <p><span className="font-semibold">힌트:</span> {saveError.hint}</p>}
+        </div>
+      )}
 
       <div className="flex gap-3 pt-2">
         <button onClick={() => setStep('step2')} className="px-5 py-3 rounded-xl text-gray-500 bg-gray-100 font-semibold text-sm flex items-center gap-1">
