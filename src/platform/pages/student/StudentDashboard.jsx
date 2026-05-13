@@ -1,21 +1,22 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { Home, BookOpen, ClipboardList, Heart, Compass, Activity, Loader } from 'lucide-react'
+import { Home, BookOpen, ClipboardList, Heart, Activity, Loader } from 'lucide-react'
 import PageLayout from '../../components/layout/PageLayout.jsx'
 import { useData } from '../../context/DataContext.jsx'
 import DashboardTab from './DashboardTab.jsx'
 import LearningTab from './LearningTab.jsx'
 import TaskTab from './TaskTab.jsx'
 import MindTab from './MindTab.jsx'
+import DiagnosisIndexTab from './DiagnosisIndexTab.jsx'
 import CareerDesignTab from './CareerDesignTab.jsx'
 import LearningDiagnosisTab from './LearningDiagnosisTab.jsx'
+import QuizTab from './QuizTab.jsx'
 
 const TABS = [
   { path: '/student/dashboard', label: '홈', icon: Home },
   { path: '/student/learning', label: '학습', icon: BookOpen },
   { path: '/student/task', label: '과제', icon: ClipboardList },
   { path: '/student/mind', label: '마인드', icon: Heart },
-  { path: '/student/learning-diagnosis', label: '학습진단', icon: Activity },
-  { path: '/student/career-design', label: '진로설계', icon: Compass },
+  { path: '/student/diagnosis', label: '진단', icon: Activity },
 ]
 
 export default function StudentDashboard() {
@@ -40,8 +41,10 @@ export default function StudentDashboard() {
         <Route path="learning" element={<LearningTab />} />
         <Route path="task" element={<TaskTab />} />
         <Route path="mind" element={<MindTab />} />
-        <Route path="learning-diagnosis" element={<LearningDiagnosisTab />} />
-        <Route path="career-design" element={<CareerDesignTab />} />
+        <Route path="diagnosis" element={<DiagnosisIndexTab />} />
+        <Route path="diagnosis/learning" element={<LearningDiagnosisTab />} />
+        <Route path="diagnosis/career" element={<CareerDesignTab />} />
+        <Route path="diagnosis/quiz" element={<QuizTab />} />
       </Routes>
     </PageLayout>
   )

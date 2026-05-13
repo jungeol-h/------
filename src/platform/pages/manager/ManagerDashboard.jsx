@@ -1,17 +1,19 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { Home, Users, MessageSquare, Loader } from 'lucide-react'
+import { Home, Users, MessageSquare, ClipboardCheck, Loader } from 'lucide-react'
 import PageLayout from '../../components/layout/PageLayout.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
 import ManagerHomeTab from './ManagerHomeTab.jsx'
 import StudentListTab from './StudentListTab.jsx'
 import CounselingTab from './CounselingTab.jsx'
+import QuizMonitorTab from './QuizMonitorTab.jsx'
 import StudentDetailPage from '../shared/StudentDetailPage.jsx'
 
 const TABS = [
   { path: '/manager/home', label: '홈', icon: Home },
   { path: '/manager/students', label: '학생', icon: Users },
   { path: '/manager/counseling', label: '상담', icon: MessageSquare },
+  { path: '/manager/quiz', label: '확인평가', icon: ClipboardCheck },
 ]
 
 function StudentDetailWrapper({ tabs, back }) {
@@ -50,6 +52,7 @@ export default function ManagerDashboard() {
             <Route path="home" element={<ManagerHomeTab />} />
             <Route path="students" element={<StudentListTab />} />
             <Route path="counseling" element={<CounselingTab />} />
+            <Route path="quiz" element={<QuizMonitorTab />} />
           </Routes>
         </PageLayout>
       } />

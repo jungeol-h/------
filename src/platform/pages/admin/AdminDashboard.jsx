@@ -1,16 +1,18 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { Home, BarChart2, UserCog, Loader } from 'lucide-react'
+import { Home, BarChart2, UserCog, ClipboardCheck, Loader } from 'lucide-react'
 import PageLayout from '../../components/layout/PageLayout.jsx'
 import { useData } from '../../context/DataContext.jsx'
 import AdminHomeTab from './AdminHomeTab.jsx'
 import StatisticsTab from './StatisticsTab.jsx'
 import UserManagementTab from './UserManagementTab.jsx'
+import QuizMonitorTab from './QuizMonitorTab.jsx'
 import StudentDetailPage from '../shared/StudentDetailPage.jsx'
 
 const TABS = [
   { path: '/admin/home', label: '홈', icon: Home },
   { path: '/admin/statistics', label: '통계', icon: BarChart2 },
   { path: '/admin/users', label: '사용자', icon: UserCog },
+  { path: '/admin/quiz', label: '확인평가', icon: ClipboardCheck },
 ]
 
 function StudentDetailWrapper({ tabs, back }) {
@@ -47,6 +49,7 @@ export default function AdminDashboard() {
             <Route path="home" element={<AdminHomeTab />} />
             <Route path="statistics" element={<StatisticsTab />} />
             <Route path="users" element={<UserManagementTab />} />
+            <Route path="quiz" element={<QuizMonitorTab />} />
           </Routes>
         </PageLayout>
       } />

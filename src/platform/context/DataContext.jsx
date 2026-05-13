@@ -4,7 +4,9 @@ import {
   toUser, toMindRecord, toDiaryRecord, toLearningRecord,
   toTask, toCounselingRecord, toAlert, toTodoItem,
   toCareerDesignResult, toLearningDiagnosisResult, toAssignment,
+  toQuizSet, toQuizQuestion, toQuizAttempt,
 } from '../lib/supabaseHelpers'
+import { gradeAttempt } from '../utils/quizGrading'
 import { useAuth } from './AuthContext'
 
 const DataContext = createContext(null)
@@ -25,11 +27,14 @@ const EMPTY = {
   todoItems: [],
   careerDesignResults: [],
   learningDiagnosisResults: [],
+  quizSets: [],
+  quizQuestions: [],
+  quizAttempts: [],
 }
 
 // 역할별 초기 데이터 fetch
 async function fetchForStudent(userId) {
-  const [userRes, assnRes, mindRes, learningRes, tasksRes, todoRes, diaryRes, careerRes, diagRes] = await Promise.all([
+  const [userRes, assnRes, mindRes, learningRes, tasksRes, todoRes, diaryRes, careerRes, diagRes, attemptsRes] = await Promise.all([
     supabase.from('users').select('*').eq('id', userId).limit(1),
     supabase.from('assignments').select('*').eq('student_id', userId),
     supabase.from('mind_records').select('*').eq('student_id', userId).order('date', { ascending: false }).limit(50),
@@ -39,7 +44,20 @@ async function fetchForStudent(userId) {
     supabase.from('diary_records').select('*').eq('student_id', userId).order('date', { ascending: false }).limit(10),
     supabase.from('career_results').select('*').eq('student_id', userId).order('created_at', { ascending: false }).limit(1),
     supabase.from('diagnosis_results').select('*').eq('student_id', userId).order('created_at', { ascending: false }).limit(1),
+    supabase.from('quiz_attempts').select('*').eq('student_id', userId),
   ])
+
+  const me = (userRes.data ?? [])[0]
+  const myGrade = me?.grade ?? ''
+  // 학생 본인 학년의 회차만 노출
+  const setsRes = myGrade
+    ? await supabase.from('quiz_sets').select('*').eq('grade', myGrade).eq('is_published', true).order('round')
+    : { data: [] }
+  const setIds = (setsRes.data ?? []).map((s) => s.id)
+  const questionsRes = setIds.length > 0
+    ? await supabase.from('quiz_questions').select('*').in('quiz_set_id', setIds).order('order_no')
+    : { data: [] }
+
   return {
     ...EMPTY,
     students: (userRes.data ?? []).map(toUser),
@@ -51,6 +69,9 @@ async function fetchForStudent(userId) {
     diaryRecords: (diaryRes.data ?? []).map(toDiaryRecord),
     careerDesignResults: (careerRes.data ?? []).map(toCareerDesignResult),
     learningDiagnosisResults: (diagRes.data ?? []).map(toLearningDiagnosisResult),
+    quizSets: (setsRes.data ?? []).map(toQuizSet),
+    quizQuestions: (questionsRes.data ?? []).map(toQuizQuestion),
+    quizAttempts: (attemptsRes.data ?? []).map(toQuizAttempt),
   }
 }
 
@@ -67,7 +88,7 @@ async function fetchForManager(userId) {
     return { ...EMPTY, assignments }
   }
 
-  const [studentsRes, mindRes, alertsRes, counselingRes, tasksRes, learningRes, diaryRes, careerRes, diagRes] = await Promise.all([
+  const [studentsRes, mindRes, alertsRes, counselingRes, tasksRes, learningRes, diaryRes, careerRes, diagRes, attemptsRes, setsRes] = await Promise.all([
     supabase.from('users').select('*').in('id', studentIds),
     supabase.from('mind_records').select('*').in('student_id', studentIds).order('date', { ascending: false }).limit(200),
     supabase.from('alerts').select('*').eq('manager_id', userId).order('created_at', { ascending: false }),
@@ -77,7 +98,13 @@ async function fetchForManager(userId) {
     supabase.from('diary_records').select('*').in('student_id', studentIds).order('date', { ascending: false }).limit(200),
     supabase.from('career_results').select('*').in('student_id', studentIds),
     supabase.from('diagnosis_results').select('*').in('student_id', studentIds),
+    supabase.from('quiz_attempts').select('*').in('student_id', studentIds).order('submitted_at', { ascending: false }),
+    supabase.from('quiz_sets').select('*').order('grade').order('round'),
   ])
+  const setIds = (setsRes.data ?? []).map((s) => s.id)
+  const questionsRes = setIds.length > 0
+    ? await supabase.from('quiz_questions').select('*').in('quiz_set_id', setIds).order('order_no')
+    : { data: [] }
 
   return {
     ...EMPTY,
@@ -91,23 +118,28 @@ async function fetchForManager(userId) {
     diaryRecords: (diaryRes.data ?? []).map(toDiaryRecord),
     careerDesignResults: (careerRes.data ?? []).map(toCareerDesignResult),
     learningDiagnosisResults: (diagRes.data ?? []).map(toLearningDiagnosisResult),
+    quizSets: (setsRes.data ?? []).map(toQuizSet),
+    quizQuestions: (questionsRes.data ?? []).map(toQuizQuestion),
+    quizAttempts: (attemptsRes.data ?? []).map(toQuizAttempt),
   }
 }
 
 async function fetchForAdmin() {
-  const [usersRes, assnRes, alertsRes, counselingRes, statsRes] = await Promise.all([
+  const [usersRes, assnRes, alertsRes, counselingRes, statsRes, setsRes] = await Promise.all([
     supabase.from('users').select('*').order('grade').order('login_id'),
     supabase.from('assignments').select('*'),
     supabase.from('alerts').select('*').order('created_at', { ascending: false }),
     supabase.from('counseling_records').select('*').order('date', { ascending: false }),
     supabase.from('monthly_stats').select('*').order('id'),
+    supabase.from('quiz_sets').select('*').order('grade').order('round'),
   ])
 
   const allUsers = usersRes.data ?? []
   const studentIds = allUsers.filter((u) => u.role === 'student').map((u) => u.id)
+  const setIds = (setsRes.data ?? []).map((s) => s.id)
 
   // 매니저 화면과 동일하게 학생 활동 데이터도 fetch
-  const [mindRes, learningRes, tasksRes, diaryRes, careerRes, diagRes] = studentIds.length > 0
+  const [mindRes, learningRes, tasksRes, diaryRes, careerRes, diagRes, attemptsRes] = studentIds.length > 0
     ? await Promise.all([
         supabase.from('mind_records').select('*').in('student_id', studentIds).order('date', { ascending: false }).limit(500),
         supabase.from('learning_records').select('*').in('student_id', studentIds).order('date', { ascending: false }).limit(1000),
@@ -115,8 +147,13 @@ async function fetchForAdmin() {
         supabase.from('diary_records').select('*').in('student_id', studentIds).order('date', { ascending: false }).limit(500),
         supabase.from('career_results').select('*').in('student_id', studentIds),
         supabase.from('diagnosis_results').select('*').in('student_id', studentIds),
+        supabase.from('quiz_attempts').select('*').in('student_id', studentIds).order('submitted_at', { ascending: false }),
       ])
-    : [{ data: [] }, { data: [] }, { data: [] }, { data: [] }, { data: [] }, { data: [] }]
+    : [{ data: [] }, { data: [] }, { data: [] }, { data: [] }, { data: [] }, { data: [] }, { data: [] }]
+
+  const questionsRes = setIds.length > 0
+    ? await supabase.from('quiz_questions').select('*').in('quiz_set_id', setIds).order('order_no')
+    : { data: [] }
 
   return {
     ...EMPTY,
@@ -138,6 +175,9 @@ async function fetchForAdmin() {
       mindTotal: r.mind_total,
       centerHours: r.center_hours,
     })),
+    quizSets: (setsRes.data ?? []).map(toQuizSet),
+    quizQuestions: (questionsRes.data ?? []).map(toQuizQuestion),
+    quizAttempts: (attemptsRes.data ?? []).map(toQuizAttempt),
   }
 }
 
@@ -431,6 +471,40 @@ export function DataProvider({ children }) {
     }))
   }, [])
 
+  // 확인평가 제출 — 채점 + insert + local state 반영
+  const submitQuizAttempt = useCallback(async (studentId, quizSetId, rawByQid) => {
+    const questions = data.quizQuestions
+      .filter((q) => q.quizSetId === quizSetId)
+      .sort((a, b) => a.orderNo - b.orderNo)
+    if (questions.length === 0) {
+      throw new Error('해당 회차의 문제를 불러오지 못했습니다.')
+    }
+    const { answers, score, total } = gradeAttempt(questions, rawByQid)
+    const row = {
+      id: `qa-${Date.now()}`,
+      student_id: studentId,
+      quiz_set_id: quizSetId,
+      answers,
+      score,
+      total,
+      submitted_at: new Date().toISOString(),
+    }
+    const { error } = await supabase.from('quiz_attempts').insert(row)
+    if (error) {
+      console.error('submitQuizAttempt insert error:', error)
+      if (error.code === '23505') {
+        throw new Error('이미 응시한 회차입니다. 결과 화면에서 확인하세요.')
+      }
+      throw error
+    }
+    const local = toQuizAttempt(row)
+    setData((prev) => ({
+      ...prev,
+      quizAttempts: [local, ...prev.quizAttempts.filter((a) => !(a.studentId === studentId && a.quizSetId === quizSetId))],
+    }))
+    return local
+  }, [data.quizQuestions])
+
   // 최근 7일 학습시간 집계 (StudentListTab 주간 차트용)
   const getWeeklyLearning = useCallback((studentId) => {
     const days = []
@@ -466,6 +540,7 @@ export function DataProvider({ children }) {
       toggleTodo,
       saveCareerDesignResult,
       saveLearningDiagnosisResult,
+      submitQuizAttempt,
       getWeeklyLearning,
       resetData,
     }}>

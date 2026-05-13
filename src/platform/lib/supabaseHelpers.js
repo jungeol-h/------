@@ -112,3 +112,34 @@ export const toAssignment = (row) => ({
   educatorId: row.educator_id,
   studentId: row.student_id,
 })
+
+export const toQuizSet = (row) => ({
+  id: row.id,
+  title: row.title,
+  grade: row.grade,
+  round: row.round ?? 1,
+  source: row.source ?? '',
+  description: row.description ?? '',
+  isPublished: row.is_published ?? true,
+  createdAt: row.created_at,
+})
+
+export const toQuizQuestion = (row) => ({
+  id: row.id,
+  quizSetId: row.quiz_set_id,
+  orderNo: row.order_no,
+  question: row.question,
+  acceptedAnswers: row.accepted_answers ?? [],
+  explanation: row.explanation ?? '',
+  hint: row.hint ?? '',
+})
+
+export const toQuizAttempt = (row) => ({
+  id: row.id,
+  studentId: row.student_id,
+  quizSetId: row.quiz_set_id,
+  answers: row.answers ?? [],
+  score: row.score ?? 0,
+  total: row.total ?? 0,
+  submittedAt: row.submitted_at,
+})
