@@ -29,7 +29,7 @@ export default function CounselingTab() {
                   </div>
                   <span className="text-xs text-gray-400">{r.date}</span>
                 </div>
-                <p className="text-sm text-gray-600">{r.content}</p>
+                <p className="text-sm text-gray-600">{r.comment}</p>
               </div>
             )
           })}

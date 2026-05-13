@@ -29,7 +29,9 @@ const EMPTY = {
 
 // 역할별 초기 데이터 fetch
 async function fetchForStudent(userId) {
-  const [mindRes, learningRes, tasksRes, todoRes, diaryRes, careerRes, diagRes] = await Promise.all([
+  const [userRes, assnRes, mindRes, learningRes, tasksRes, todoRes, diaryRes, careerRes, diagRes] = await Promise.all([
+    supabase.from('users').select('*').eq('id', userId).limit(1),
+    supabase.from('assignments').select('*').eq('student_id', userId),
     supabase.from('mind_records').select('*').eq('student_id', userId).order('date', { ascending: false }).limit(50),
     supabase.from('learning_records').select('*').eq('student_id', userId).order('date', { ascending: false }).limit(100),
     supabase.from('tasks').select('*').eq('student_id', userId),
@@ -40,6 +42,8 @@ async function fetchForStudent(userId) {
   ])
   return {
     ...EMPTY,
+    students: (userRes.data ?? []).map(toUser),
+    assignments: (assnRes.data ?? []).map(toAssignment),
     mindRecords: (mindRes.data ?? []).map(toMindRecord),
     learningRecords: (learningRes.data ?? []).map(toLearningRecord),
     tasks: (tasksRes.data ?? []).map(toTask),
