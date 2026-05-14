@@ -48,8 +48,10 @@ export default function QuizResultsTable({ attempts, students, quizSets, quizQue
   }, [quizSets, filterGrade])
 
   const openSet = openAttempt ? setById[openAttempt.quizSetId] : null
-  const openQuestions = openAttempt ? (questionsBySet[openAttempt.quizSetId] || []) : []
-  const openAnswerMap = openAttempt ? Object.fromEntries(openAttempt.answers.map((x) => [x.questionId, x])) : {}
+  // 응시 시점 순서대로 표시 — attempt.answers 순서가 응시 당시의 문제 순서를 그대로 담고 있음
+  const openQuestionMap = openAttempt
+    ? Object.fromEntries((questionsBySet[openAttempt.quizSetId] || []).map((q) => [q.id, q]))
+    : {}
   const openStudent = openAttempt ? studentById[openAttempt.studentId] : null
 
   return (
@@ -155,38 +157,40 @@ export default function QuizResultsTable({ attempts, students, quizSets, quizQue
                 </p>
               </div>
 
-              {openQuestions.length === 0 ? (
+              {openAttempt.answers.length === 0 ? (
                 <p className="text-xs text-gray-400 text-center py-4">문제 정보를 불러오지 못했습니다.</p>
               ) : (
-                openQuestions.map((q) => {
-                  const ans = openAnswerMap[q.id]
-                  const ok = ans?.isCorrect
+                openAttempt.answers.map((ans, idx) => {
+                  const q = openQuestionMap[ans.questionId]
+                  const ok = ans.isCorrect
                   return (
-                    <div key={q.id} className={`rounded-xl p-3 border ${ok ? 'border-emerald-100 bg-emerald-50/40' : 'border-red-100 bg-red-50/40'}`}>
+                    <div key={ans.questionId} className={`rounded-xl p-3 border ${ok ? 'border-emerald-100 bg-emerald-50/40' : 'border-red-100 bg-red-50/40'}`}>
                       <div className="flex items-start gap-2 mb-1.5">
                         {ok
                           ? <CheckCircle2 size={16} className="text-emerald-500 flex-shrink-0 mt-0.5" />
                           : <XCircle    size={16} className="text-red-500     flex-shrink-0 mt-0.5" />
                         }
                         <p className="text-xs text-gray-800 leading-relaxed">
-                          <span className="text-[10px] font-bold text-gray-400 mr-1">Q{q.orderNo}.</span>
-                          {q.question}
+                          <span className="text-[10px] font-bold text-gray-400 mr-1">Q{idx + 1}.</span>
+                          {q?.question ?? <span className="text-gray-400 italic">(삭제된 문제)</span>}
                         </p>
                       </div>
                       <div className="ml-5 text-[11px] space-y-0.5">
                         <p>
                           <span className="text-gray-400">답: </span>
                           <span className={ok ? 'text-emerald-700 font-semibold' : 'text-red-700 font-semibold'}>
-                            {ans?.raw || '(미입력)'}
+                            {ans.raw || '(미입력)'}
                           </span>
                         </p>
-                        <p>
-                          <span className="text-gray-400">정답: </span>
-                          <span className="text-gray-800 font-semibold">{q.acceptedAnswers[0]}</span>
-                          {q.acceptedAnswers.length > 1 && (
-                            <span className="text-gray-400"> · {q.acceptedAnswers.slice(1).join(', ')}</span>
-                          )}
-                        </p>
+                        {q && (
+                          <p>
+                            <span className="text-gray-400">정답: </span>
+                            <span className="text-gray-800 font-semibold">{q.acceptedAnswers[0]}</span>
+                            {q.acceptedAnswers.length > 1 && (
+                              <span className="text-gray-400"> · {q.acceptedAnswers.slice(1).join(', ')}</span>
+                            )}
+                          </p>
+                        )}
                       </div>
                     </div>
                   )

@@ -505,6 +505,129 @@ export function DataProvider({ children }) {
     return local
   }, [data.quizQuestions])
 
+  // 회차 신규 생성
+  const createQuizSet = useCallback(async ({ title, grade, round, source = '', description = '', isPublished = true }) => {
+    const row = {
+      id: `qs-${Date.now()}`,
+      title,
+      grade,
+      round,
+      source,
+      description,
+      is_published: isPublished,
+      created_at: new Date().toISOString(),
+    }
+    const { error } = await supabase.from('quiz_sets').insert(row)
+    if (error) {
+      console.error('createQuizSet insert error:', error)
+      throw error
+    }
+    const local = toQuizSet(row)
+    setData((prev) => ({
+      ...prev,
+      quizSets: [...prev.quizSets, local].sort((a, b) =>
+        (a.grade ?? '').localeCompare(b.grade ?? '') || (a.round ?? 0) - (b.round ?? 0)
+      ),
+    }))
+    return local
+  }, [])
+
+  // 회차 정보 수정 (배포 토글 포함)
+  const updateQuizSet = useCallback(async (setId, patch) => {
+    const snake = {}
+    if (patch.title !== undefined) snake.title = patch.title
+    if (patch.grade !== undefined) snake.grade = patch.grade
+    if (patch.round !== undefined) snake.round = patch.round
+    if (patch.source !== undefined) snake.source = patch.source
+    if (patch.description !== undefined) snake.description = patch.description
+    if (patch.isPublished !== undefined) snake.is_published = patch.isPublished
+
+    const { error } = await supabase.from('quiz_sets').update(snake).eq('id', setId)
+    if (error) {
+      console.error('updateQuizSet update error:', error)
+      throw error
+    }
+    setData((prev) => ({
+      ...prev,
+      quizSets: prev.quizSets.map((s) => (s.id === setId ? { ...s, ...patch } : s)),
+    }))
+  }, [])
+
+  // 회차 삭제 (CASCADE로 문제/응시 함께 정리)
+  const deleteQuizSet = useCallback(async (setId) => {
+    const { error } = await supabase.from('quiz_sets').delete().eq('id', setId)
+    if (error) {
+      console.error('deleteQuizSet delete error:', error)
+      throw error
+    }
+    setData((prev) => ({
+      ...prev,
+      quizSets: prev.quizSets.filter((s) => s.id !== setId),
+      quizQuestions: prev.quizQuestions.filter((q) => q.quizSetId !== setId),
+      quizAttempts: prev.quizAttempts.filter((a) => a.quizSetId !== setId),
+    }))
+  }, [])
+
+  // 문제 신규 생성
+  const createQuizQuestion = useCallback(async ({ quizSetId, orderNo, question, acceptedAnswers, explanation = '', hint = '' }) => {
+    const row = {
+      id: `qq-${Date.now()}`,
+      quiz_set_id: quizSetId,
+      order_no: orderNo,
+      question,
+      accepted_answers: acceptedAnswers,
+      explanation,
+      hint,
+    }
+    const { error } = await supabase.from('quiz_questions').insert(row)
+    if (error) {
+      console.error('createQuizQuestion insert error:', error)
+      throw error
+    }
+    const local = toQuizQuestion(row)
+    setData((prev) => ({
+      ...prev,
+      quizQuestions: [...prev.quizQuestions, local].sort((a, b) => {
+        if (a.quizSetId !== b.quizSetId) return (a.quizSetId ?? '').localeCompare(b.quizSetId ?? '')
+        return (a.orderNo ?? 0) - (b.orderNo ?? 0)
+      }),
+    }))
+    return local
+  }, [])
+
+  // 문제 수정
+  const updateQuizQuestion = useCallback(async (questionId, patch) => {
+    const snake = {}
+    if (patch.orderNo !== undefined) snake.order_no = patch.orderNo
+    if (patch.question !== undefined) snake.question = patch.question
+    if (patch.acceptedAnswers !== undefined) snake.accepted_answers = patch.acceptedAnswers
+    if (patch.explanation !== undefined) snake.explanation = patch.explanation
+    if (patch.hint !== undefined) snake.hint = patch.hint
+
+    const { error } = await supabase.from('quiz_questions').update(snake).eq('id', questionId)
+    if (error) {
+      console.error('updateQuizQuestion update error:', error)
+      throw error
+    }
+    setData((prev) => ({
+      ...prev,
+      quizQuestions: prev.quizQuestions.map((q) => (q.id === questionId ? { ...q, ...patch } : q)),
+    }))
+  }, [])
+
+  // 문제 삭제 (응시 기록의 answers는 그대로 유지 — 재채점 안 함)
+  const deleteQuizQuestion = useCallback(async (questionId) => {
+    const { error } = await supabase.from('quiz_questions').delete().eq('id', questionId)
+    if (error) {
+      console.error('deleteQuizQuestion delete error:', error)
+      throw error
+    }
+    setData((prev) => ({
+      ...prev,
+      quizQuestions: prev.quizQuestions.filter((q) => q.id !== questionId),
+    }))
+  }, [])
+
   // 최근 7일 학습시간 집계 (StudentListTab 주간 차트용)
   const getWeeklyLearning = useCallback((studentId) => {
     const days = []
@@ -541,6 +664,12 @@ export function DataProvider({ children }) {
       saveCareerDesignResult,
       saveLearningDiagnosisResult,
       submitQuizAttempt,
+      createQuizSet,
+      updateQuizSet,
+      deleteQuizSet,
+      createQuizQuestion,
+      updateQuizQuestion,
+      deleteQuizQuestion,
       getWeeklyLearning,
       resetData,
     }}>

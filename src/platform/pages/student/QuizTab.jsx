@@ -39,6 +39,11 @@ export default function QuizTab() {
       .sort((a, b) => a.orderNo - b.orderNo),
     [data.quizQuestions, activeSetId]
   )
+  // 결과 화면에서 응시 기록의 questionId로 문제 본문 lookup
+  const activeQuestionsById = useMemo(
+    () => Object.fromEntries(activeQuestions.map((q) => [q.id, q])),
+    [activeQuestions]
+  )
 
   function openSet(setId) {
     const existing = myAttempts.find((a) => a.quizSetId === setId)
@@ -177,7 +182,7 @@ export default function QuizTab() {
         </div>
 
         <div className="bg-white rounded-2xl p-5 border border-gray-100 min-h-[120px]">
-          <p className="text-[11px] font-bold text-emerald-600 mb-2">문제 {q.orderNo}</p>
+          <p className="text-[11px] font-bold text-emerald-600 mb-2">문제 {step + 1}</p>
           <p className="text-sm font-medium text-gray-800 leading-relaxed whitespace-pre-wrap">{q.question}</p>
           {q.hint && <p className="text-xs text-gray-400 mt-2">힌트: {q.hint}</p>}
         </div>
@@ -241,7 +246,6 @@ export default function QuizTab() {
   // ── 결과 화면 ──────────────────────────────────────────────
   if (mode === 'result' && activeSet && resultAttempt) {
     const pct = resultAttempt.total > 0 ? Math.round((resultAttempt.score / resultAttempt.total) * 100) : 0
-    const correctMap = Object.fromEntries(resultAttempt.answers.map((a) => [a.questionId, a]))
 
     return (
       <div className="py-4 space-y-4 px-1">
@@ -255,12 +259,13 @@ export default function QuizTab() {
         </div>
 
         <div className="space-y-2">
-          {activeQuestions.map((q) => {
-            const a = correctMap[q.id]
-            const ok = a?.isCorrect
+          {resultAttempt.answers.map((a, idx) => {
+            const q = activeQuestionsById[a.questionId]
+            if (!q) return null
+            const ok = a.isCorrect
             return (
               <div
-                key={q.id}
+                key={a.questionId}
                 className={`bg-white rounded-2xl p-4 border ${ok ? 'border-emerald-100' : 'border-red-100'}`}
               >
                 <div className="flex items-start gap-2 mb-2">
@@ -269,7 +274,7 @@ export default function QuizTab() {
                     : <XCircle    size={18} className="text-red-500     flex-shrink-0 mt-0.5" />
                   }
                   <p className="text-sm text-gray-800 leading-relaxed flex-1">
-                    <span className="text-[11px] font-bold text-gray-400 mr-1">Q{q.orderNo}.</span>
+                    <span className="text-[11px] font-bold text-gray-400 mr-1">Q{idx + 1}.</span>
                     {q.question}
                   </p>
                 </div>

@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { ClipboardCheck } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
 import QuizResultsTable from '../../components/admin/QuizResultsTable.jsx'
+import QuizSetManagement from '../../components/admin/QuizSetManagement.jsx'
 
 export default function QuizMonitorTab() {
   const { data } = useData()
@@ -51,6 +52,8 @@ export default function QuizMonitorTab() {
           ))}
         </div>
       )}
+
+      <QuizSetManagement />
 
       <QuizResultsTable
         attempts={data.quizAttempts}
