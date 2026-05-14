@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { User, AlertCircle, Plus, MoreVertical, Pencil, UserX, UserCheck } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { User, AlertCircle, Plus, MoreVertical, Pencil, UserX, UserCheck, Search, ArrowUp, ArrowDown } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
 import { useNavigate } from 'react-router-dom'
 import StudentFormModal from '../../components/admin/StudentFormModal.jsx'
@@ -11,6 +11,15 @@ const RISK_LABELS = {
   danger:  { label: '위험', color: 'text-red-600 bg-red-100' },
 }
 const GENDER_LABELS = { M: '남', F: '여' }
+const RISK_ORDER = { danger: 0, warning: 1, normal: 2 }
+const GRADE_ORDER = { '중1': 1, '중2': 2, '중3': 3, '고1': 4, '고2': 5, '고3': 6 }
+
+function gradeWeight(g) {
+  if (!g) return 99
+  if (GRADE_ORDER[g] != null) return GRADE_ORDER[g]
+  const m = g.match(/(\d+)/)
+  return m ? parseInt(m[1], 10) : 99
+}
 
 export default function UserManagementTab() {
   const { data, createStudent, updateStudent, setStudentStatus } = useData()
@@ -19,12 +28,82 @@ export default function UserManagementTab() {
   const [showInactive, setShowInactive] = useState(false)
   const [modal, setModal] = useState(null) // { mode: 'create' } | { mode: 'edit', student }
   const [menuOpenId, setMenuOpenId] = useState(null)
+  const [query, setQuery] = useState('')
+  const [sortKey, setSortKey] = useState('name') // 'name' | 'grade' | 'manager' | 'risk' | 'selfIndex'
+  const [sortDir, setSortDir] = useState('asc')  // 'asc' | 'desc'
 
   const managers = data.educators.filter((e) => e.role === 'manager')
   const allStudents = data.students
   const activeStudents = allStudents.filter((s) => (s.status ?? 'active') === 'active')
   const inactiveStudents = allStudents.filter((s) => s.status === 'inactive')
-  const visibleStudents = showInactive ? allStudents : activeStudents
+  const baseStudents = showInactive ? allStudents : activeStudents
+
+  const managerNameOf = (studentId) => {
+    const a = data.assignments.find((x) => x.studentId === studentId)
+    if (!a) return ''
+    return data.educators.find((e) => e.id === a.educatorId)?.name ?? ''
+  }
+
+  const visibleStudents = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    const filtered = q
+      ? baseStudents.filter((s) => {
+          const mgr = managerNameOf(s.id)
+          return (
+            (s.name || '').toLowerCase().includes(q) ||
+            (s.school || '').toLowerCase().includes(q) ||
+            (s.grade || '').toLowerCase().includes(q) ||
+            (s.className || '').toLowerCase().includes(q) ||
+            mgr.toLowerCase().includes(q)
+          )
+        })
+      : baseStudents.slice()
+
+    const dir = sortDir === 'asc' ? 1 : -1
+    const cmp = (a, b) => {
+      switch (sortKey) {
+        case 'grade': {
+          const d = gradeWeight(a.grade) - gradeWeight(b.grade)
+          return d !== 0 ? d * dir : (a.name || '').localeCompare(b.name || '', 'ko')
+        }
+        case 'manager': {
+          const am = managerNameOf(a.id)
+          const bm = managerNameOf(b.id)
+          if (!am && bm) return 1
+          if (am && !bm) return -1
+          const d = am.localeCompare(bm, 'ko')
+          return d !== 0 ? d * dir : (a.name || '').localeCompare(b.name || '', 'ko')
+        }
+        case 'risk': {
+          const d = (RISK_ORDER[a.riskLevel] ?? 99) - (RISK_ORDER[b.riskLevel] ?? 99)
+          return d !== 0 ? d * dir : (a.name || '').localeCompare(b.name || '', 'ko')
+        }
+        case 'selfIndex': {
+          const d = (a.selfIndex ?? 0) - (b.selfIndex ?? 0)
+          return d !== 0 ? d * dir : (a.name || '').localeCompare(b.name || '', 'ko')
+        }
+        case 'name':
+        default:
+          return (a.name || '').localeCompare(b.name || '', 'ko') * dir
+      }
+    }
+    return filtered.sort(cmp)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [baseStudents, query, sortKey, sortDir, data.assignments, data.educators])
+
+  const toggleSort = (key) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortDir(key === 'selfIndex' || key === 'risk' ? 'desc' : 'asc')
+    }
+  }
+
+  const SortIcon = ({ k }) =>
+    sortKey === k ? (
+      sortDir === 'asc' ? <ArrowUp size={10} className="inline" /> : <ArrowDown size={10} className="inline" />
+    ) : null
 
   const findManagerId = (studentId) =>
     data.assignments.find((a) => a.studentId === studentId)?.educatorId ?? ''
@@ -83,16 +162,61 @@ export default function UserManagementTab() {
           </div>
         </div>
 
+        {/* 검색바 */}
+        <div className="mb-2 relative">
+          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="이름·학교·학년·반·담당 검색"
+            className="w-full pl-8 pr-3 py-2 text-xs bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-emerald-400"
+          />
+        </div>
+
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-          <div className="grid grid-cols-[1fr_auto_auto_auto_auto] text-xs text-gray-400 font-semibold px-3 py-2 border-b border-gray-100 bg-gray-50">
-            <span>이름 · 학교</span>
-            <span className="w-14 text-center">담당</span>
-            <span className="w-10 text-center">위험도</span>
-            <span className="w-12 text-right">지수</span>
-            <span className="w-8 text-center"> </span>
+          <div className="grid grid-cols-[1fr_70px_44px_56px_44px_32px] text-xs text-gray-400 font-semibold px-3 py-2 border-b border-gray-100 bg-gray-50">
+            <button
+              type="button"
+              onClick={() => toggleSort('name')}
+              className={`text-left flex items-center gap-1 hover:text-gray-600 ${sortKey === 'name' ? 'text-gray-700' : ''}`}
+            >
+              이름 <SortIcon k="name" />
+            </button>
+            <button
+              type="button"
+              onClick={() => toggleSort('manager')}
+              className={`text-center flex items-center justify-center gap-1 hover:text-gray-600 ${sortKey === 'manager' ? 'text-gray-700' : ''}`}
+            >
+              담당 <SortIcon k="manager" />
+            </button>
+            <button
+              type="button"
+              onClick={() => toggleSort('grade')}
+              className={`text-center flex items-center justify-center gap-1 hover:text-gray-600 ${sortKey === 'grade' ? 'text-gray-700' : ''}`}
+            >
+              학년 <SortIcon k="grade" />
+            </button>
+            <button
+              type="button"
+              onClick={() => toggleSort('risk')}
+              className={`text-center flex items-center justify-center gap-1 hover:text-gray-600 ${sortKey === 'risk' ? 'text-gray-700' : ''}`}
+            >
+              위험도 <SortIcon k="risk" />
+            </button>
+            <button
+              type="button"
+              onClick={() => toggleSort('selfIndex')}
+              className={`text-right flex items-center justify-end gap-1 hover:text-gray-600 ${sortKey === 'selfIndex' ? 'text-gray-700' : ''}`}
+            >
+              지수 <SortIcon k="selfIndex" />
+            </button>
+            <span className="text-center"> </span>
           </div>
           {visibleStudents.length === 0 ? (
-            <div className="px-3 py-6 text-center text-xs text-gray-400">표시할 학생이 없습니다.</div>
+            <div className="px-3 py-6 text-center text-xs text-gray-400">
+              {query.trim() ? '검색 결과가 없습니다.' : '표시할 학생이 없습니다.'}
+            </div>
           ) : (
             visibleStudents.map((s) => {
               const risk = RISK_LABELS[s.riskLevel] || RISK_LABELS.normal
@@ -106,12 +230,12 @@ export default function UserManagementTab() {
               return (
                 <div
                   key={s.id}
-                  className={`grid grid-cols-[1fr_auto_auto_auto_auto] items-center px-3 py-2.5 border-b border-gray-50 last:border-0 transition-colors ${
+                  className={`grid grid-cols-[1fr_70px_44px_56px_44px_32px] items-center px-3 py-2.5 border-b border-gray-50 last:border-0 transition-colors ${
                     isInactive ? 'bg-gray-50/60 opacity-70' : 'hover:bg-gray-50 active:bg-gray-100'
                   } cursor-pointer`}
                   onClick={() => navigate(`/admin/student/${s.id}`)}
                 >
-                  <div className="flex items-center gap-2 min-w-0">
+                  <div className="flex items-center gap-2 min-w-0 pr-2">
                     <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
                       <User size={13} className="text-gray-400" />
                     </div>
@@ -130,19 +254,20 @@ export default function UserManagementTab() {
                           <span className="text-[10px] font-bold px-1 rounded text-gray-500 bg-gray-200">비활성</span>
                         )}
                       </div>
-                      <span className="text-xs text-gray-400 truncate">
-                        {s.school || '학교 미입력'} · {s.grade}{s.className ? ` · ${s.className}` : ''}
+                      <span className="text-xs text-gray-400 truncate block">
+                        {s.school || '학교 미입력'}{s.className ? ` · ${s.className}` : ''}
                       </span>
                     </div>
                   </div>
-                  <span className="w-14 text-center text-xs text-gray-500 truncate px-1">
+                  <span className="text-center text-xs text-gray-500 truncate px-1">
                     {mgr ? mgr.name : <span className="text-orange-400">미배정</span>}
                   </span>
-                  <span className={`w-10 text-center text-xs font-semibold px-1 py-0.5 rounded-full ${risk.color}`}>
+                  <span className="text-center text-xs text-gray-600">{s.grade || '-'}</span>
+                  <span className={`text-center text-xs font-semibold px-1 py-0.5 rounded-full mx-auto ${risk.color}`}>
                     {risk.label}
                   </span>
-                  <span className="w-12 text-right text-sm font-bold text-blue-600">{s.selfIndex}점</span>
-                  <div className="w-8 flex justify-center relative">
+                  <span className="text-right text-sm font-bold text-blue-600">{s.selfIndex}점</span>
+                  <div className="flex justify-center relative">
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
