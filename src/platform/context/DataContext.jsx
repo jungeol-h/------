@@ -396,13 +396,14 @@ export function DataProvider({ children }) {
   }, [])
 
   // TODO 아이템 추가
-  const addTodoItem = useCallback(async (studentId, { subject, plannedMin }) => {
+  const addTodoItem = useCallback(async (studentId, { subject, plannedMin, content = '' }) => {
     const row = {
       id: `td${Date.now()}`,
       student_id: studentId,
       date: new Date().toISOString().slice(0, 10),
       subject,
       planned_min: plannedMin,
+      content,
       done: false,
     }
     const { error: todoError } = await supabase.from('todo_items').insert(row)
@@ -413,6 +414,24 @@ export function DataProvider({ children }) {
     setData((prev) => ({
       ...prev,
       todoItems: [toTodoItem(row), ...prev.todoItems],
+    }))
+  }, [])
+
+  // TODO 아이템 수정 (학습 내용 보완 등)
+  const updateTodoItem = useCallback(async (itemId, patch) => {
+    const snake = {}
+    if (patch.subject !== undefined) snake.subject = patch.subject
+    if (patch.plannedMin !== undefined) snake.planned_min = patch.plannedMin
+    if (patch.content !== undefined) snake.content = patch.content
+    if (Object.keys(snake).length === 0) return
+    const { error: updateError } = await supabase.from('todo_items').update(snake).eq('id', itemId)
+    if (updateError) {
+      console.error('updateTodoItem update error:', updateError)
+      throw updateError
+    }
+    setData((prev) => ({
+      ...prev,
+      todoItems: prev.todoItems.map((t) => (t.id === itemId ? { ...t, ...patch } : t)),
     }))
   }, [])
 
@@ -804,6 +823,7 @@ export function DataProvider({ children }) {
       toggleTask,
       addLearningRecord,
       addTodoItem,
+      updateTodoItem,
       toggleTodo,
       saveCareerDesignResult,
       saveLearningDiagnosisResult,

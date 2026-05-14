@@ -30,13 +30,15 @@ function TodoScreen({ studentId, onBack }) {
 
   const [newSubject, setNewSubject] = useState('수학')
   const [newMin, setNewMin] = useState(30)
+  const [newContent, setNewContent] = useState('')
   const [adding, setAdding] = useState(false)
   const [todoError, setTodoError] = useState(null)
 
   const handleAdd = async () => {
     setTodoError(null)
     try {
-      await addTodoItem(studentId, { subject: newSubject, plannedMin: newMin })
+      await addTodoItem(studentId, { subject: newSubject, plannedMin: newMin, content: newContent.trim() })
+      setNewContent('')
       setAdding(false)
     } catch (e) {
       setTodoError(e)
@@ -90,21 +92,29 @@ function TodoScreen({ studentId, onBack }) {
         {todayItems.map(item => (
           <div
             key={item.id}
-            onClick={() => handleToggle(item.id)}
-            className={`flex items-center gap-3 p-4 rounded-2xl shadow-sm cursor-pointer transition-all active:scale-[0.98] ${
+            className={`flex items-start gap-3 p-4 rounded-2xl shadow-sm transition-all ${
               item.done ? 'bg-indigo-50' : 'bg-white'
             }`}
           >
-            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
-              item.done ? 'bg-indigo-500 border-indigo-500' : 'border-gray-300'
-            }`}>
+            <button
+              onClick={() => handleToggle(item.id)}
+              className={`w-6 h-6 mt-0.5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all active:scale-90 ${
+                item.done ? 'bg-indigo-500 border-indigo-500' : 'border-gray-300'
+              }`}
+              aria-label={item.done ? '완료 해제' : '완료'}
+            >
               {item.done && <Check size={13} className="text-white" strokeWidth={3} />}
-            </div>
-            <div className="flex-1">
+            </button>
+            <div className="flex-1 min-w-0">
               <p className={`font-semibold text-sm ${item.done ? 'line-through text-gray-400' : 'text-gray-800'}`}>
                 {item.subject}
               </p>
               <p className="text-xs text-gray-400">목표 {item.plannedMin}분</p>
+              {item.content && (
+                <p className={`text-xs mt-1.5 whitespace-pre-wrap break-words ${item.done ? 'text-gray-400' : 'text-gray-600'}`}>
+                  {item.content}
+                </p>
+              )}
             </div>
           </div>
         ))}
@@ -139,6 +149,16 @@ function TodoScreen({ studentId, onBack }) {
               value={newMin}
               onChange={e => setNewMin(Number(e.target.value))}
               className="w-full accent-indigo-500"
+            />
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 mb-1">학습 내용 (선택)</p>
+            <textarea
+              rows={3}
+              value={newContent}
+              onChange={e => setNewContent(e.target.value)}
+              placeholder="어떤 내용을 공부할지 자세히 적어보세요"
+              className="w-full text-sm p-3 bg-gray-50 rounded-xl border border-gray-100 focus:border-indigo-300 focus:bg-white focus:outline-none resize-none"
             />
           </div>
           <div className="flex gap-2">

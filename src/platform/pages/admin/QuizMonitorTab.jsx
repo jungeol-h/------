@@ -1,11 +1,16 @@
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { ClipboardCheck } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
+import { useAuth } from '../../context/AuthContext.jsx'
 import QuizResultsTable from '../../components/admin/QuizResultsTable.jsx'
 import QuizSetManagement from '../../components/admin/QuizSetManagement.jsx'
+import DownloadPdfButton from '../../pdf/components/DownloadPdfButton.jsx'
+import { buildFilename, nowDateTime } from '../../pdf/utils/formatters.js'
+import { authorOf } from '../../pdf/config/meta.js'
 
 export default function QuizMonitorTab() {
   const { data } = useData()
+  const { currentUser } = useAuth()
 
   // 회차별 응시자 수 / 미응시자 수 / 평균 — 간단 요약 카드
   const summaries = useMemo(() => {
@@ -23,11 +28,38 @@ export default function QuizMonitorTab() {
     })
   }, [data.quizSets, data.students, data.quizAttempts])
 
+  const handleDownloadPdf = useCallback(async () => {
+    const filename = buildFilename('확인평가보고서', '전체')
+    const [{ downloadPdf }, { default: QuizReport }] = await Promise.all([
+      import('../../pdf/utils/downloadPdf.js'),
+      import('../../pdf/reports/QuizReport.jsx'),
+    ])
+    await downloadPdf(
+      <QuizReport
+        summaries={summaries}
+        attempts={data.quizAttempts}
+        students={data.students}
+        quizSets={data.quizSets}
+        period={`조회일 ${nowDateTime().slice(0, 10)}`}
+        generatedAt={nowDateTime()}
+        author={authorOf(currentUser)}
+      />,
+      filename,
+    )
+  }, [summaries, data.quizAttempts, data.students, data.quizSets, currentUser])
+
   return (
     <div className="py-4 space-y-4">
-      <div className="flex items-center gap-2">
-        <ClipboardCheck size={20} className="text-emerald-600" />
-        <h2 className="text-base font-bold text-gray-800">확인평가 모니터링</h2>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <ClipboardCheck size={20} className="text-emerald-600" />
+          <h2 className="text-base font-bold text-gray-800">확인평가 모니터링</h2>
+        </div>
+        <DownloadPdfButton
+          onDownload={handleDownloadPdf}
+          label="확인평가 보고서"
+          disabled={summaries.length === 0}
+        />
       </div>
 
       {summaries.length === 0 ? (

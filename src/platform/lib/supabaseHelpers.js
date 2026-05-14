@@ -83,6 +83,7 @@ export const toTodoItem = (row) => ({
   date: row.date,
   subject: row.subject,
   plannedMin: row.planned_min,
+  content: row.content ?? '',
   done: row.done ?? false,
 })
 

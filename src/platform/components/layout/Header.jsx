@@ -26,7 +26,7 @@ export default function Header({ title, badge, back }) {
   }
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-40 bg-white border-b border-gray-100 shadow-sm">
+    <header className="fixed top-0 left-0 right-0 z-40 bg-white border-b border-gray-100 shadow-sm print:hidden">
       <div className="max-w-lg mx-auto flex items-center px-4 h-14 gap-3">
         {back ? (
           <button onClick={() => navigate(back)} className="flex-shrink-0 -ml-1 p-1 text-gray-500 hover:text-gray-700">

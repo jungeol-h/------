@@ -148,6 +148,7 @@ CREATE TABLE IF NOT EXISTS todo_items (
   date        DATE NOT NULL,
   subject     TEXT NOT NULL,
   planned_min INTEGER NOT NULL CHECK (planned_min > 0),
+  content     TEXT,
   done        BOOLEAN DEFAULT FALSE,
   created_at  TIMESTAMPTZ DEFAULT NOW()
 );

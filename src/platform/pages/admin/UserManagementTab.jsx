@@ -1,8 +1,12 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { User, AlertCircle, Plus, MoreVertical, Pencil, UserX, UserCheck, Search, ArrowUp, ArrowDown } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
+import { useAuth } from '../../context/AuthContext.jsx'
 import { useNavigate } from 'react-router-dom'
 import StudentFormModal from '../../components/admin/StudentFormModal.jsx'
+import DownloadPdfButton from '../../pdf/components/DownloadPdfButton.jsx'
+import { buildFilename, nowDateTime } from '../../pdf/utils/formatters.js'
+import { authorOf } from '../../pdf/config/meta.js'
 
 const ROLE_LABELS = { student: '학생', manager: '학습매니저', admin: '관리자' }
 const RISK_LABELS = {
@@ -23,6 +27,7 @@ function gradeWeight(g) {
 
 export default function UserManagementTab() {
   const { data, createStudent, updateStudent, setStudentStatus } = useData()
+  const { currentUser } = useAuth()
   const navigate = useNavigate()
 
   const [showInactive, setShowInactive] = useState(false)
@@ -117,6 +122,27 @@ export default function UserManagementTab() {
     await updateStudent(modal.student.id, form)
   }
 
+  const handleDownloadPdf = useCallback(async () => {
+    const identifier = `${showInactive ? '전체' : '활성'}_${sortKey}${sortDir === 'desc' ? '내림' : '오름'}`
+    const filename = buildFilename('학생목록', identifier)
+    const [{ downloadPdf }, { default: UserListReport }] = await Promise.all([
+      import('../../pdf/utils/downloadPdf.js'),
+      import('../../pdf/reports/UserListReport.jsx'),
+    ])
+    await downloadPdf(
+      <UserListReport
+        students={visibleStudents}
+        managerNameOf={managerNameOf}
+        filters={{ showInactive, query, sortKey, sortDir }}
+        period={`조회일 ${nowDateTime().slice(0, 10)}`}
+        generatedAt={nowDateTime()}
+        author={authorOf(currentUser)}
+      />,
+      filename,
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleStudents, showInactive, query, sortKey, sortDir, currentUser])
+
   const handleToggleStatus = async (student) => {
     const isActive = (student.status ?? 'active') === 'active'
     const next = isActive ? 'inactive' : 'active'
@@ -134,7 +160,14 @@ export default function UserManagementTab() {
 
   return (
     <div className="py-6 space-y-6">
-      <h2 className="text-lg font-bold text-gray-900">사용자 관리</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-bold text-gray-900">사용자 관리</h2>
+        <DownloadPdfButton
+          onDownload={handleDownloadPdf}
+          label="학생 목록 보고서"
+          disabled={visibleStudents.length === 0}
+        />
+      </div>
 
       {/* ── 학생 목록 ── */}
       <section>
