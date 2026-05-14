@@ -16,15 +16,20 @@ CREATE TABLE IF NOT EXISTS users (
   grade           TEXT,                     -- '중1' | '중2' | '중3'
   class_name      TEXT,                     -- '중1' | '중2S' | '중2A' | '중3'
   parent_password TEXT,                     -- 학부모 전화번호 010+8자리
+  gender          TEXT,                     -- 'M' | 'F' | NULL
   self_index      INTEGER DEFAULT 70,
   risk_level      TEXT DEFAULT 'normal',    -- 'normal' | 'warning' | 'danger'
   status          TEXT DEFAULT 'active',
-  created_at      TIMESTAMPTZ DEFAULT NOW()
+  created_at      TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT users_gender_check CHECK (gender IN ('M', 'F') OR gender IS NULL)
 );
 
 -- 기존 테이블에 컬럼 추가 (이미 생성된 경우)
 ALTER TABLE users ADD COLUMN IF NOT EXISTS class_name      TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS parent_password TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS gender          TEXT;
+ALTER TABLE users DROP CONSTRAINT IF EXISTS users_gender_check;
+ALTER TABLE users ADD CONSTRAINT users_gender_check CHECK (gender IN ('M', 'F') OR gender IS NULL);
 
 -- ----------------------------------------------------------------
 -- 2. 매니저-학생 배정

@@ -81,15 +81,30 @@ async function fetchForManager(userId) {
     .select('*')
     .eq('educator_id', userId)
 
-  const studentIds = (assnData ?? []).map((a) => a.student_id)
-  const assignments = (assnData ?? []).map(toAssignment)
+  const allStudentIds = (assnData ?? []).map((a) => a.student_id)
+
+  if (allStudentIds.length === 0) {
+    return { ...EMPTY, assignments: [] }
+  }
+
+  // 비활성 학생은 매니저 화면 전체에서 제외
+  const { data: activeStudents } = await supabase
+    .from('users')
+    .select('*')
+    .in('id', allStudentIds)
+    .eq('status', 'active')
+
+  const studentIds = (activeStudents ?? []).map((u) => u.id)
+  const activeIdSet = new Set(studentIds)
+  const assignments = (assnData ?? [])
+    .filter((a) => activeIdSet.has(a.student_id))
+    .map(toAssignment)
 
   if (studentIds.length === 0) {
     return { ...EMPTY, assignments }
   }
 
-  const [studentsRes, mindRes, alertsRes, counselingRes, tasksRes, learningRes, diaryRes, careerRes, diagRes, attemptsRes, setsRes] = await Promise.all([
-    supabase.from('users').select('*').in('id', studentIds),
+  const [mindRes, alertsRes, counselingRes, tasksRes, learningRes, diaryRes, careerRes, diagRes, attemptsRes, setsRes] = await Promise.all([
     supabase.from('mind_records').select('*').in('student_id', studentIds).order('date', { ascending: false }).limit(200),
     supabase.from('alerts').select('*').eq('manager_id', userId).order('created_at', { ascending: false }),
     supabase.from('counseling_records').select('*').eq('manager_id', userId).order('date', { ascending: false }),
@@ -108,7 +123,7 @@ async function fetchForManager(userId) {
 
   return {
     ...EMPTY,
-    students: (studentsRes.data ?? []).map(toUser),
+    students: (activeStudents ?? []).map(toUser),
     assignments,
     mindRecords: (mindRes.data ?? []).map(toMindRecord),
     alerts: (alertsRes.data ?? []).map(toAlert),
@@ -135,7 +150,11 @@ async function fetchForAdmin() {
   ])
 
   const allUsers = usersRes.data ?? []
-  const studentIds = allUsers.filter((u) => u.role === 'student').map((u) => u.id)
+  // 사용자 관리 탭은 비활성 학생도 보여줘야 하므로 students 자체는 전체 유지
+  // 활동 데이터(마인드/학습/통계 등) fetch는 active 학생만 대상으로 — 비활성은 통계에 미반영
+  const studentIds = allUsers
+    .filter((u) => u.role === 'student' && (u.status ?? 'active') === 'active')
+    .map((u) => u.id)
   const setIds = (setsRes.data ?? []).map((s) => s.id)
 
   // 매니저 화면과 동일하게 학생 활동 데이터도 fetch
@@ -628,6 +647,131 @@ export function DataProvider({ children }) {
     }))
   }, [])
 
+  // 학생 신규 추가 (관리자 사용자 관리 탭)
+  const createStudent = useCallback(async ({
+    name, gender, grade, className, school,
+    loginId, password, parentPassword, managerId,
+  }) => {
+    const id = `s${Date.now()}`
+    const row = {
+      id,
+      login_id: loginId,
+      password,
+      name,
+      role: 'student',
+      school: school ?? '',
+      grade: grade ?? '',
+      class_name: className ?? '',
+      parent_password: parentPassword ?? '',
+      gender: gender ?? null,
+      self_index: 70,
+      risk_level: 'normal',
+      status: 'active',
+    }
+    const { error } = await supabase.from('users').insert(row)
+    if (error) {
+      console.error('createStudent insert error:', error)
+      if (error.code === '23505') {
+        throw new Error('이미 사용 중인 login_id입니다.')
+      }
+      throw error
+    }
+
+    let newAssignment = null
+    if (managerId) {
+      const assn = { student_id: id, educator_id: managerId }
+      const { error: aErr } = await supabase.from('assignments').insert(assn)
+      if (aErr) console.error('createStudent assignment insert error:', aErr)
+      else newAssignment = toAssignment(assn)
+    }
+
+    const local = toUser(row)
+    setData((prev) => ({
+      ...prev,
+      students: [...prev.students, local],
+      assignments: newAssignment ? [...prev.assignments, newAssignment] : prev.assignments,
+    }))
+    return local
+  }, [])
+
+  // 학생 정보 수정. patch에 managerId 키가 있으면 assignments 갈아치움.
+  const updateStudent = useCallback(async (studentId, patch) => {
+    const snake = {}
+    if (patch.name !== undefined) snake.name = patch.name
+    if (patch.loginId !== undefined) snake.login_id = patch.loginId
+    if (patch.password !== undefined) snake.password = patch.password
+    if (patch.gender !== undefined) snake.gender = patch.gender
+    if (patch.grade !== undefined) snake.grade = patch.grade
+    if (patch.className !== undefined) snake.class_name = patch.className
+    if (patch.school !== undefined) snake.school = patch.school
+    if (patch.parentPassword !== undefined) snake.parent_password = patch.parentPassword
+
+    if (Object.keys(snake).length > 0) {
+      const { error } = await supabase.from('users').update(snake).eq('id', studentId)
+      if (error) {
+        console.error('updateStudent update error:', error)
+        if (error.code === '23505') {
+          throw new Error('이미 사용 중인 login_id입니다.')
+        }
+        throw error
+      }
+    }
+
+    // managerId 변경 처리: 기존 assignments 모두 삭제 후 신규 1개 insert
+    let assignmentsPatch = null
+    if (patch.managerId !== undefined) {
+      const { error: delErr } = await supabase
+        .from('assignments')
+        .delete()
+        .eq('student_id', studentId)
+      if (delErr) console.error('updateStudent assignment delete error:', delErr)
+
+      if (patch.managerId) {
+        const assn = { student_id: studentId, educator_id: patch.managerId }
+        const { error: insErr } = await supabase.from('assignments').insert(assn)
+        if (insErr) console.error('updateStudent assignment insert error:', insErr)
+        else assignmentsPatch = toAssignment(assn)
+      } else {
+        assignmentsPatch = 'cleared'
+      }
+    }
+
+    // local state: patch를 camelCase 그대로 머지
+    const localPatch = { ...patch }
+    delete localPatch.managerId
+
+    setData((prev) => {
+      let nextAssignments = prev.assignments
+      if (patch.managerId !== undefined) {
+        nextAssignments = prev.assignments.filter((a) => a.studentId !== studentId)
+        if (assignmentsPatch && assignmentsPatch !== 'cleared') {
+          nextAssignments = [...nextAssignments, assignmentsPatch]
+        }
+      }
+      return {
+        ...prev,
+        students: prev.students.map((s) => (s.id === studentId ? { ...s, ...localPatch } : s)),
+        assignments: nextAssignments,
+      }
+    })
+  }, [])
+
+  // 학생 활성/비활성 토글 (soft delete)
+  const setStudentStatus = useCallback(async (studentId, status) => {
+    const { error } = await supabase
+      .from('users')
+      .update({ status })
+      .eq('id', studentId)
+    if (error) {
+      console.error('setStudentStatus update error:', error)
+      throw error
+    }
+    setData((prev) => ({
+      ...prev,
+      students: prev.students.map((s) => (s.id === studentId ? { ...s, status } : s)),
+    }))
+  }, [])
+
   // 최근 7일 학습시간 집계 (StudentListTab 주간 차트용)
   const getWeeklyLearning = useCallback((studentId) => {
     const days = []
@@ -670,6 +814,9 @@ export function DataProvider({ children }) {
       createQuizQuestion,
       updateQuizQuestion,
       deleteQuizQuestion,
+      createStudent,
+      updateStudent,
+      setStudentStatus,
       getWeeklyLearning,
       resetData,
     }}>

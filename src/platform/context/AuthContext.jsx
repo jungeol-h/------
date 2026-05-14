@@ -33,6 +33,7 @@ export function AuthProvider({ children }) {
         .select('*')
         .eq('login_id', loginId.trim())
         .eq('password', password.trim())
+        .eq('status', 'active')
         .single()
 
       if (dbError || !data) {
