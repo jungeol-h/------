@@ -1,30 +1,48 @@
-import { useState } from 'react'
-import { AlertTriangle, ChevronRight, X, CheckCheck, Clock, ClipboardList, MessageCircle, User } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { AlertTriangle, X, CheckCheck, Clock, ClipboardList, MessageCircle, User } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
+import { getRiskStudents } from '../../context/selectors/riskDetection.js'
 import SaveErrorBox from '../../components/common/SaveErrorBox.jsx'
 
 export default function ManagerHomeTab() {
   const { currentUser } = useAuth()
-  const { data, resolveAlert } = useData()
+  const { data, recordCoaching } = useData()
 
-  const myAlerts = data.alerts.filter(a => a.managerId === currentUser?.id && !a.resolved)
   const myStudentIds = data.assignments.filter(a => a.educatorId === currentUser?.id).map(a => a.studentId)
   const myStudents = data.students.filter(s => myStudentIds.includes(s.id))
 
+  // 위험 학생 — 조회 시점 실시간 계산 (담당 학생 중 마인드 위험군)
+  const riskStudents = useMemo(
+    () => getRiskStudents(data, { educatorId: currentUser?.id }),
+    [data, currentUser?.id]
+  )
+
+  // 이미 코칭(alert 기록)이 있는 학생 — "코칭 완료" 표시용
+  const coachedStudentIds = useMemo(
+    () => new Set(data.alerts.map(a => a.studentId)),
+    [data.alerts]
+  )
+
   const [modal, setModal] = useState(null)
   const [comment, setComment] = useState('')
-  const [resolveError, setResolveError] = useState(null)
+  const [coachError, setCoachError] = useState(null)
 
-  const handleResolve = async () => {
+  const handleCoach = async () => {
     if (!modal) return
-    setResolveError(null)
+    setCoachError(null)
     try {
-      await resolveAlert(modal.id, comment)
+      await recordCoaching({
+        studentId: modal.student.id,
+        managerId: currentUser.id,
+        studentName: modal.student.name,
+        level: modal.level,
+        comment,
+      })
       setModal(null)
       setComment('')
     } catch (e) {
-      setResolveError(e)
+      setCoachError(e)
     }
   }
 
@@ -35,38 +53,43 @@ export default function ManagerHomeTab() {
         <p className="text-sm text-gray-500">담당 학생 {myStudents.length}명</p>
       </div>
 
-      {/* 긴급 알림 */}
-      {myAlerts.length > 0 ? (
+      {/* 위험 학생 — 마인드 점수 낮은 담당 학생 */}
+      {riskStudents.length > 0 ? (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <AlertTriangle size={16} className="text-red-500" />
-            <span className="text-red-500 font-bold text-sm">긴급 알림</span>
-            <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">{myAlerts.length}</span>
+            <span className="text-red-500 font-bold text-sm">마인드 위험 학생</span>
+            <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">{riskStudents.length}</span>
           </div>
-          {myAlerts.map(alert => {
-            const student = data.students.find(s => s.id === alert.studentId)
+          {riskStudents.map(({ student, level }) => {
+            const coached = coachedStudentIds.has(student.id)
             return (
               <div
-                key={alert.id}
-                onClick={() => { setModal(alert); setComment('') }}
+                key={student.id}
+                onClick={() => { setModal({ student, level }); setComment('') }}
                 className={`rounded-2xl p-4 cursor-pointer border-2 transition-all hover:shadow-md ${
-                  alert.severity === 'danger'
-                    ? 'bg-red-50 border-red-300'
-                    : 'bg-yellow-50 border-yellow-300'
+                  level === 'danger' ? 'bg-red-50 border-red-300' : 'bg-yellow-50 border-yellow-300'
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                    alert.severity === 'danger' ? 'bg-red-100' : 'bg-yellow-100'
+                    level === 'danger' ? 'bg-red-100' : 'bg-yellow-100'
                   }`}>
-                    <AlertTriangle size={20} className={alert.severity === 'danger' ? 'text-red-500' : 'text-yellow-500'} />
+                    <AlertTriangle size={20} className={level === 'danger' ? 'text-red-500' : 'text-yellow-500'} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-gray-800 text-sm">{alert.message}</p>
-                    <p className="text-xs text-gray-500 mt-0.5 truncate">{alert.detail}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{alert.date}</p>
+                    <p className="font-bold text-gray-800 text-sm">{student.name} 학생</p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      마인드 점수 {level === 'danger' ? '위험' : '주의'} 단계입니다
+                    </p>
                   </div>
-                  <ChevronRight size={16} className="text-blue-400 flex-shrink-0" />
+                  {coached ? (
+                    <span className="flex items-center gap-1 text-xs text-green-600 font-semibold flex-shrink-0">
+                      <CheckCheck size={14} /> 코칭 완료
+                    </span>
+                  ) : (
+                    <span className="text-xs text-blue-500 font-semibold flex-shrink-0">코칭하기</span>
+                  )}
                 </div>
               </div>
             )
@@ -75,8 +98,8 @@ export default function ManagerHomeTab() {
       ) : (
         <div className="bg-green-50 border border-green-200 rounded-2xl p-4 text-center">
           <CheckCheck size={24} className="text-green-500 mx-auto mb-1" />
-          <p className="text-green-700 font-semibold text-sm">긴급 알림이 없어요</p>
-          <p className="text-xs text-green-500 mt-0.5">모든 학생이 안정적인 상태입니다</p>
+          <p className="text-green-700 font-semibold text-sm">마인드 위험 학생이 없어요</p>
+          <p className="text-xs text-green-500 mt-0.5">담당 학생이 모두 안정적인 상태입니다</p>
         </div>
       )}
 
@@ -85,7 +108,7 @@ export default function ManagerHomeTab() {
         <h3 className="text-sm font-bold text-gray-700 mb-3">담당 학생 현황</h3>
         <div className="space-y-2">
           {myStudents.map(s => {
-            const hasAlert = myAlerts.some(a => a.studentId === s.id)
+            const isRisk = riskStudents.some(r => r.student.id === s.id)
             const totalMin = data.learningRecords.filter(r => r.studentId === s.id).reduce((sum, r) => sum + r.duration, 0)
             const pendingCount = data.tasks.filter(t => t.studentId === s.id && t.status === 'pending').length
             const counselingCount = data.counselingRecords.filter(r => r.studentId === s.id).length
@@ -97,7 +120,7 @@ export default function ManagerHomeTab() {
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-gray-800">{s.name}</span>
-                    {hasAlert && (
+                    {isRisk && (
                       <AlertTriangle size={13} className="text-red-500" />
                     )}
                   </div>
@@ -133,9 +156,11 @@ export default function ManagerHomeTab() {
                 <X size={20} />
               </button>
             </div>
-            <div className={`rounded-xl p-3 text-sm ${modal.severity === 'danger' ? 'bg-red-50 text-red-700' : 'bg-yellow-50 text-yellow-700'}`}>
-              <p className="font-semibold">{modal.message}</p>
-              <p className="mt-1 opacity-80">{modal.detail}</p>
+            <div className={`rounded-xl p-3 text-sm ${modal.level === 'danger' ? 'bg-red-50 text-red-700' : 'bg-yellow-50 text-yellow-700'}`}>
+              <p className="font-semibold">{modal.student.name} 학생</p>
+              <p className="mt-1 opacity-80">
+                마인드 점수가 {modal.level === 'danger' ? '위험' : '주의'} 단계입니다. 코칭 코멘트를 남기면 상담 기록에 등록됩니다.
+              </p>
             </div>
             <textarea
               value={comment}
@@ -144,7 +169,7 @@ export default function ManagerHomeTab() {
               rows={4}
               className="w-full border border-gray-200 rounded-xl p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-300"
             />
-            <SaveErrorBox error={resolveError} userId={currentUser?.id} />
+            <SaveErrorBox error={coachError} userId={currentUser?.id} />
             <div className="flex gap-2">
               <button
                 onClick={() => setModal(null)}
@@ -153,11 +178,12 @@ export default function ManagerHomeTab() {
                 취소
               </button>
               <button
-                onClick={handleResolve}
-                className="flex-1 py-3 bg-emerald-500 text-white rounded-xl font-bold hover:bg-emerald-600 active:scale-95 transition-all flex items-center justify-center gap-2"
+                onClick={handleCoach}
+                disabled={!comment.trim()}
+                className="flex-1 py-3 bg-emerald-500 text-white rounded-xl font-bold hover:bg-emerald-600 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <CheckCheck size={16} />
-                알림 해제
+                코칭 기록 저장
               </button>
             </div>
           </div>

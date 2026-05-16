@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from 'react'
 import { User, AlertCircle, Plus, MoreVertical, Pencil, UserX, UserCheck, Search, ArrowUp, ArrowDown } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
+import { getMindStatus } from '../../context/selectors/riskDetection.js'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useNavigate } from 'react-router-dom'
 import StudentFormModal from '../../components/admin/StudentFormModal.jsx'
@@ -253,7 +254,7 @@ export default function UserManagementTab() {
           ) : (
             visibleStudents.map((s) => {
               const risk = RISK_LABELS[s.riskLevel] || RISK_LABELS.normal
-              const hasAlert = data.alerts.some((a) => a.studentId === s.id && !a.resolved)
+              const hasAlert = getMindStatus(data.mindRecords.filter((r) => r.studentId === s.id)) !== null
               const mgr = managers.find((m) =>
                 data.assignments.some((a) => a.studentId === s.id && a.educatorId === m.id)
               )

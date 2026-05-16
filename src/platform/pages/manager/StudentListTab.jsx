@@ -1,6 +1,7 @@
 import { User, AlertCircle } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
+import { getMindStatus } from '../../context/selectors/riskDetection.js'
 import { useNavigate } from 'react-router-dom'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 
@@ -43,7 +44,7 @@ export default function StudentListTab() {
           const records = data.learningRecords.filter((r) => r.studentId === s.id)
           const totalMin = records.reduce((sum, r) => sum + r.duration, 0)
           const chartData = getWeeklyLearning(s.id)
-          const hasAlert = data.alerts.some((a) => a.studentId === s.id && !a.resolved)
+          const hasAlert = getMindStatus(data.mindRecords.filter((r) => r.studentId === s.id)) !== null
 
           return (
             <div

@@ -3,6 +3,7 @@ import { Home, Users, MessageSquare, ClipboardCheck, Loader } from 'lucide-react
 import PageLayout from '../../components/layout/PageLayout.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
+import { getRiskStudents } from '../../context/selectors/riskDetection.js'
 import ManagerHomeTab from './ManagerHomeTab.jsx'
 import StudentListTab from './StudentListTab.jsx'
 import CounselingTab from './CounselingTab.jsx'
@@ -27,7 +28,8 @@ function StudentDetailWrapper({ tabs, back }) {
 export default function ManagerDashboard() {
   const { currentUser } = useAuth()
   const { data, loading } = useData()
-  const unresolved = data.alerts.filter((a) => a.managerId === currentUser?.id && !a.resolved).length
+  // 탭 badge — 담당 학생 중 마인드 위험 학생 수
+  const unresolved = getRiskStudents(data, { educatorId: currentUser?.id }).length
 
   if (loading) {
     return (

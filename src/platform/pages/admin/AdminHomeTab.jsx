@@ -5,6 +5,7 @@ import {
   BarChart2, UserCog, ClipboardCheck, ChevronRight,
 } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
+import { getRiskStudents } from '../../context/selectors/riskDetection.js'
 
 const RISK_COLOR = {
   danger: 'text-red-600 bg-red-100',
@@ -21,7 +22,8 @@ export default function AdminHomeTab() {
     const active = data.students.filter((s) => (s.status ?? 'active') === 'active')
     const withdrawn = data.students.filter((s) => s.status === 'inactive')
     const risk = active.filter((s) => s.riskLevel === 'danger' || s.riskLevel === 'warning')
-    const unresolvedAlerts = data.alerts.filter((a) => !a.resolved)
+    // 마인드 위험군 — 전체 active 학생 중 마인드 점수 위험 (미배정 학생도 포함)
+    const mindRiskStudents = getRiskStudents(data)
     const avgSelfIndex = active.length > 0
       ? Math.round(active.reduce((s, st) => s + st.selfIndex, 0) / active.length)
       : 0
@@ -29,11 +31,11 @@ export default function AdminHomeTab() {
       active,
       withdrawn,
       risk,
-      unresolvedAlerts,
+      mindRiskStudents,
       enrolled: active.length + withdrawn.length,
       avgSelfIndex,
     }
-  }, [data.students, data.alerts])
+  }, [data])
 
   const managerCount = data.educators.filter((e) => e.role === 'manager').length
   const quizSetCount = data.quizSets.length
@@ -89,20 +91,20 @@ export default function AdminHomeTab() {
           <div className="bg-white rounded-2xl shadow-sm p-3">
             <div className="flex items-center gap-1.5 mb-1">
               <Bell size={13} className="text-amber-500" />
-              <p className="text-[11px] text-gray-500">미해결 알림</p>
+              <p className="text-[11px] text-gray-500">마인드 위험</p>
             </div>
-            <p className="text-xl font-bold text-amber-600">{stats.unresolvedAlerts.length}<span className="text-xs font-normal text-gray-400 ml-0.5">건</span></p>
+            <p className="text-xl font-bold text-amber-600">{stats.mindRiskStudents.length}<span className="text-xs font-normal text-gray-400 ml-0.5">명</span></p>
           </div>
         </div>
       </section>
 
-      {/* ── 미해결 알림 미리보기 ──────────────────────────── */}
-      {stats.unresolvedAlerts.length > 0 && (
+      {/* ── 마인드 위험 학생 미리보기 ──────────────────────── */}
+      {stats.mindRiskStudents.length > 0 && (
         <section className="bg-red-50 border border-red-100 rounded-2xl p-4">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-1.5">
               <AlertTriangle size={14} className="text-red-600" />
-              <h3 className="text-sm font-bold text-red-700">처리 대기 알림 {stats.unresolvedAlerts.length}건</h3>
+              <h3 className="text-sm font-bold text-red-700">마인드 위험 학생 {stats.mindRiskStudents.length}명</h3>
             </div>
             <button
               type="button"
@@ -113,23 +115,19 @@ export default function AdminHomeTab() {
             </button>
           </div>
           <ul className="space-y-1.5">
-            {stats.unresolvedAlerts.slice(0, 3).map((a) => {
-              const student = data.students.find((s) => s.id === a.studentId)
-              const risk = student?.riskLevel || 'normal'
-              return (
-                <li key={a.id} className="flex items-center justify-between bg-white rounded-lg px-3 py-2">
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-gray-800 truncate">{student?.name ?? a.studentId}</p>
-                    <p className="text-xs text-gray-500 truncate">{a.message}</p>
-                  </div>
-                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 ml-2 ${RISK_COLOR[risk]}`}>
-                    {RISK_LABEL[risk]}
-                  </span>
-                </li>
-              )
-            })}
-            {stats.unresolvedAlerts.length > 3 && (
-              <li className="text-[11px] text-red-600 text-center pt-1">외 {stats.unresolvedAlerts.length - 3}건</li>
+            {stats.mindRiskStudents.slice(0, 3).map(({ student, level }) => (
+              <li key={student.id} className="flex items-center justify-between bg-white rounded-lg px-3 py-2">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-gray-800 truncate">{student.name}</p>
+                  <p className="text-xs text-gray-500 truncate">{student.school} · {student.grade}</p>
+                </div>
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 ml-2 ${RISK_COLOR[level]}`}>
+                  {RISK_LABEL[level]}
+                </span>
+              </li>
+            ))}
+            {stats.mindRiskStudents.length > 3 && (
+              <li className="text-[11px] text-red-600 text-center pt-1">외 {stats.mindRiskStudents.length - 3}명</li>
             )}
           </ul>
         </section>

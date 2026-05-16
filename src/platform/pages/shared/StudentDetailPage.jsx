@@ -6,6 +6,7 @@ import {
   ResponsiveContainer, CartesianGrid, Cell,
 } from 'recharts'
 import { useData } from '../../context/DataContext.jsx'
+import { getMindStatus } from '../../context/selectors/riskDetection.js'
 import { STAGE_META, STAGE_ORDER } from '../../data/stageFeedbackLibrary.js'
 import { DOMAIN_LABELS } from '../../data/questions.js'
 import {
@@ -510,7 +511,7 @@ export default function StudentDetailPage() {
   const risk = RISK_LABELS[student?.riskLevel] || RISK_LABELS.normal
   const managerIds = data.assignments.filter((a) => a.studentId === studentId).map((a) => a.educatorId)
   const managers = data.educators.filter((e) => managerIds.includes(e.id) && e.role === 'manager')
-  const hasAlert = data.alerts.some((a) => a.studentId === studentId && !a.resolved)
+  const hasAlert = getMindStatus(data.mindRecords.filter((r) => r.studentId === studentId)) !== null
 
   if (!student) {
     return <p className="text-sm text-gray-400 py-16 text-center">학생 정보를 찾을 수 없습니다.</p>
