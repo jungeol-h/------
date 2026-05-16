@@ -6,6 +6,7 @@ import { useCallback } from 'react'
 import { supabase } from '../../lib/supabase.js'
 import { toUser, toAssignment } from '../../lib/supabaseHelpers.js'
 import { makeId } from '../dataModel.js'
+import { reportError } from '../../lib/sentry.js'
 
 export function useStudentDomain(setData) {
   // 학생 신규 추가
@@ -32,7 +33,7 @@ export function useStudentDomain(setData) {
       }
       const { error } = await supabase.from('users').insert(row)
       if (error) {
-        console.error('createStudent insert error:', error)
+        reportError(error, { where: 'createStudent', loginId })
         if (error.code === '23505') {
           throw new Error('이미 사용 중인 login_id입니다.')
         }
@@ -43,7 +44,7 @@ export function useStudentDomain(setData) {
       if (managerId) {
         const assn = { student_id: id, educator_id: managerId }
         const { error: aErr } = await supabase.from('assignments').insert(assn)
-        if (aErr) console.error('createStudent assignment insert error:', aErr)
+        if (aErr) reportError(aErr, { where: 'createStudent.assignment', studentId: id, managerId })
         else newAssignment = toAssignment(assn)
       }
 
@@ -76,7 +77,7 @@ export function useStudentDomain(setData) {
       if (Object.keys(snake).length > 0) {
         const { error } = await supabase.from('users').update(snake).eq('id', studentId)
         if (error) {
-          console.error('updateStudent update error:', error)
+          reportError(error, { where: 'updateStudent', studentId })
           if (error.code === '23505') {
             throw new Error('이미 사용 중인 login_id입니다.')
           }
@@ -91,12 +92,12 @@ export function useStudentDomain(setData) {
           .from('assignments')
           .delete()
           .eq('student_id', studentId)
-        if (delErr) console.error('updateStudent assignment delete error:', delErr)
+        if (delErr) reportError(delErr, { where: 'updateStudent.assignmentDelete', studentId })
 
         if (patch.managerId) {
           const assn = { student_id: studentId, educator_id: patch.managerId }
           const { error: insErr } = await supabase.from('assignments').insert(assn)
-          if (insErr) console.error('updateStudent assignment insert error:', insErr)
+          if (insErr) reportError(insErr, { where: 'updateStudent.assignmentInsert', studentId, managerId: patch.managerId })
           else assignmentsPatch = toAssignment(assn)
         } else {
           assignmentsPatch = 'cleared'
@@ -134,7 +135,7 @@ export function useStudentDomain(setData) {
         .update({ status })
         .eq('id', studentId)
       if (error) {
-        console.error('setStudentStatus update error:', error)
+        reportError(error, { where: 'setStudentStatus', studentId, status })
         throw error
       }
       setData((prev) => ({

@@ -8,6 +8,7 @@ import {
   toLearningDiagnosisResult,
 } from '../../lib/supabaseHelpers.js'
 import { makeId } from '../dataModel.js'
+import { reportError } from '../../lib/sentry.js'
 
 export function useCareerDomain(setData) {
   // 진로설계 결과 저장 (학생당 1개)
@@ -31,7 +32,7 @@ export function useCareerDomain(setData) {
       await supabase.from('career_results').delete().eq('student_id', studentId)
       const { error } = await supabase.from('career_results').insert(row)
       if (error) {
-        console.error('saveCareerDesignResult insert error:', error)
+        reportError(error, { where: 'saveCareerDesignResult', studentId })
         throw error
       }
       setData((prev) => ({
@@ -62,7 +63,7 @@ export function useCareerDomain(setData) {
       await supabase.from('diagnosis_results').delete().eq('student_id', studentId)
       const { error } = await supabase.from('diagnosis_results').insert(row)
       if (error) {
-        console.error('saveLearningDiagnosisResult insert error:', error)
+        reportError(error, { where: 'saveLearningDiagnosisResult', studentId })
         throw error
       }
       setData((prev) => ({

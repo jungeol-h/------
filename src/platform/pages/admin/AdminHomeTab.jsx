@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import {
   Users, TrendingUp, AlertTriangle, Bell,
   BarChart2, UserCog, ClipboardCheck, ChevronRight,
+  ShieldCheck, ShieldAlert,
 } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
 import { getRiskStudents } from '../../context/selectors/riskDetection.js'
+import { getReconciliationIssues } from '../../context/selectors/reconciliation.js'
 
 const RISK_COLOR = {
   danger: 'text-red-600 bg-red-100',
@@ -36,6 +38,8 @@ export default function AdminHomeTab() {
       avgSelfIndex,
     }
   }, [data])
+
+  const reconciliation = useMemo(() => getReconciliationIssues(data), [data])
 
   const managerCount = data.educators.filter((e) => e.role === 'manager').length
   const quizSetCount = data.quizSets.length
@@ -133,6 +137,9 @@ export default function AdminHomeTab() {
         </section>
       )}
 
+      {/* ── 시스템 정합성 점검 ───────────────────────────── */}
+      <ReconciliationSection issues={reconciliation} onGoUsers={() => navigate('/admin/users')} />
+
       {/* ── 탭 진입 카드 ─────────────────────────────────── */}
       <section>
         <h3 className="text-sm font-bold text-gray-500 mb-2">상세 메뉴</h3>
@@ -167,6 +174,98 @@ export default function AdminHomeTab() {
         </div>
       </section>
     </div>
+  )
+}
+
+// 데이터 정합성 점검 결과. 이상이 없으면 안심 신호(초록), 있으면 항목별 경고.
+function ReconciliationSection({ issues, onGoUsers }) {
+  const { unassignedActive, orphanAssignments, truncatedTables, fetchErrors, hasIssue } = issues
+
+  if (!hasIssue) {
+    return (
+      <section className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4">
+        <div className="flex items-center gap-1.5">
+          <ShieldCheck size={14} className="text-emerald-600" />
+          <h3 className="text-sm font-bold text-emerald-700">시스템 정합성 이상 없음</h3>
+        </div>
+        <p className="text-[11px] text-emerald-600 mt-1">
+          미배정 학생·데이터 로드 실패·누락이 발견되지 않았습니다.
+        </p>
+      </section>
+    )
+  }
+
+  return (
+    <section className="bg-orange-50 border border-orange-200 rounded-2xl p-4">
+      <div className="flex items-center gap-1.5 mb-3">
+        <ShieldAlert size={14} className="text-orange-600" />
+        <h3 className="text-sm font-bold text-orange-700">시스템 정합성 점검 필요</h3>
+      </div>
+      <div className="space-y-2">
+        {unassignedActive.length > 0 && (
+          <div className="bg-white rounded-xl p-3">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-bold text-gray-800">
+                담당 매니저 미배정 학생 {unassignedActive.length}명
+              </p>
+              <button
+                type="button"
+                onClick={onGoUsers}
+                className="text-[11px] font-semibold text-orange-700 hover:text-orange-800 flex-shrink-0 ml-2"
+              >
+                배정하기 →
+              </button>
+            </div>
+            <p className="text-[11px] text-gray-500 mt-1">
+              이 학생들의 활동은 어느 매니저 화면에도 나타나지 않습니다.
+            </p>
+            <p className="text-[11px] text-gray-600 mt-1 truncate">
+              {unassignedActive.map((s) => s.name).join(', ')}
+            </p>
+          </div>
+        )}
+
+        {orphanAssignments.length > 0 && (
+          <div className="bg-white rounded-xl p-3">
+            <p className="text-xs font-bold text-gray-800">
+              잘못된 배정 {orphanAssignments.length}건
+            </p>
+            <p className="text-[11px] text-gray-500 mt-1">
+              존재하지 않는 학생 또는 매니저를 가리키는 배정입니다.
+            </p>
+          </div>
+        )}
+
+        {truncatedTables.length > 0 && (
+          <div className="bg-white rounded-xl p-3">
+            <p className="text-xs font-bold text-gray-800">
+              일부만 불러온 데이터 {truncatedTables.length}건
+            </p>
+            <p className="text-[11px] text-gray-500 mt-1">
+              화면에 보이는 데이터가 전체가 아닐 수 있습니다.
+            </p>
+            <ul className="text-[11px] text-gray-600 mt-1 space-y-0.5">
+              {truncatedTables.map((t) => (
+                <li key={t.table}>{t.table}: {t.fetched} / {t.total}건</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {fetchErrors.length > 0 && (
+          <div className="bg-white rounded-xl p-3">
+            <p className="text-xs font-bold text-red-600">
+              데이터 로드 실패 {fetchErrors.length}건
+            </p>
+            <ul className="text-[11px] text-gray-600 mt-1 space-y-0.5">
+              {fetchErrors.map((e, i) => (
+                <li key={i}>{e.table}: {e.message}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    </section>
   )
 }
 

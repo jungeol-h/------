@@ -4,6 +4,8 @@
 // → alert 생성). emit은 동기적으로 모든 핸들러를 호출한다 — 프로토타입 규모에서
 // 비동기 큐는 불필요하고, 동기 실행이 디버깅·테스트를 단순하게 한다.
 
+import { reportError } from '../../lib/sentry.js'
+
 const handlers = new Map() // eventName → Set<handler>
 
 export function subscribe(eventName, handler) {
@@ -19,7 +21,7 @@ export function emit(eventName, payload) {
     try {
       handler(payload)
     } catch (err) {
-      console.error(`event handler error [${eventName}]:`, err)
+      reportError(err, { where: 'eventBus.emit', eventName })
     }
   }
 }

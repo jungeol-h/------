@@ -24,6 +24,7 @@ import { useCareerDomain } from './domains/careerDomain.js'
 import { useQuizDomain } from './domains/quizDomain.js'
 import { useStudentDomain } from './domains/studentDomain.js'
 import { getWeeklyLearning as selectWeeklyLearning } from './selectors/weeklyLearning.js'
+import { reportError, setSentryUser } from '../lib/sentry.js'
 
 const DataContext = createContext(null)
 
@@ -35,6 +36,7 @@ export function DataProvider({ children }) {
 
   // currentUser 변경 시 역할별 fetch
   useEffect(() => {
+    setSentryUser(currentUser ?? null)
     if (!currentUser) {
       setData(EMPTY)
       setDataReady(false)
@@ -62,8 +64,15 @@ export function DataProvider({ children }) {
           setDataReady(true)
         }
       } catch (err) {
-        console.error('DataContext fetch error:', err)
-        if (!cancelled) setDataReady(true)
+        reportError(err, { where: 'DataContext.load', role: currentUser?.role })
+        if (!cancelled) {
+          // fetch 전체가 실패해도 침묵하지 않도록 _fetchErrors에 남긴다.
+          setData({
+            ...EMPTY,
+            _fetchErrors: [{ table: '전체', message: err?.message ?? String(err) }],
+          })
+          setDataReady(true)
+        }
       } finally {
         if (!cancelled) setLoading(false)
       }

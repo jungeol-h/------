@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase.js'
 import { toQuizSet, toQuizQuestion, toQuizAttempt } from '../../lib/supabaseHelpers.js'
 import { gradeAttempt } from '../../utils/quizGrading.js'
 import { makeId } from '../dataModel.js'
+import { reportError } from '../../lib/sentry.js'
 
 const sortSets = (a, b) =>
   (a.grade ?? '').localeCompare(b.grade ?? '') || (a.round ?? 0) - (b.round ?? 0)
@@ -38,7 +39,7 @@ export function useQuizDomain(data, setData) {
       }
       const { error } = await supabase.from('quiz_attempts').insert(row)
       if (error) {
-        console.error('submitQuizAttempt insert error:', error)
+        reportError(error, { where: 'submitQuizAttempt', studentId, quizSetId })
         if (error.code === '23505') {
           throw new Error('이미 응시한 회차입니다. 결과 화면에서 확인하세요.')
         }
@@ -74,7 +75,7 @@ export function useQuizDomain(data, setData) {
       }
       const { error } = await supabase.from('quiz_sets').insert(row)
       if (error) {
-        console.error('createQuizSet insert error:', error)
+        reportError(error, { where: 'createQuizSet' })
         throw error
       }
       const local = toQuizSet(row)
@@ -100,7 +101,7 @@ export function useQuizDomain(data, setData) {
 
       const { error } = await supabase.from('quiz_sets').update(snake).eq('id', setId)
       if (error) {
-        console.error('updateQuizSet update error:', error)
+        reportError(error, { where: 'updateQuizSet', setId })
         throw error
       }
       setData((prev) => ({
@@ -116,7 +117,7 @@ export function useQuizDomain(data, setData) {
     async (setId) => {
       const { error } = await supabase.from('quiz_sets').delete().eq('id', setId)
       if (error) {
-        console.error('deleteQuizSet delete error:', error)
+        reportError(error, { where: 'deleteQuizSet', setId })
         throw error
       }
       setData((prev) => ({
@@ -143,7 +144,7 @@ export function useQuizDomain(data, setData) {
       }
       const { error } = await supabase.from('quiz_questions').insert(row)
       if (error) {
-        console.error('createQuizQuestion insert error:', error)
+        reportError(error, { where: 'createQuizQuestion', quizSetId })
         throw error
       }
       const local = toQuizQuestion(row)
@@ -171,7 +172,7 @@ export function useQuizDomain(data, setData) {
         .update(snake)
         .eq('id', questionId)
       if (error) {
-        console.error('updateQuizQuestion update error:', error)
+        reportError(error, { where: 'updateQuizQuestion', questionId })
         throw error
       }
       setData((prev) => ({
@@ -192,7 +193,7 @@ export function useQuizDomain(data, setData) {
         .delete()
         .eq('id', questionId)
       if (error) {
-        console.error('deleteQuizQuestion delete error:', error)
+        reportError(error, { where: 'deleteQuizQuestion', questionId })
         throw error
       }
       setData((prev) => ({

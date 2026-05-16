@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import { Printer, Loader } from 'lucide-react'
+import { reportError } from '../../lib/sentry.js'
 
 export default function DownloadPdfButton({
   onDownload,
@@ -15,7 +16,7 @@ export default function DownloadPdfButton({
     try {
       await onDownload()
     } catch (e) {
-      console.error('PDF export failed:', e)
+      reportError(e, { where: 'DownloadPdfButton' })
       alert('PDF 생성에 실패했습니다. 다시 시도해 주세요.')
     } finally {
       setBusy(false)

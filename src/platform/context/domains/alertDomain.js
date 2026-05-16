@@ -8,6 +8,7 @@ import { useCallback } from 'react'
 import { supabase } from '../../lib/supabase.js'
 import { toAlert, toCounselingRecord } from '../../lib/supabaseHelpers.js'
 import { makeId } from '../dataModel.js'
+import { reportError } from '../../lib/sentry.js'
 
 export function useAlertDomain(setData) {
   // 매니저가 위험 학생에게 코칭 → 코칭 기록(alert) + 상담 기록(counseling) 생성.
@@ -30,7 +31,7 @@ export function useAlertDomain(setData) {
       }
       const { error: alertError } = await supabase.from('alerts').insert(alertRow)
       if (alertError) {
-        console.error('recordCoaching alert insert error:', alertError)
+        reportError(alertError, { where: 'recordCoaching.alert', studentId, managerId })
         throw alertError
       }
 
@@ -46,7 +47,7 @@ export function useAlertDomain(setData) {
         .from('counseling_records')
         .insert(counselRow)
       if (counselError) {
-        console.error('recordCoaching counseling insert error:', counselError)
+        reportError(counselError, { where: 'recordCoaching.counseling', studentId, managerId })
         throw counselError
       }
 

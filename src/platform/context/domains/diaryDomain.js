@@ -4,6 +4,7 @@ import { useCallback } from 'react'
 import { supabase } from '../../lib/supabase.js'
 import { toDiaryRecord } from '../../lib/supabaseHelpers.js'
 import { makeId } from '../dataModel.js'
+import { reportError } from '../../lib/sentry.js'
 
 export function useDiaryDomain(data, setData) {
   // 오늘 날짜 일기가 있으면 덮어쓰기(upsert), 없으면 신규.
@@ -20,7 +21,7 @@ export function useDiaryDomain(data, setData) {
         .from('diary_records')
         .upsert(row, { onConflict: 'student_id,date' })
       if (error) {
-        console.error('addDiaryRecord upsert error:', error)
+        reportError(error, { where: 'addDiaryRecord', studentId })
         throw error
       }
 

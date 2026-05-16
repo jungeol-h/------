@@ -1,5 +1,7 @@
 // Supabase DB row(snake_case) → DataContext 형식(camelCase) 변환 헬퍼
 
+import { reportError } from './sentry.js'
+
 export const toUser = (row) => ({
   id: row.id,
   loginId: row.login_id,
@@ -148,3 +150,17 @@ export const toQuizAttempt = (row) => ({
   total: row.total ?? 0,
   submittedAt: row.submitted_at,
 })
+
+// ── 침묵 실패 방지: fetch 결과 검사 ──────────────────────────────
+// Supabase 쿼리 결과에서 에러를 errors 배열에 수집하고 data 행을 꺼낸다.
+// 에러가 나도 throw하지 않고 [] 를 돌려줘 부분 렌더는 유지하되,
+// "실패했다는 사실"은 errors 에 남겨 화면에서 경고할 수 있게 한다.
+// 동시에 Sentry로도 보내 개발자가 운영 중 즉시 인지하게 한다.
+export function collectRows(res, table, errors) {
+  if (res?.error) {
+    errors.push({ table, message: res.error.message ?? String(res.error) })
+    reportError(res.error, { where: 'fetch', table })
+    return []
+  }
+  return res?.data ?? []
+}

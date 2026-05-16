@@ -1,4 +1,5 @@
 import { toPng } from 'html-to-image'
+import { reportError } from '../../lib/sentry.js'
 
 export async function captureChart(node, options = {}) {
   if (!node) return null
@@ -11,7 +12,7 @@ export async function captureChart(node, options = {}) {
       height: options.height,
     })
   } catch (err) {
-    console.error('captureChart failed:', err)
+    reportError(err, { where: 'captureChart' })
     return null
   }
 }

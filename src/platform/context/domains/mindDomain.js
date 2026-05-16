@@ -7,6 +7,7 @@ import { useCallback } from 'react'
 import { supabase } from '../../lib/supabase.js'
 import { toMindRecord } from '../../lib/supabaseHelpers.js'
 import { makeId } from '../dataModel.js'
+import { reportError } from '../../lib/sentry.js'
 
 export function useMindDomain(setData) {
   const addMindRecord = useCallback(
@@ -24,7 +25,7 @@ export function useMindDomain(setData) {
 
       const { error } = await supabase.from('mind_records').insert(row)
       if (error) {
-        console.error('addMindRecord insert error:', error)
+        reportError(error, { where: 'addMindRecord', studentId })
         throw error
       }
 

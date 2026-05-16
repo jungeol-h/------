@@ -4,6 +4,7 @@ import { useCallback } from 'react'
 import { supabase } from '../../lib/supabase.js'
 import { toTodoItem } from '../../lib/supabaseHelpers.js'
 import { makeId } from '../dataModel.js'
+import { reportError } from '../../lib/sentry.js'
 
 export function useTaskDomain(data, setData) {
   // 과제 완료/미완료 토글
@@ -17,7 +18,7 @@ export function useTaskDomain(data, setData) {
         .update({ status: newStatus })
         .eq('id', taskId)
       if (error) {
-        console.error('toggleTask update error:', error)
+        reportError(error, { where: 'toggleTask', taskId })
         throw error
       }
       setData((prev) => ({
@@ -44,7 +45,7 @@ export function useTaskDomain(data, setData) {
       }
       const { error } = await supabase.from('todo_items').insert(row)
       if (error) {
-        console.error('addTodoItem insert error:', error)
+        reportError(error, { where: 'addTodoItem', studentId })
         throw error
       }
       setData((prev) => ({
@@ -65,7 +66,7 @@ export function useTaskDomain(data, setData) {
       if (Object.keys(snake).length === 0) return
       const { error } = await supabase.from('todo_items').update(snake).eq('id', itemId)
       if (error) {
-        console.error('updateTodoItem update error:', error)
+        reportError(error, { where: 'updateTodoItem', itemId })
         throw error
       }
       setData((prev) => ({
@@ -89,7 +90,7 @@ export function useTaskDomain(data, setData) {
         .update({ done: newDone })
         .eq('id', itemId)
       if (error) {
-        console.error('toggleTodo update error:', error)
+        reportError(error, { where: 'toggleTodo', itemId })
         throw error
       }
       setData((prev) => ({
