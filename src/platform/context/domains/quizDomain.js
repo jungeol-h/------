@@ -5,6 +5,7 @@ import { useCallback } from 'react'
 import { supabase } from '../../lib/supabase.js'
 import { toQuizSet, toQuizQuestion, toQuizAttempt } from '../../lib/supabaseHelpers.js'
 import { gradeAttempt } from '../../utils/quizGrading.js'
+import { shuffleQuestionsOrder } from '../../utils/quizShuffle.js'
 import { makeId } from '../dataModel.js'
 import { reportError } from '../../lib/sentry.js'
 
@@ -112,6 +113,72 @@ export function useQuizDomain(data, setData) {
     [setData]
   )
 
+  // 회차 복제(순서 셔플) — 회차 1개 + 소속 문제 N개를 그대로 복제하되 문제 orderNo만 무작위로 재배치.
+  // 새 회차: round=해당 학년 max+1, 제목 접미사 "(순서 셔플)", 미배포 시작.
+  const duplicateQuizSetShuffled = useCallback(
+    async (sourceSetId) => {
+      const source = data.quizSets.find((s) => s.id === sourceSetId)
+      if (!source) throw new Error('복제할 회차를 찾지 못했습니다.')
+      const sourceQuestions = data.quizQuestions
+        .filter((q) => q.quizSetId === sourceSetId)
+        .sort((a, b) => (a.orderNo ?? 0) - (b.orderNo ?? 0))
+      if (sourceQuestions.length === 0) {
+        throw new Error('소속 문제가 없는 회차는 복제할 수 없습니다.')
+      }
+
+      const sameGradeMaxRound = data.quizSets
+        .filter((s) => s.grade === source.grade)
+        .reduce((max, s) => Math.max(max, s.round ?? 0), 0)
+      const newRound = sameGradeMaxRound + 1
+      const newSetId = makeId('qs-')
+      const newSetRow = {
+        id: newSetId,
+        title: `${source.title} (순서 셔플)`,
+        grade: source.grade,
+        round: newRound,
+        source: source.source ?? '',
+        description: source.description ?? '',
+        is_published: false,
+        created_at: new Date().toISOString(),
+      }
+
+      // 문제 순서 셔플 — orderNo만 1..N으로 재배치, 본문/정답/해설/힌트는 그대로
+      const shuffled = shuffleQuestionsOrder(sourceQuestions)
+      const newQuestionRows = shuffled.map((q) => ({
+        id: makeId('qq-'),
+        quiz_set_id: newSetId,
+        order_no: q.orderNo,
+        question: q.question,
+        accepted_answers: q.acceptedAnswers,
+        explanation: q.explanation ?? '',
+        hint: q.hint ?? '',
+      }))
+
+      const { error: setErr } = await supabase.from('quiz_sets').insert(newSetRow)
+      if (setErr) {
+        reportError(setErr, { where: 'duplicateQuizSetShuffled.set', sourceSetId })
+        throw setErr
+      }
+      const { error: qErr } = await supabase.from('quiz_questions').insert(newQuestionRows)
+      if (qErr) {
+        // 문제 insert 실패 시 방금 만든 회차 롤백 (CASCADE 미사용 가정 안전장치)
+        await supabase.from('quiz_sets').delete().eq('id', newSetId)
+        reportError(qErr, { where: 'duplicateQuizSetShuffled.questions', sourceSetId, newSetId })
+        throw qErr
+      }
+
+      const localSet = toQuizSet(newSetRow)
+      const localQuestions = newQuestionRows.map(toQuizQuestion)
+      setData((prev) => ({
+        ...prev,
+        quizSets: [...prev.quizSets, localSet].sort(sortSets),
+        quizQuestions: [...prev.quizQuestions, ...localQuestions].sort(sortQuestions),
+      }))
+      return localSet
+    },
+    [data.quizSets, data.quizQuestions, setData]
+  )
+
   // 회차 삭제 (CASCADE로 문제/응시 함께 정리)
   const deleteQuizSet = useCallback(
     async (setId) => {
@@ -208,6 +275,7 @@ export function useQuizDomain(data, setData) {
     submitQuizAttempt,
     createQuizSet,
     updateQuizSet,
+    duplicateQuizSetShuffled,
     deleteQuizSet,
     createQuizQuestion,
     updateQuizQuestion,

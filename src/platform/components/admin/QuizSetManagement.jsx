@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Settings, Plus, Edit2, Trash2, Eye, ToggleLeft, ToggleRight, AlertTriangle } from 'lucide-react'
+import { Settings, Plus, Edit2, Trash2, Eye, ToggleLeft, ToggleRight, AlertTriangle, Shuffle } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
 import QuizSetEditModal from './QuizSetEditModal.jsx'
 import QuizQuestionsModal from './QuizQuestionsModal.jsx'
@@ -9,6 +9,7 @@ export default function QuizSetManagement() {
     data,
     createQuizSet,
     updateQuizSet,
+    duplicateQuizSetShuffled,
     deleteQuizSet,
     createQuizQuestion,
     updateQuizQuestion,
@@ -20,6 +21,7 @@ export default function QuizSetManagement() {
   const [viewingSetId, setViewingSetId] = useState(null)
   const [confirmDeleteSet, setConfirmDeleteSet] = useState(null)
   const [togglingSetId, setTogglingSetId] = useState(null)
+  const [duplicatingSetId, setDuplicatingSetId] = useState(null)
   const [deleting, setDeleting] = useState(false)
 
   const sortedSets = useMemo(
@@ -50,6 +52,23 @@ export default function QuizSetManagement() {
   const viewingSet = viewingSetId ? sortedSets.find((s) => s.id === viewingSetId) : null
   const viewingQuestions = viewingSetId ? (questionsBySet[viewingSetId] ?? []) : []
   const viewingAttemptCount = viewingSetId ? (attemptsBySet[viewingSetId] ?? 0) : 0
+
+  const handleDuplicate = async (set) => {
+    const questionCount = (questionsBySet[set.id] ?? []).length
+    if (questionCount === 0) {
+      alert('소속 문제가 없는 회차는 복제할 수 없습니다.')
+      return
+    }
+    setDuplicatingSetId(set.id)
+    try {
+      await duplicateQuizSetShuffled(set.id)
+    } catch (err) {
+      console.error('회차 복제 실패:', err)
+      alert(err?.message ?? '복제 중 오류가 발생했습니다.')
+    } finally {
+      setDuplicatingSetId(null)
+    }
+  }
 
   const handleTogglePublish = async (set) => {
     setTogglingSetId(set.id)
@@ -136,6 +155,14 @@ export default function QuizSetManagement() {
                       title="문제 보기"
                     >
                       <Eye size={16} />
+                    </button>
+                    <button
+                      onClick={() => handleDuplicate(set)}
+                      disabled={duplicatingSetId === set.id || questionCount === 0}
+                      className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600 disabled:opacity-40"
+                      title={questionCount === 0 ? '문제가 없어 복제할 수 없습니다' : '순서 셔플 복제 (새 회차로 생성, 미배포)'}
+                    >
+                      <Shuffle size={16} />
                     </button>
                     <button
                       onClick={() => setEditingSet(set)}
