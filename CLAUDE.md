@@ -31,6 +31,7 @@ JSX (not TypeScript). 배포: `andong.gooooookee.com` (Vercel).
 ### DataContext 구조 (3계층)
 
 `context/DataContext.jsx`는 Provider 조립만. CRUD/조회/이벤트는 계층 분리:
+
 - `domains/` [Write] — 도메인별 CRUD 훅
 - `selectors/` [Read] — cross-domain 종합·지표 (순수함수)
 - `events/` — 얇은 이벤트 버스 (현재 미사용, 푸시알림용 슬롯)
@@ -61,3 +62,43 @@ snake_case DB ↔ camelCase 변환은 `lib/supabaseHelpers.js`.
 - `docs/1. 프로젝트/산청 우정학사 중등부 베타테스트/` — 베타 요청사항·계정·교재
 
 docs는 클라이언트 기획 의도라 *원함*은 담지만 문서 간 모순이 있을 수 있음.
+
+# System Directive: Autonomous Decision Logging Rule
+
+<rule_overview>
+You are an autonomous AI development agent. During task execution, you will frequently encounter ambiguous requirements, edge cases, or architectural choices where multiple implementation paths are possible.
+
+Your task is to identify these specific moments of "autonomous micro-decisions" and document your subjective choices. Do not log standard, predictable, or literal code implementations. Focus exclusively on the instances where you had to make an independent judgment call.
+</rule_overview>
+
+<documentation_trigger>
+Before concluding your development task, evaluate your execution path. If you made any subjective or arbitrary choices to resolve ambiguities, you MUST create or append to a file named `AI_DECISIONS.md` at the root of the repository.
+</documentation_trigger>
+
+<criteria>
+### 1. What You MUST Document (Include Categories)
+Apply this rule globally across all modified files and directories. Document any instance that falls into these categories:
+* **Ambiguous Requirements:** When the user prompt or specification was vague, and you independently selected Path A over Path B.
+* **Silent Assumptions:** Any assumption you made about the codebase, system architecture, user intent, or business logic that was not explicitly stated in the instructions.
+* **Technical Trade-offs:** When you consciously sacrificed one software quality attribute (e.g., performance, readability, complexity, execution time) to favor another based on your judgment.
+* **Spontaneous Refactoring:** If you modified adjacent or unrequested code because you judged it necessary to maintain architectural integrity or prevent technical debt.
+
+### 2. What You MUST NOT Document (Exclude Categories)
+
+To keep the log actionable for human code review, strictly ignore and omit the following:
+
+- Literal and straightforward implementations of explicit instructions.
+- Standard syntax corrections, basic bug fixes, or routine boilerplate code.
+- A mundane, changelog-style list of modified files or functions.
+  </criteria>
+
+<output_format>
+Document each autonomous decision using the following precise Markdown structure inside `AI_DECISIONS.md`. Do not use overly complex formatting or excessive bolding outside this template:
+
+#### [YYYY-MM-DD] Short Descriptive Title of the Decision
+
+- **Context & Ambiguity:** Describe the vague or uncertain point encountered in the codebase or requirements.
+- **Your Choice & Action:** Explain exactly what you decided to do arbitrarily and how you implemented it.
+- **Reasoning & Justification:** Provide the engineering rationale behind why you judged this path to be the best option at that moment.
+- **Potential Risk / Review Required:** Highlight the specific risk or edge case that the human developer must double-check during code review.
+  </output_format>
