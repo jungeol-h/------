@@ -14,8 +14,8 @@ export default function PageWrapper({
     <Document
       title={`${reportTitle} (${generatedAt})`}
       author={author}
-      creator="나르샤"
-      producer="나르샤"
+      creator="나매크"
+      producer="나매크"
     >
       <Page size="A4" style={baseStyles.page}>
         <ReportHeader

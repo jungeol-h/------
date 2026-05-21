@@ -11,8 +11,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'pwa-192x192.png', 'pwa-512x512.png', 'apple-touch-icon.png'],
       manifest: {
-        name: '나르샤',
-        short_name: '나르샤',
+        name: '나매크',
+        short_name: '나매크',
         description: '자기주도 학습·진로성장 관리 시스템',
         theme_color: '#863bff',
         background_color: '#ffffff',

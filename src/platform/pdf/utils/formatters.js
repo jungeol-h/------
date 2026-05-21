@@ -19,7 +19,7 @@ export function sanitizeFilenamePart(part) {
 }
 
 export function buildFilename(reportName, identifier) {
-  const parts = ['나르샤', reportName, identifier, todayFileDate()]
+  const parts = ['나매크', reportName, identifier, todayFileDate()]
     .filter(Boolean)
     .map(sanitizeFilenamePart)
   return `${parts.join('_')}.pdf`

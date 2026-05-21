@@ -49,7 +49,7 @@ export default function AdminHomeTab() {
     <div className="py-6 space-y-6">
       <div>
         <h2 className="text-lg font-bold text-gray-900">관리자 대시보드</h2>
-        <p className="text-xs text-gray-500 mt-0.5">학습 센터의 현재 상황을 한눈에 확인합니다.</p>
+        <p className="text-xs text-gray-500 mt-0.5">현재 상황을 한눈에 확인합니다.</p>
       </div>
 
       {/* ── 인원 요약 ────────────────────────────────────── */}

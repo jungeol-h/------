@@ -41,8 +41,7 @@ export default function LoginPage() {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-500 rounded-2xl mb-4 shadow-lg">
             <GraduationCap size={36} className="text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">산청 우정학사</h1>
-          <p className="text-sm text-gray-500 mt-1">자기주도학습 관리 시스템</p>
+          <h1 className="text-2xl font-bold text-gray-900">나매크</h1>
         </div>
 
         {/* 앱 설치 배너 */}
@@ -117,7 +116,7 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-xs text-gray-400 mt-5">
-          산청 우정학사 · 2026
+          나매크 · 2026
         </p>
       </div>
     </div>

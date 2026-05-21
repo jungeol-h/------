@@ -1,5 +1,5 @@
-export const ORG_NAME = '나르샤'
-export const ORG_SUBTITLE = '안동시 자기주도학습·진로성장 관리 시스템'
+export const ORG_NAME = '나매크'
+export const ORG_SUBTITLE = '자기주도학습·진로성장 관리 시스템'
 
 export const ROLE_LABEL = {
   admin: '관리자',
