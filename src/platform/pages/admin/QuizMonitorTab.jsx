@@ -67,7 +67,7 @@ export default function QuizMonitorTab() {
           아직 등록된 회차가 없습니다.
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-2">
           {summaries.map(({ set, eligibleCount, submittedCount, missingCount, avgPct }) => (
             <div key={set.id} className="bg-white rounded-2xl p-4 border border-gray-100">
               <p className="text-[11px] font-bold text-emerald-600">{set.grade} · {set.round}회</p>

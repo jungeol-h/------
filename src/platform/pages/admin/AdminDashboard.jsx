@@ -42,6 +42,11 @@ export default function AdminDashboard() {
       <Route path="student/:studentId" element={
         <StudentDetailWrapper tabs={TABS} back="/admin/users" />
       } />
+      <Route path="quiz" element={
+        <PageLayout title="관리자" tabs={TABS} wide>
+          <QuizMonitorTab />
+        </PageLayout>
+      } />
       <Route path="*" element={
         <PageLayout title="관리자" tabs={TABS}>
           <Routes>
@@ -49,7 +54,6 @@ export default function AdminDashboard() {
             <Route path="home" element={<AdminHomeTab />} />
             <Route path="statistics" element={<StatisticsTab />} />
             <Route path="users" element={<UserManagementTab />} />
-            <Route path="quiz" element={<QuizMonitorTab />} />
           </Routes>
         </PageLayout>
       } />

@@ -1,8 +1,33 @@
 import { useMemo, useState } from 'react'
-import { Settings, Plus, Edit2, Trash2, Eye, ToggleLeft, ToggleRight, AlertTriangle, Shuffle } from 'lucide-react'
+import {
+  Settings, Plus, Edit2, Trash2, Eye,
+  ToggleLeft, ToggleRight, AlertTriangle, Shuffle,
+} from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
 import QuizSetEditModal from './QuizSetEditModal.jsx'
 import QuizQuestionsModal from './QuizQuestionsModal.jsx'
+
+const GRADE_BADGE = {
+  '중1': 'bg-sky-50 text-sky-700 border-sky-200',
+  '중2': 'bg-violet-50 text-violet-700 border-violet-200',
+  '중3': 'bg-rose-50 text-rose-700 border-rose-200',
+}
+
+function formatDateKey(iso) {
+  if (!iso) return '날짜 없음'
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return '날짜 없음'
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+function formatDateLabel(key) {
+  if (key === '날짜 없음') return key
+  const [, m, d] = key.split('-')
+  return `${Number(m)}월 ${Number(d)}일`
+}
 
 export default function QuizSetManagement() {
   const {
@@ -24,13 +49,6 @@ export default function QuizSetManagement() {
   const [duplicatingSetId, setDuplicatingSetId] = useState(null)
   const [deleting, setDeleting] = useState(false)
 
-  const sortedSets = useMemo(
-    () => [...data.quizSets].sort((a, b) =>
-      (a.grade ?? '').localeCompare(b.grade ?? '') || (a.round ?? 0) - (b.round ?? 0)
-    ),
-    [data.quizSets]
-  )
-
   const questionsBySet = useMemo(() => {
     const map = {}
     data.quizQuestions.forEach((q) => {
@@ -49,7 +67,31 @@ export default function QuizSetManagement() {
     return map
   }, [data.quizAttempts])
 
-  const viewingSet = viewingSetId ? sortedSets.find((s) => s.id === viewingSetId) : null
+  // 일자(내림차순) → 학년 → 회차 정렬 후 일자별 그룹으로 묶기
+  const dateGroups = useMemo(() => {
+    const sorted = [...data.quizSets].sort((a, b) => {
+      const dateA = formatDateKey(a.createdAt)
+      const dateB = formatDateKey(b.createdAt)
+      if (dateA !== dateB) return dateB.localeCompare(dateA) // 최신 일자가 위로
+      const gradeCmp = (a.grade ?? '').localeCompare(b.grade ?? '')
+      if (gradeCmp !== 0) return gradeCmp
+      return (a.round ?? 0) - (b.round ?? 0)
+    })
+    const groups = []
+    sorted.forEach((set) => {
+      const key = formatDateKey(set.createdAt)
+      const last = groups[groups.length - 1]
+      if (last && last.dateKey === key) {
+        last.sets.push(set)
+      } else {
+        groups.push({ dateKey: key, sets: [set] })
+      }
+    })
+    return groups
+  }, [data.quizSets])
+
+  const allSets = useMemo(() => dateGroups.flatMap((g) => g.sets), [dateGroups])
+  const viewingSet = viewingSetId ? allSets.find((s) => s.id === viewingSetId) : null
   const viewingQuestions = viewingSetId ? (questionsBySet[viewingSetId] ?? []) : []
   const viewingAttemptCount = viewingSetId ? (attemptsBySet[viewingSetId] ?? 0) : 0
 
@@ -97,92 +139,146 @@ export default function QuizSetManagement() {
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
-      <div className="flex items-center justify-between">
+    <div className="bg-white rounded-xl border border-gray-200">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
         <div className="flex items-center gap-2">
           <Settings size={18} className="text-emerald-600" />
           <h2 className="text-sm font-bold text-gray-800">회차/문제 관리</h2>
+          <span className="text-[11px] text-gray-400 ml-1">총 {allSets.length}개 회차</span>
         </div>
         <button
           onClick={() => setCreatingSet(true)}
-          className="px-3 py-1.5 rounded-lg bg-emerald-600 text-xs font-semibold text-white flex items-center gap-1"
+          className="px-3 py-1.5 rounded-lg bg-emerald-600 text-xs font-semibold text-white flex items-center gap-1 hover:bg-emerald-700"
         >
           <Plus size={14} />
           새 회차
         </button>
       </div>
 
-      {sortedSets.length === 0 ? (
-        <div className="bg-gray-50 rounded-xl p-6 text-center text-sm text-gray-400">
+      {allSets.length === 0 ? (
+        <div className="px-5 py-12 text-center text-sm text-gray-400">
           아직 등록된 회차가 없습니다.
         </div>
       ) : (
-        <div className="space-y-2">
-          {sortedSets.map((set) => {
-            const questionCount = (questionsBySet[set.id] ?? []).length
-            const attemptCount = attemptsBySet[set.id] ?? 0
-            return (
-              <div key={set.id} className="border border-gray-100 rounded-xl p-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-[11px] font-bold text-emerald-600">{set.grade} · {set.round}회</span>
-                      {!set.isPublished && (
-                        <span className="text-[10px] font-bold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">미배포</span>
-                      )}
-                    </div>
-                    <p className="text-sm font-semibold text-gray-800 leading-snug mt-0.5 truncate">{set.title}</p>
-                    <p className="text-[11px] text-gray-500 mt-1">
-                      문제 {questionCount}개 · 응시 {attemptCount}명
-                      {set.source && <span className="ml-1">· {set.source}</span>}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-0.5 flex-shrink-0">
-                    <button
-                      onClick={() => handleTogglePublish(set)}
-                      disabled={togglingSetId === set.id}
-                      className="p-1.5 rounded-lg hover:bg-gray-50 disabled:opacity-50"
-                      title={set.isPublished ? '배포 중 (클릭하여 OFF)' : '미배포 (클릭하여 ON)'}
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
+              <tr>
+                <th className="text-left px-4 py-2.5 w-28">생성일</th>
+                <th className="text-left px-3 py-2.5 w-16">학년</th>
+                <th className="text-left px-3 py-2.5 w-14">회차</th>
+                <th className="text-left px-3 py-2.5">제목</th>
+                <th className="text-right px-3 py-2.5 w-20">문제</th>
+                <th className="text-right px-3 py-2.5 w-20">응시</th>
+                <th className="text-left px-3 py-2.5 w-40">출처</th>
+                <th className="text-center px-3 py-2.5 w-20">배포</th>
+                <th className="text-right px-4 py-2.5 w-44">액션</th>
+              </tr>
+            </thead>
+            <tbody>
+              {dateGroups.map((group) => (
+                group.sets.map((set, idxInGroup) => {
+                  const questionCount = (questionsBySet[set.id] ?? []).length
+                  const attemptCount = attemptsBySet[set.id] ?? 0
+                  const isFirstOfDate = idxInGroup === 0
+                  const gradeClass = GRADE_BADGE[set.grade] ?? 'bg-gray-50 text-gray-700 border-gray-200'
+
+                  return (
+                    <tr
+                      key={set.id}
+                      className={`border-t border-gray-100 hover:bg-gray-50/60 ${isFirstOfDate ? 'border-t-gray-200' : ''}`}
                     >
-                      {set.isPublished
-                        ? <ToggleRight size={20} className="text-emerald-600" />
-                        : <ToggleLeft  size={20} className="text-gray-400" />
-                      }
-                    </button>
-                    <button
-                      onClick={() => setViewingSetId(set.id)}
-                      className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-600"
-                      title="문제 보기"
-                    >
-                      <Eye size={16} />
-                    </button>
-                    <button
-                      onClick={() => handleDuplicate(set)}
-                      disabled={duplicatingSetId === set.id || questionCount === 0}
-                      className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600 disabled:opacity-40"
-                      title={questionCount === 0 ? '문제가 없어 복제할 수 없습니다' : '순서 셔플 복제 (새 회차로 생성, 미배포)'}
-                    >
-                      <Shuffle size={16} />
-                    </button>
-                    <button
-                      onClick={() => setEditingSet(set)}
-                      className="p-1.5 rounded-lg hover:bg-emerald-50 text-emerald-600"
-                      title="편집"
-                    >
-                      <Edit2 size={16} />
-                    </button>
-                    <button
-                      onClick={() => setConfirmDeleteSet(set)}
-                      className="p-1.5 rounded-lg hover:bg-red-50 text-red-500"
-                      title="삭제"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )
-          })}
+                      <td className="px-4 py-3 align-top">
+                        {isFirstOfDate ? (
+                          <div>
+                            <p className="text-xs font-bold text-gray-700">{formatDateLabel(group.dateKey)}</p>
+                            <p className="text-[10px] text-gray-400 mt-0.5">{group.dateKey}</p>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] text-gray-300">↑ 동일</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-3 align-top">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md border text-[11px] font-bold ${gradeClass}`}>
+                          {set.grade}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 align-top">
+                        <span className="text-sm font-bold text-gray-800 tabular-nums">{set.round}회</span>
+                      </td>
+                      <td className="px-3 py-3 align-top">
+                        <p className="text-sm font-semibold text-gray-800">{set.title}</p>
+                        {set.description && (
+                          <p className="text-[11px] text-gray-500 mt-0.5 line-clamp-1">{set.description}</p>
+                        )}
+                      </td>
+                      <td className="px-3 py-3 align-top text-right">
+                        <span className="text-sm font-semibold text-gray-700 tabular-nums">{questionCount}</span>
+                        <span className="text-[11px] text-gray-400 ml-0.5">개</span>
+                      </td>
+                      <td className="px-3 py-3 align-top text-right">
+                        <span className="text-sm font-semibold text-gray-700 tabular-nums">{attemptCount}</span>
+                        <span className="text-[11px] text-gray-400 ml-0.5">명</span>
+                      </td>
+                      <td className="px-3 py-3 align-top">
+                        {set.source ? (
+                          <p className="text-[11px] text-gray-500 line-clamp-1" title={set.source}>{set.source}</p>
+                        ) : (
+                          <span className="text-[11px] text-gray-300">—</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-3 align-top text-center">
+                        <button
+                          onClick={() => handleTogglePublish(set)}
+                          disabled={togglingSetId === set.id}
+                          className="p-1 rounded-lg hover:bg-gray-100 disabled:opacity-50"
+                          title={set.isPublished ? '배포 중 (클릭하여 OFF)' : '미배포 (클릭하여 ON)'}
+                        >
+                          {set.isPublished
+                            ? <ToggleRight size={22} className="text-emerald-600" />
+                            : <ToggleLeft  size={22} className="text-gray-400" />
+                          }
+                        </button>
+                      </td>
+                      <td className="px-4 py-3 align-top">
+                        <div className="flex items-center justify-end gap-0.5">
+                          <button
+                            onClick={() => setViewingSetId(set.id)}
+                            className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-600"
+                            title="문제 보기"
+                          >
+                            <Eye size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleDuplicate(set)}
+                            disabled={duplicatingSetId === set.id || questionCount === 0}
+                            className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600 disabled:opacity-40"
+                            title={questionCount === 0 ? '문제가 없어 복제할 수 없습니다' : '순서 셔플 복제 (새 회차로 생성, 미배포)'}
+                          >
+                            <Shuffle size={16} />
+                          </button>
+                          <button
+                            onClick={() => setEditingSet(set)}
+                            className="p-1.5 rounded-lg hover:bg-emerald-50 text-emerald-600"
+                            title="편집"
+                          >
+                            <Edit2 size={16} />
+                          </button>
+                          <button
+                            onClick={() => setConfirmDeleteSet(set)}
+                            className="p-1.5 rounded-lg hover:bg-red-50 text-red-500"
+                            title="삭제"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
@@ -229,7 +325,7 @@ export default function QuizSetManagement() {
                   </span>
                   {(attemptsBySet[confirmDeleteSet.id] ?? 0) > 0 && (
                     <span className="block mt-1 text-red-700">
-                      ⚠ 응시 기록 {attemptsBySet[confirmDeleteSet.id]}건도 함께 삭제됩니다 (복구 불가).
+                      응시 기록 {attemptsBySet[confirmDeleteSet.id]}건도 함께 삭제됩니다 (복구 불가).
                     </span>
                   )}
                 </p>
