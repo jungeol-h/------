@@ -4,7 +4,7 @@ import { useCallback } from 'react'
 import { supabase } from '../../lib/supabase.js'
 import { toLearningRecord } from '../../lib/supabaseHelpers.js'
 import { makeId } from '../dataModel.js'
-import { reportError } from '../../lib/sentry.js'
+import { withWriteRetry } from '../../lib/supabaseRetry.js'
 
 export function useLearningDomain(setData) {
   const addLearningRecord = useCallback(
@@ -17,11 +17,11 @@ export function useLearningDomain(setData) {
         duration,
         focus,
       }
-      const { error } = await supabase.from('learning_records').insert(row)
-      if (error) {
-        reportError(error, { where: 'addLearningRecord', studentId })
-        throw error
-      }
+      const { error } = await withWriteRetry(
+        () => supabase.from('learning_records').insert(row),
+        { label: 'addLearningRecord' }
+      )
+      if (error) throw error
       setData((prev) => ({
         ...prev,
         learningRecords: [toLearningRecord(row), ...prev.learningRecords],

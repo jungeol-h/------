@@ -8,7 +8,7 @@ import {
   toLearningDiagnosisResult,
 } from '../../lib/supabaseHelpers.js'
 import { makeId } from '../dataModel.js'
-import { reportError } from '../../lib/sentry.js'
+import { withWriteRetry } from '../../lib/supabaseRetry.js'
 
 export function useCareerDomain(setData) {
   // 진로설계 결과 저장 (학생당 1개)
@@ -29,12 +29,16 @@ export function useCareerDomain(setData) {
         final_scores: finalScores,
         fields,
       }
-      await supabase.from('career_results').delete().eq('student_id', studentId)
-      const { error } = await supabase.from('career_results').insert(row)
-      if (error) {
-        reportError(error, { where: 'saveCareerDesignResult', studentId })
-        throw error
-      }
+      const { error: deleteError } = await withWriteRetry(
+        () => supabase.from('career_results').delete().eq('student_id', studentId),
+        { label: 'saveCareerDesignResult:delete' }
+      )
+      if (deleteError) throw deleteError
+      const { error } = await withWriteRetry(
+        () => supabase.from('career_results').insert(row),
+        { label: 'saveCareerDesignResult:insert' }
+      )
+      if (error) throw error
       setData((prev) => ({
         ...prev,
         careerDesignResults: [
@@ -60,12 +64,16 @@ export function useCareerDomain(setData) {
         state_types: resultData.stateTypes ?? {},
         type_name: resultData.typeName ?? '',
       }
-      await supabase.from('diagnosis_results').delete().eq('student_id', studentId)
-      const { error } = await supabase.from('diagnosis_results').insert(row)
-      if (error) {
-        reportError(error, { where: 'saveLearningDiagnosisResult', studentId })
-        throw error
-      }
+      const { error: deleteError } = await withWriteRetry(
+        () => supabase.from('diagnosis_results').delete().eq('student_id', studentId),
+        { label: 'saveLearningDiagnosisResult:delete' }
+      )
+      if (deleteError) throw deleteError
+      const { error } = await withWriteRetry(
+        () => supabase.from('diagnosis_results').insert(row),
+        { label: 'saveLearningDiagnosisResult:insert' }
+      )
+      if (error) throw error
       setData((prev) => ({
         ...prev,
         learningDiagnosisResults: [

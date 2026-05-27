@@ -8,11 +8,12 @@ import { useCallback } from 'react'
 import { supabase } from '../../lib/supabase.js'
 import { toAlert, toCounselingRecord } from '../../lib/supabaseHelpers.js'
 import { makeId } from '../dataModel.js'
-import { reportError } from '../../lib/sentry.js'
+import { withWriteRetry } from '../../lib/supabaseRetry.js'
 
 export function useAlertDomain(setData) {
   // 매니저가 위험 학생에게 코칭 → 코칭 기록(alert) + 상담 기록(counseling) 생성.
   // managerId는 코칭하는 매니저 본인. level은 riskDetection 판정값('warning'|'danger').
+  // NOTE: 두 insert는 트랜잭션이 없어 alert만 저장된 채 counseling이 실패하는 부분 실패가 가능하다.
   const recordCoaching = useCallback(
     async ({ studentId, managerId, studentName, level, comment }) => {
       const date = new Date().toISOString().slice(0, 10)
@@ -29,11 +30,11 @@ export function useAlertDomain(setData) {
         resolved: true,
         coaching_comment: comment,
       }
-      const { error: alertError } = await supabase.from('alerts').insert(alertRow)
-      if (alertError) {
-        reportError(alertError, { where: 'recordCoaching.alert', studentId, managerId })
-        throw alertError
-      }
+      const { error: alertError } = await withWriteRetry(
+        () => supabase.from('alerts').insert(alertRow),
+        { label: 'recordCoaching:alert' }
+      )
+      if (alertError) throw alertError
 
       const counselRow = {
         id: makeId('c'),
@@ -43,13 +44,11 @@ export function useAlertDomain(setData) {
         content: comment,
         type: 'mind',
       }
-      const { error: counselError } = await supabase
-        .from('counseling_records')
-        .insert(counselRow)
-      if (counselError) {
-        reportError(counselError, { where: 'recordCoaching.counseling', studentId, managerId })
-        throw counselError
-      }
+      const { error: counselError } = await withWriteRetry(
+        () => supabase.from('counseling_records').insert(counselRow),
+        { label: 'recordCoaching:counseling' }
+      )
+      if (counselError) throw counselError
 
       setData((prev) => ({
         ...prev,

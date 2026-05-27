@@ -42,7 +42,6 @@ export default function InstallGuidePage() {
             </p>
           </div>
         </div>
-
         {/* Android 가이드 */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="bg-emerald-500 px-5 py-3 flex items-center gap-2">
@@ -73,8 +72,7 @@ export default function InstallGuidePage() {
             </div>
           </div>
         </div>
-
-        {/* iOS 가이드 */}
+        {/* iOS 가이드 */}3
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="bg-blue-500 px-5 py-3 flex items-center gap-2">
             <span className="text-white font-bold text-sm">
@@ -113,7 +111,6 @@ export default function InstallGuidePage() {
             </div>
           </div>
         </div>
-
         {/* 로그인 안내 */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-4 space-y-2">
           <p className="font-semibold text-gray-800 text-sm">로그인 방법</p>
@@ -137,7 +134,6 @@ export default function InstallGuidePage() {
             </li>
           </ul>
         </div>
-
         <p className="text-center text-xs text-gray-400 pb-4">
           나매크 베타테스트 2026
         </p>

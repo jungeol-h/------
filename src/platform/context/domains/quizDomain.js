@@ -7,7 +7,7 @@ import { toQuizSet, toQuizQuestion, toQuizAttempt } from '../../lib/supabaseHelp
 import { gradeAttempt } from '../../utils/quizGrading.js'
 import { shuffleQuestionsOrder } from '../../utils/quizShuffle.js'
 import { makeId } from '../dataModel.js'
-import { reportError } from '../../lib/sentry.js'
+import { withWriteRetry } from '../../lib/supabaseRetry.js'
 
 const sortSets = (a, b) =>
   (a.grade ?? '').localeCompare(b.grade ?? '') || (a.round ?? 0) - (b.round ?? 0)
@@ -38,9 +38,11 @@ export function useQuizDomain(data, setData) {
         total,
         submitted_at: new Date().toISOString(),
       }
-      const { error } = await supabase.from('quiz_attempts').insert(row)
+      const { error } = await withWriteRetry(
+        () => supabase.from('quiz_attempts').insert(row),
+        { label: 'submitQuizAttempt' }
+      )
       if (error) {
-        reportError(error, { where: 'submitQuizAttempt', studentId, quizSetId })
         if (error.code === '23505') {
           throw new Error('이미 응시한 회차입니다. 결과 화면에서 확인하세요.')
         }
@@ -74,11 +76,11 @@ export function useQuizDomain(data, setData) {
         is_published: isPublished,
         created_at: new Date().toISOString(),
       }
-      const { error } = await supabase.from('quiz_sets').insert(row)
-      if (error) {
-        reportError(error, { where: 'createQuizSet' })
-        throw error
-      }
+      const { error } = await withWriteRetry(
+        () => supabase.from('quiz_sets').insert(row),
+        { label: 'createQuizSet' }
+      )
+      if (error) throw error
       const local = toQuizSet(row)
       setData((prev) => ({
         ...prev,
@@ -100,11 +102,11 @@ export function useQuizDomain(data, setData) {
       if (patch.description !== undefined) snake.description = patch.description
       if (patch.isPublished !== undefined) snake.is_published = patch.isPublished
 
-      const { error } = await supabase.from('quiz_sets').update(snake).eq('id', setId)
-      if (error) {
-        reportError(error, { where: 'updateQuizSet', setId })
-        throw error
-      }
+      const { error } = await withWriteRetry(
+        () => supabase.from('quiz_sets').update(snake).eq('id', setId),
+        { label: 'updateQuizSet' }
+      )
+      if (error) throw error
       setData((prev) => ({
         ...prev,
         quizSets: prev.quizSets.map((s) => (s.id === setId ? { ...s, ...patch } : s)),
@@ -154,16 +156,22 @@ export function useQuizDomain(data, setData) {
         hint: q.hint ?? '',
       }))
 
-      const { error: setErr } = await supabase.from('quiz_sets').insert(newSetRow)
-      if (setErr) {
-        reportError(setErr, { where: 'duplicateQuizSetShuffled.set', sourceSetId })
-        throw setErr
-      }
-      const { error: qErr } = await supabase.from('quiz_questions').insert(newQuestionRows)
+      const { error: setErr } = await withWriteRetry(
+        () => supabase.from('quiz_sets').insert(newSetRow),
+        { label: 'duplicateQuizSetShuffled' }
+      )
+      if (setErr) throw setErr
+
+      const { error: qErr } = await withWriteRetry(
+        () => supabase.from('quiz_questions').insert(newQuestionRows),
+        { label: 'duplicateQuizSetShuffled' }
+      )
       if (qErr) {
         // 문제 insert 실패 시 방금 만든 회차 롤백 (CASCADE 미사용 가정 안전장치)
-        await supabase.from('quiz_sets').delete().eq('id', newSetId)
-        reportError(qErr, { where: 'duplicateQuizSetShuffled.questions', sourceSetId, newSetId })
+        await withWriteRetry(
+          () => supabase.from('quiz_sets').delete().eq('id', newSetId),
+          { label: 'duplicateQuizSetShuffled' }
+        )
         throw qErr
       }
 
@@ -182,11 +190,11 @@ export function useQuizDomain(data, setData) {
   // 회차 삭제 (CASCADE로 문제/응시 함께 정리)
   const deleteQuizSet = useCallback(
     async (setId) => {
-      const { error } = await supabase.from('quiz_sets').delete().eq('id', setId)
-      if (error) {
-        reportError(error, { where: 'deleteQuizSet', setId })
-        throw error
-      }
+      const { error } = await withWriteRetry(
+        () => supabase.from('quiz_sets').delete().eq('id', setId),
+        { label: 'deleteQuizSet' }
+      )
+      if (error) throw error
       setData((prev) => ({
         ...prev,
         quizSets: prev.quizSets.filter((s) => s.id !== setId),
@@ -209,11 +217,11 @@ export function useQuizDomain(data, setData) {
         explanation,
         hint,
       }
-      const { error } = await supabase.from('quiz_questions').insert(row)
-      if (error) {
-        reportError(error, { where: 'createQuizQuestion', quizSetId })
-        throw error
-      }
+      const { error } = await withWriteRetry(
+        () => supabase.from('quiz_questions').insert(row),
+        { label: 'createQuizQuestion' }
+      )
+      if (error) throw error
       const local = toQuizQuestion(row)
       setData((prev) => ({
         ...prev,
@@ -234,14 +242,11 @@ export function useQuizDomain(data, setData) {
       if (patch.explanation !== undefined) snake.explanation = patch.explanation
       if (patch.hint !== undefined) snake.hint = patch.hint
 
-      const { error } = await supabase
-        .from('quiz_questions')
-        .update(snake)
-        .eq('id', questionId)
-      if (error) {
-        reportError(error, { where: 'updateQuizQuestion', questionId })
-        throw error
-      }
+      const { error } = await withWriteRetry(
+        () => supabase.from('quiz_questions').update(snake).eq('id', questionId),
+        { label: 'updateQuizQuestion' }
+      )
+      if (error) throw error
       setData((prev) => ({
         ...prev,
         quizQuestions: prev.quizQuestions.map((q) =>
@@ -255,14 +260,11 @@ export function useQuizDomain(data, setData) {
   // 문제 삭제 (응시 기록의 answers는 그대로 유지 — 재채점 안 함)
   const deleteQuizQuestion = useCallback(
     async (questionId) => {
-      const { error } = await supabase
-        .from('quiz_questions')
-        .delete()
-        .eq('id', questionId)
-      if (error) {
-        reportError(error, { where: 'deleteQuizQuestion', questionId })
-        throw error
-      }
+      const { error } = await withWriteRetry(
+        () => supabase.from('quiz_questions').delete().eq('id', questionId),
+        { label: 'deleteQuizQuestion' }
+      )
+      if (error) throw error
       setData((prev) => ({
         ...prev,
         quizQuestions: prev.quizQuestions.filter((q) => q.id !== questionId),

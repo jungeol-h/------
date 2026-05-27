@@ -4,7 +4,7 @@ import { useCallback } from 'react'
 import { supabase } from '../../lib/supabase.js'
 import { toTodoItem } from '../../lib/supabaseHelpers.js'
 import { makeId } from '../dataModel.js'
-import { reportError } from '../../lib/sentry.js'
+import { withWriteRetry } from '../../lib/supabaseRetry.js'
 
 export function useTaskDomain(data, setData) {
   // 과제 완료/미완료 토글
@@ -13,14 +13,11 @@ export function useTaskDomain(data, setData) {
       const task = data.tasks.find((t) => t.id === taskId)
       if (!task) return
       const newStatus = task.status === 'done' ? 'pending' : 'done'
-      const { error } = await supabase
-        .from('tasks')
-        .update({ status: newStatus })
-        .eq('id', taskId)
-      if (error) {
-        reportError(error, { where: 'toggleTask', taskId })
-        throw error
-      }
+      const { error } = await withWriteRetry(
+        () => supabase.from('tasks').update({ status: newStatus }).eq('id', taskId),
+        { label: 'toggleTask' }
+      )
+      if (error) throw error
       setData((prev) => ({
         ...prev,
         tasks: prev.tasks.map((t) =>
@@ -43,11 +40,11 @@ export function useTaskDomain(data, setData) {
         content,
         done: false,
       }
-      const { error } = await supabase.from('todo_items').insert(row)
-      if (error) {
-        reportError(error, { where: 'addTodoItem', studentId })
-        throw error
-      }
+      const { error } = await withWriteRetry(
+        () => supabase.from('todo_items').insert(row),
+        { label: 'addTodoItem' }
+      )
+      if (error) throw error
       setData((prev) => ({
         ...prev,
         todoItems: [toTodoItem(row), ...prev.todoItems],
@@ -64,11 +61,11 @@ export function useTaskDomain(data, setData) {
       if (patch.plannedMin !== undefined) snake.planned_min = patch.plannedMin
       if (patch.content !== undefined) snake.content = patch.content
       if (Object.keys(snake).length === 0) return
-      const { error } = await supabase.from('todo_items').update(snake).eq('id', itemId)
-      if (error) {
-        reportError(error, { where: 'updateTodoItem', itemId })
-        throw error
-      }
+      const { error } = await withWriteRetry(
+        () => supabase.from('todo_items').update(snake).eq('id', itemId),
+        { label: 'updateTodoItem' }
+      )
+      if (error) throw error
       setData((prev) => ({
         ...prev,
         todoItems: prev.todoItems.map((t) =>
@@ -85,14 +82,11 @@ export function useTaskDomain(data, setData) {
       const item = data.todoItems.find((t) => t.id === itemId)
       if (!item) return
       const newDone = !item.done
-      const { error } = await supabase
-        .from('todo_items')
-        .update({ done: newDone })
-        .eq('id', itemId)
-      if (error) {
-        reportError(error, { where: 'toggleTodo', itemId })
-        throw error
-      }
+      const { error } = await withWriteRetry(
+        () => supabase.from('todo_items').update({ done: newDone }).eq('id', itemId),
+        { label: 'toggleTodo' }
+      )
+      if (error) throw error
       setData((prev) => ({
         ...prev,
         todoItems: prev.todoItems.map((t) =>

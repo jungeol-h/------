@@ -7,7 +7,7 @@ import { useCallback } from 'react'
 import { supabase } from '../../lib/supabase.js'
 import { toMindRecord } from '../../lib/supabaseHelpers.js'
 import { makeId } from '../dataModel.js'
-import { reportError } from '../../lib/sentry.js'
+import { withWriteRetry } from '../../lib/supabaseRetry.js'
 
 export function useMindDomain(setData) {
   const addMindRecord = useCallback(
@@ -23,11 +23,11 @@ export function useMindDomain(setData) {
         memo,
       }
 
-      const { error } = await supabase.from('mind_records').insert(row)
-      if (error) {
-        reportError(error, { where: 'addMindRecord', studentId })
-        throw error
-      }
+      const { error } = await withWriteRetry(
+        () => supabase.from('mind_records').insert(row),
+        { label: 'addMindRecord' }
+      )
+      if (error) throw error
 
       setData((prev) => ({
         ...prev,

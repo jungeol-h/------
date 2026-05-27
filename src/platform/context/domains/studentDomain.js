@@ -6,7 +6,7 @@ import { useCallback } from 'react'
 import { supabase } from '../../lib/supabase.js'
 import { toUser, toAssignment } from '../../lib/supabaseHelpers.js'
 import { makeId } from '../dataModel.js'
-import { reportError } from '../../lib/sentry.js'
+import { withWriteRetry } from '../../lib/supabaseRetry.js'
 
 export function useStudentDomain(setData) {
   // 학생 신규 추가
@@ -31,9 +31,11 @@ export function useStudentDomain(setData) {
         risk_level: 'normal',
         status: 'active',
       }
-      const { error } = await supabase.from('users').insert(row)
+      const { error } = await withWriteRetry(
+        () => supabase.from('users').insert(row),
+        { label: 'createStudent' }
+      )
       if (error) {
-        reportError(error, { where: 'createStudent', loginId })
         if (error.code === '23505') {
           throw new Error('이미 사용 중인 login_id입니다.')
         }
@@ -43,9 +45,11 @@ export function useStudentDomain(setData) {
       let newAssignment = null
       if (managerId) {
         const assn = { student_id: id, educator_id: managerId }
-        const { error: aErr } = await supabase.from('assignments').insert(assn)
-        if (aErr) reportError(aErr, { where: 'createStudent.assignment', studentId: id, managerId })
-        else newAssignment = toAssignment(assn)
+        const { error: aErr } = await withWriteRetry(
+          () => supabase.from('assignments').insert(assn),
+          { label: 'createStudent' }
+        )
+        if (!aErr) newAssignment = toAssignment(assn)
       }
 
       const local = toUser(row)
@@ -75,9 +79,11 @@ export function useStudentDomain(setData) {
       if (patch.parentPassword !== undefined) snake.parent_password = patch.parentPassword
 
       if (Object.keys(snake).length > 0) {
-        const { error } = await supabase.from('users').update(snake).eq('id', studentId)
+        const { error } = await withWriteRetry(
+          () => supabase.from('users').update(snake).eq('id', studentId),
+          { label: 'updateStudent' }
+        )
         if (error) {
-          reportError(error, { where: 'updateStudent', studentId })
           if (error.code === '23505') {
             throw new Error('이미 사용 중인 login_id입니다.')
           }
@@ -88,17 +94,18 @@ export function useStudentDomain(setData) {
       // managerId 변경: 기존 assignments 모두 삭제 후 신규 1개 insert
       let assignmentsPatch = null
       if (patch.managerId !== undefined) {
-        const { error: delErr } = await supabase
-          .from('assignments')
-          .delete()
-          .eq('student_id', studentId)
-        if (delErr) reportError(delErr, { where: 'updateStudent.assignmentDelete', studentId })
+        await withWriteRetry(
+          () => supabase.from('assignments').delete().eq('student_id', studentId),
+          { label: 'updateStudent' }
+        )
 
         if (patch.managerId) {
           const assn = { student_id: studentId, educator_id: patch.managerId }
-          const { error: insErr } = await supabase.from('assignments').insert(assn)
-          if (insErr) reportError(insErr, { where: 'updateStudent.assignmentInsert', studentId, managerId: patch.managerId })
-          else assignmentsPatch = toAssignment(assn)
+          const { error: insErr } = await withWriteRetry(
+            () => supabase.from('assignments').insert(assn),
+            { label: 'updateStudent' }
+          )
+          if (!insErr) assignmentsPatch = toAssignment(assn)
         } else {
           assignmentsPatch = 'cleared'
         }
@@ -130,14 +137,11 @@ export function useStudentDomain(setData) {
   // 학생 활성/비활성 토글 (soft delete)
   const setStudentStatus = useCallback(
     async (studentId, status) => {
-      const { error } = await supabase
-        .from('users')
-        .update({ status })
-        .eq('id', studentId)
-      if (error) {
-        reportError(error, { where: 'setStudentStatus', studentId, status })
-        throw error
-      }
+      const { error } = await withWriteRetry(
+        () => supabase.from('users').update({ status }).eq('id', studentId),
+        { label: 'setStudentStatus' }
+      )
+      if (error) throw error
       setData((prev) => ({
         ...prev,
         students: prev.students.map((s) =>
