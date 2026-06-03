@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { ChevronRight, ChevronLeft, RotateCcw, History } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
-import SaveErrorBox from '../../components/common/SaveErrorBox.jsx'
 
 // ─── 계열 정의 ────────────────────────────────────────────────
 const CATEGORIES = {
@@ -209,7 +208,6 @@ export default function CareerDesignTab() {
   const [selectedActivities, setSelectedActivities] = useState([]) // string[]
   const [selectedCategories, setSelectedCategories] = useState([]) // string[], up to 2
   const [result, setResult] = useState(null)
-  const [saveError, setSaveError] = useState(null)
 
   const reset = () => {
     setStep('intro')
@@ -270,15 +268,14 @@ export default function CareerDesignTab() {
     const newResult = { primaryCat, typeName, finalScores, fields }
     setResult(newResult)
     try {
-      setSaveError(null)
       await saveCareerDesignResult(currentUser.id, {
         selectedVerbs,
         selectedActivities,
         selectedCategories,
         ...newResult,
       })
-    } catch (e) {
-      setSaveError(e)
+    } catch {
+      // 저장 실패는 전역 Toast가 표면화한다. 결과 단계로 넘어가지 않는다.
       return
     }
     setStep('result')
@@ -480,8 +477,6 @@ export default function CareerDesignTab() {
           )
         })}
       </div>
-
-      <SaveErrorBox error={saveError} userId={currentUser?.id} />
 
       <div className="flex gap-3 pt-2">
         <button onClick={() => setStep('step2')} className="px-5 py-3 rounded-xl text-gray-500 bg-gray-100 font-semibold text-sm flex items-center gap-1">

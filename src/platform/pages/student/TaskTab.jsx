@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { CheckCircle2, Circle, ClipboardList, Upload } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
-import SaveErrorBox from '../../components/common/SaveErrorBox.jsx'
 
 export default function TaskTab() {
   const { currentUser } = useAuth()
@@ -12,14 +11,12 @@ export default function TaskTab() {
   const done = tasks.filter(t => t.status === 'done')
 
   const [toast, setToast] = useState(false)
-  const [taskError, setTaskError] = useState(null)
 
   const handleToggleTask = async (id) => {
-    setTaskError(null)
     try {
       await toggleTask(id)
-    } catch (e) {
-      setTaskError(e)
+    } catch {
+      // 저장 실패는 전역 Toast가 표면화한다.
     }
   }
 
@@ -93,8 +90,6 @@ export default function TaskTab() {
           )}
         </>
       )}
-
-      <SaveErrorBox error={taskError} userId={currentUser?.id} />
 
       {/* 파일 업로드 안내 토스트 */}
       {toast && (

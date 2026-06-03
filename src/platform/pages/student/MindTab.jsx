@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { Check, BookHeart, NotebookPen } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
-import SaveErrorBox from '../../components/common/SaveErrorBox.jsx'
 
 function scoreColor(total) {
   if (total > 3) return 'text-blue-600'
@@ -31,14 +30,12 @@ export default function MindTab() {
   const [scores, setScores] = useState({ mood: 0, motivation: 0, confidence: 0 })
   const [memo, setMemo] = useState('')
   const [mindSubmitted, setMindSubmitted] = useState(false)
-  const [mindError, setMindError] = useState(null)
 
   // 일기 상태
   const [praise, setPraise] = useState('')
   const [reflection, setReflection] = useState('')
   const [resolution, setResolution] = useState('')
   const [diarySubmitted, setDiarySubmitted] = useState(false)
-  const [diaryError, setDiaryError] = useState(null)
 
   const myRecords = data.mindRecords
     .filter(r => r.studentId === currentUser?.id)
@@ -47,20 +44,18 @@ export default function MindTab() {
     .slice(0, 5)
 
   const handleMindSubmit = async () => {
-    setMindError(null)
     try {
       await addMindRecord(currentUser.id, { ...scores, memo })
       setMindSubmitted(true)
       setTimeout(() => setMindSubmitted(false), 2000)
       setScores({ mood: 0, motivation: 0, confidence: 0 })
       setMemo('')
-    } catch (e) {
-      setMindError(e)
+    } catch {
+      // 저장 실패는 전역 Toast가 표면화한다.
     }
   }
 
   const handleDiarySubmit = async () => {
-    setDiaryError(null)
     try {
       await addDiaryRecord(currentUser.id, { praise, reflection, resolution })
       setDiarySubmitted(true)
@@ -68,8 +63,8 @@ export default function MindTab() {
       setPraise('')
       setReflection('')
       setResolution('')
-    } catch (e) {
-      setDiaryError(e)
+    } catch {
+      // 저장 실패는 전역 Toast가 표면화한다.
     }
   }
 
@@ -154,7 +149,6 @@ export default function MindTab() {
           >
             {mindSubmitted ? <><Check size={18} /> 저장됐어요!</> : '마인드 저장하기'}
           </button>
-          <SaveErrorBox error={mindError} userId={currentUser?.id} />
 
           {/* 최근 기록 */}
           {myRecords.length > 0 && (
@@ -233,7 +227,6 @@ export default function MindTab() {
           >
             {diarySubmitted ? <><Check size={18} /> 저장됐어요!</> : '일기 저장하기'}
           </button>
-          <SaveErrorBox error={diaryError} userId={currentUser?.id} />
 
           {/* 오늘 일기 존재 여부 표시 */}
           {(() => {

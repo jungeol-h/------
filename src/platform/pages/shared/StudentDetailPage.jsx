@@ -1,12 +1,15 @@
 import { useState, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
-import { User, AlertCircle } from 'lucide-react'
+import { User, AlertCircle, Plus } from 'lucide-react'
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid, Cell,
 } from 'recharts'
+import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
 import { getMindStatus } from '../../context/selectors/riskDetection.js'
+import { COUNSELING_TYPE_LABELS } from '../../data/counselingTypes.js'
+import CounselingFormModal from '../../components/counseling/CounselingFormModal.jsx'
 import { STAGE_META, STAGE_ORDER } from '../../data/stageFeedbackLibrary.js'
 import { DOMAIN_LABELS } from '../../data/questions.js'
 import {
@@ -499,11 +502,64 @@ function CareerDesignSection({ studentId, data }) {
   )
 }
 
+// ─── 탭: 상담 ─────────────────────────────────────────────────
+function CounselingSection({ studentId, data, authorId }) {
+  const [showForm, setShowForm] = useState(false)
+
+  const student = data.students.find((s) => s.id === studentId)
+  const records = data.counselingRecords
+    .filter((r) => r.studentId === studentId)
+    .slice()
+    .sort((a, b) => (b.date > a.date ? 1 : -1))
+
+  return (
+    <div className="space-y-3">
+      <div className="flex justify-end">
+        <button
+          onClick={() => setShowForm(true)}
+          className="flex items-center gap-1 bg-emerald-500 text-white text-sm font-bold px-3 py-2 rounded-xl hover:bg-emerald-600 active:scale-95 transition-all"
+        >
+          <Plus size={16} /> 상담 작성
+        </button>
+      </div>
+
+      {records.length === 0 ? (
+        <p className="text-sm text-gray-400 py-8 text-center">상담 기록이 없습니다.</p>
+      ) : (
+        records.map((r) => {
+          const author = data.educators.find((e) => e.id === r.educatorId)
+          return (
+            <div key={r.id} className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">
+                  {COUNSELING_TYPE_LABELS[r.type] || r.type}
+                </span>
+                <span className="text-xs text-gray-400">{r.date}</span>
+              </div>
+              <p className="text-sm text-gray-600">{r.comment}</p>
+              {author && <p className="text-xs text-gray-400 mt-2">작성: {author.name}</p>}
+            </div>
+          )
+        })
+      )}
+
+      {showForm && (
+        <CounselingFormModal
+          fixedStudent={student}
+          authorId={authorId}
+          onClose={() => setShowForm(false)}
+        />
+      )}
+    </div>
+  )
+}
+
 // ─── 메인 ─────────────────────────────────────────────────────
-const TABS = ['마인드', '일기', '학습', '과제', '학습진단', '진로설계']
+const TABS = ['마인드', '일기', '학습', '과제', '학습진단', '진로설계', '상담']
 
 export default function StudentDetailPage() {
   const { studentId } = useParams()
+  const { currentUser } = useAuth()
   const { data, getWeeklyLearning } = useData()
   const [activeTab, setActiveTab] = useState(0)
 
@@ -566,6 +622,7 @@ export default function StudentDetailPage() {
       {activeTab === 3 && <TaskSection studentId={studentId} data={data} />}
       {activeTab === 4 && <LearningDiagnosisSection studentId={studentId} data={data} />}
       {activeTab === 5 && <CareerDesignSection studentId={studentId} data={data} />}
+      {activeTab === 6 && <CounselingSection studentId={studentId} data={data} authorId={currentUser?.id} />}
     </div>
   )
 }

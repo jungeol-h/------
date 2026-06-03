@@ -2,7 +2,6 @@ import { useState, useMemo } from 'react'
 import { ChevronLeft, ChevronRight, ClipboardCheck, CheckCircle2, XCircle, RotateCcw, Loader } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
-import SaveErrorBox from '../../components/common/SaveErrorBox.jsx'
 
 export default function QuizTab() {
   const { currentUser } = useAuth()
@@ -30,7 +29,6 @@ export default function QuizTab() {
   const [rawByQid, setRawByQid] = useState({})
   const [resultAttempt, setResultAttempt] = useState(null)
   const [submitting, setSubmitting] = useState(false)
-  const [saveError, setSaveError] = useState(null)
 
   const activeSet = mySets.find((s) => s.id === activeSetId)
   const activeQuestions = useMemo(
@@ -49,7 +47,6 @@ export default function QuizTab() {
     const existing = myAttempts.find((a) => a.quizSetId === setId)
     setActiveSetId(setId)
     setStep(0)
-    setSaveError(null)
     if (existing) {
       setResultAttempt(existing)
       setMode('result')
@@ -65,7 +62,6 @@ export default function QuizTab() {
     setResultAttempt(null)
     setRawByQid({})
     setStep(0)
-    setSaveError(null)
   }
 
   function setRaw(qid, value) {
@@ -75,13 +71,12 @@ export default function QuizTab() {
   async function handleSubmit() {
     if (submitting) return
     setSubmitting(true)
-    setSaveError(null)
     try {
       const attempt = await submitQuizAttempt(studentId, activeSetId, rawByQid)
       setResultAttempt(attempt)
       setMode('result')
-    } catch (e) {
-      setSaveError(e)
+    } catch {
+      // 저장 실패는 전역 Toast가 표면화한다.
     } finally {
       setSubmitting(false)
     }
@@ -200,8 +195,6 @@ export default function QuizTab() {
             공백과 대소문자는 채점 시 무시됩니다.
           </p>
         </div>
-
-        <SaveErrorBox error={saveError} userId={studentId} />
 
         <div className="flex gap-2 pt-1">
           <button

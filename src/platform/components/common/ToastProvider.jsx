@@ -3,10 +3,11 @@
 // 캡처할 시간이 없었다. Toast는 10초간 유지되고, "신고하기" 한 번이면
 // FeedbackProvider 모달이 컨텍스트 prefill과 함께 열린다.
 
-import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { AlertCircle, MessageSquarePlus, X } from 'lucide-react'
 import { useFeedback } from '../FeedbackProvider.jsx'
+import { registerErrorToast } from '../../lib/supabaseRetry.js'
 
 const ToastContext = createContext(null)
 const TOAST_TTL_MS = 10000
@@ -59,6 +60,9 @@ export function ToastProvider({ children }) {
     },
     [dismiss]
   )
+
+  // withWriteRetry(모듈 함수)가 최종 실패 시 토스트를 띄울 수 있게 핸들러 등록.
+  useEffect(() => registerErrorToast(showErrorToast), [showErrorToast])
 
   const handleReport = useCallback(
     (toast) => {

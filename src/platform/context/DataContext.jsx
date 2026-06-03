@@ -23,6 +23,7 @@ import { useLearningDomain } from './domains/learningDomain.js'
 import { useCareerDomain } from './domains/careerDomain.js'
 import { useQuizDomain } from './domains/quizDomain.js'
 import { useStudentDomain } from './domains/studentDomain.js'
+import { useCounselingDomain } from './domains/counselingDomain.js'
 import { getWeeklyLearning as selectWeeklyLearning } from './selectors/weeklyLearning.js'
 import { reportError, setSentryUser } from '../lib/sentry.js'
 
@@ -91,6 +92,7 @@ export function DataProvider({ children }) {
   const career = useCareerDomain(setData)
   const quiz = useQuizDomain(data, setData)
   const student = useStudentDomain(setData)
+  const counseling = useCounselingDomain(setData)
 
   // getWeeklyLearning — selector를 data에 바인딩해 기존 useData() API 호환 유지.
   const getWeeklyLearning = useCallback(
@@ -115,10 +117,11 @@ export function DataProvider({ children }) {
       ...career,
       ...quiz,
       ...student,
+      ...counseling,
       getWeeklyLearning,
       resetData,
     }),
-    [data, loading, dataReady, mind, diary, alert, task, learning, career, quiz, student, getWeeklyLearning, resetData]
+    [data, loading, dataReady, mind, diary, alert, task, learning, career, quiz, student, counseling, getWeeklyLearning, resetData]
   )
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>

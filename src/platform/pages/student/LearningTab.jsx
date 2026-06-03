@@ -3,7 +3,6 @@ import { Play, Pause, RotateCcw, Save, ListChecks, ChevronLeft, Plus, Check, X }
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
-import SaveErrorBox from '../../components/common/SaveErrorBox.jsx'
 
 const SUBJECTS = [
   '국어', '영어', '수학', '과학', '사회', '도덕',
@@ -32,25 +31,22 @@ function TodoScreen({ studentId, onBack }) {
   const [newMin, setNewMin] = useState(30)
   const [newContent, setNewContent] = useState('')
   const [adding, setAdding] = useState(false)
-  const [todoError, setTodoError] = useState(null)
 
   const handleAdd = async () => {
-    setTodoError(null)
     try {
       await addTodoItem(studentId, { subject: newSubject, plannedMin: newMin, content: newContent.trim() })
       setNewContent('')
       setAdding(false)
-    } catch (e) {
-      setTodoError(e)
+    } catch {
+      // 저장 실패는 전역 Toast가 표면화한다.
     }
   }
 
   const handleToggle = async (id) => {
-    setTodoError(null)
     try {
       await toggleTodo(id)
-    } catch (e) {
-      setTodoError(e)
+    } catch {
+      // 저장 실패는 전역 Toast가 표면화한다.
     }
   }
 
@@ -119,8 +115,6 @@ function TodoScreen({ studentId, onBack }) {
           </div>
         ))}
       </div>
-
-      <SaveErrorBox error={todoError} userId={studentId} />
 
       {/* 추가 폼 */}
       {adding ? (
@@ -199,7 +193,6 @@ export default function LearningTab() {
   const [subject, setSubject] = useState('수학')
   const [focus, setFocus] = useState(80)
   const [saved, setSaved] = useState(false)
-  const [learnError, setLearnError] = useState(null)
   const intervalRef = useRef(null)
 
   useEffect(() => {
@@ -213,7 +206,6 @@ export default function LearningTab() {
 
   const handleSave = async () => {
     if (elapsed < 10) return
-    setLearnError(null)
     const minutes = Math.max(1, Math.round(elapsed / 60))
     try {
       await addLearningRecord(currentUser.id, { subject, duration: minutes, focus })
@@ -221,8 +213,8 @@ export default function LearningTab() {
       setRunning(false)
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
-    } catch (e) {
-      setLearnError(e)
+    } catch {
+      // 저장 실패는 전역 Toast가 표면화한다.
     }
   }
 
@@ -334,8 +326,6 @@ export default function LearningTab() {
           )}
         </div>
       </div>
-
-      <SaveErrorBox error={learnError} userId={currentUser?.id} />
 
       {/* 누적 통계 */}
       <div className="bg-white rounded-2xl p-4 shadow-sm flex items-center gap-4">

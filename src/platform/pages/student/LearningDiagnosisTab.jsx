@@ -3,7 +3,6 @@ import { ChevronLeft, ChevronRight, RotateCcw, CheckSquare, Square, Activity } f
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
-import SaveErrorBox from '../../components/common/SaveErrorBox.jsx'
 import { questions, DOMAIN_LABELS } from '../../data/questions.js'
 import { STAGE_META, STAGE_ORDER } from '../../data/stageFeedbackLibrary.js'
 import {
@@ -36,7 +35,6 @@ export default function LearningDiagnosisTab() {
   const [answers, setAnswers] = useState(prevResult?.answers || Array(30).fill(0))
   const [resultTab, setResultTab] = useState(0)
   const [checkedTasks, setCheckedTasks] = useState({})
-  const [saveError, setSaveError] = useState(null)
 
   // 진단 결과 계산 (메모이제이션)
   const result = useMemo(() => {
@@ -78,7 +76,6 @@ export default function LearningDiagnosisTab() {
       const stateTypes    = getStateType(stageGrades)
       const typeName      = getTypeName(stageGrades)
       try {
-        setSaveError(null)
         await saveLearningDiagnosisResult(studentId, {
           answers: [...answers],
           domainScores,
@@ -87,8 +84,8 @@ export default function LearningDiagnosisTab() {
           stateTypes,
           typeName,
         })
-      } catch (e) {
-        setSaveError(e)
+      } catch {
+        // 저장 실패는 전역 Toast가 표면화한다. 결과 단계로 넘어가지 않는다.
         return
       }
       setStep('result')
@@ -215,8 +212,6 @@ export default function LearningDiagnosisTab() {
             )
           })}
         </div>
-
-        <SaveErrorBox error={saveError} userId={studentId} />
 
         {/* 이전/다음 */}
         <div className="flex gap-2 pt-1">

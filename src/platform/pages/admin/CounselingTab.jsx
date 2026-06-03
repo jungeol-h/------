@@ -10,16 +10,10 @@ export default function CounselingTab() {
   const { data } = useData()
   const [showForm, setShowForm] = useState(false)
 
+  // 관리자는 전체 상담 기록 열람·작성
   const records = data.counselingRecords
-    .filter(r => r.educatorId === currentUser?.id)
     .slice()
     .reverse()
-
-  // 작성 대상 — 담당 학생만
-  const myStudentIds = data.assignments
-    .filter(a => a.educatorId === currentUser?.id)
-    .map(a => a.studentId)
-  const myStudents = data.students.filter(s => myStudentIds.includes(s.id))
 
   return (
     <div className="py-6 space-y-4">
@@ -39,6 +33,7 @@ export default function CounselingTab() {
         <div className="space-y-3">
           {records.map(r => {
             const student = data.students.find(s => s.id === r.studentId)
+            const author = data.educators.find(e => e.id === r.educatorId)
             return (
               <div key={r.id} className="bg-white rounded-2xl p-4 shadow-sm">
                 <div className="flex items-center justify-between mb-2">
@@ -49,6 +44,9 @@ export default function CounselingTab() {
                   <span className="text-xs text-gray-400">{r.date}</span>
                 </div>
                 <p className="text-sm text-gray-600">{r.comment}</p>
+                {author && (
+                  <p className="text-xs text-gray-400 mt-2">작성: {author.name}</p>
+                )}
               </div>
             )
           })}
@@ -57,7 +55,7 @@ export default function CounselingTab() {
 
       {showForm && (
         <CounselingFormModal
-          students={myStudents}
+          students={data.students}
           authorId={currentUser?.id}
           onClose={() => setShowForm(false)}
         />

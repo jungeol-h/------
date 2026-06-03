@@ -1,3 +1,38 @@
+#### [2026-06-03] 미마운트 Provider 크래시 수정 + 에러 토스트 전역 브리지로 일원화
+
+- **Context & Ambiguity:** `useFeedback must be used within FeedbackProvider` 런타임 크래시를 조사하니, `FeedbackProvider`/`ToastProvider`가 만들어져 있는데 `App.jsx` 트리에 **마운트되지 않은** 상태였다(최근 피드백 커밋이 Header에 FeedbackButton만 추가하고 Provider 배선을 누락). 또 `ToastProvider`(저장실패 토스트)는 어디서도 사용되지 않았고, 11곳이 인라인 `SaveErrorBox`로 에러를 표시 중이었다. "토스트로 일원화 + SaveErrorBox 제거"로 방향을 잡았는데, 모듈 함수인 `withWriteRetry`가 React context의 토스트 함수에 어떻게 닿을지가 관건이었다.
+- **Your Choice & Action:** (1) `App.jsx`에 `FeedbackProvider > ToastProvider`로 라우트 트리를 감쌌다. (2) `supabaseRetry.js`에 모듈 레벨 슬롯(`registerErrorToast`)을 두고, `ToastProvider`가 mount 시 `useEffect`로 자신의 `showErrorToast`를 등록하게 했다. `withWriteRetry`는 최종 실패 시점(throw/return 양 경로)에서 `reportError` 직후 이 슬롯으로 토스트를 쏜다. (3) 11개 호출부의 `SaveErrorBox`+에러 state를 제거하고 catch는 빈 처리(또는 제어흐름용 `return` 유지)로 단순화. `SaveErrorBox.jsx` 파일 삭제.
+- **Reasoning & Justification:** 전역 브리지는 `withWriteRetry`가 이미 모든 최종 실패를 중앙에서 처리하고 `sentryEventId`를 error에 부착("Toast UI의 신고 prefill용")하는 기존 설계의 자연스러운 seam이다. 호출부 11곳을 개별로 `showErrorToast` 호출로 바꾸는 방식보다 변경면이 좁고 누락 위험이 없다. context 접근 불가 문제는 등록 슬롯 패턴으로 우회.
+- **Potential Risk / Review Required:** (1) 모듈 싱글톤 슬롯이라 `ToastProvider`가 두 번 마운트되면 마지막 것만 유효(현재 단일 마운트라 무방). (2) 진단/진로 탭의 일부 catch는 실패 시 `return`으로 결과단계 진입을 막는 제어흐름이 있었으므로 그 `return`은 보존했다 — 이 두 곳은 토스트로 알림 + 단계 미진입이 맞는지 확인 요망. (3) 로그인 화면 등 Provider 밖에서 발생하는 저장 실패는 토스트 핸들러 미등록이라 조용히 넘어간다(Sentry에는 기록됨).
+
+#### [2026-06-03] counseling_records.manager_id를 "작성자 ID"로 재해석
+
+- **Context & Ambiguity:** 상담 작성 권한을 매니저(담당 학생)뿐 아니라 관리자(전체)에게도 부여하기로 결정됐는데, `counseling_records` 테이블에는 `manager_id`(NOT NULL, FK users) 컬럼만 있고 관리자용 작성자 컬럼이 없다. 스키마를 바꿀지(작성자 컬럼 추가) 기존 컬럼을 재사용할지 모호했다.
+- **Your Choice & Action:** 스키마 변경 없이 `manager_id`를 "작성자(매니저 또는 관리자) user id"로 의미 확장했다. `addCounselingRecord({ studentId, authorId, content, type })`가 `manager_id: authorId`로 insert한다. 변환기 `toCounselingRecord`가 이미 이 컬럼을 `educatorId`로 매핑하고 있어 코드상 이름도 자연스럽게 맞는다.
+- **Reasoning & Justification:** FK가 `users(id)`라 관리자 id도 제약을 위반하지 않는다. 베타 운영 중 마이그레이션은 리스크이고, 컬럼 추가의 실익이 작다(작성자 역할은 `users.role`로 조회 가능). 기존 코칭 흐름(`recordCoaching`)도 동일 컬럼에 매니저 id를 넣고 있어 일관적이다.
+- **Potential Risk / Review Required:** 컬럼명이 `manager_id`인데 실제로는 관리자도 들어가므로, 추후 "매니저가 작성한 것만" 집계하는 쿼리를 짜면 관리자 작성분이 섞일 수 있다. 작성자 역할 구분이 필요해지면 `educators`에서 role 조인으로 필터해야 함(관리자 탭은 이미 그렇게 작성자명만 표시).
+
+#### [2026-06-03] 상담 카테고리에 'etc'(기타) 추가 + 공용 상수 추출
+
+- **Context & Ambiguity:** 사용자는 "상담 항목을 자체적으로 마련"을 요구하면서 최소 구조(카테고리+자유서술)를 택했다. 기존 type은 `mind`/`career`/`study` 3종뿐이라 마인드 코칭 외 일반 상담을 분류할 칸이 부족했다. 항목을 얼마나 늘릴지는 명시되지 않았다.
+- **Your Choice & Action:** `etc`(기타) 1종만 추가해 4종으로 했고, `CounselingTab`에 인라인돼 있던 `TYPE_LABELS`를 `src/platform/data/counselingTypes.js` 공용 상수(`COUNSELING_TYPES`, `COUNSELING_TYPE_LABELS`)로 추출해 작성 폼/매니저 탭/관리자 탭/학생상세 4곳에서 재사용했다.
+- **Reasoning & Justification:** 최소 구조 요구에 맞춰 항목을 과하게 늘리지 않되, 분류 불가 케이스를 흡수할 `기타`만 더했다. 향후 확장은 이 상수 파일 한 곳만 수정하면 되도록 단일 출처화.
+- **Potential Risk / Review Required:** DB `type` 기본값은 여전히 `study`라, UI 외 경로로 들어온 레코드가 `study`로 뭉칠 수 있다. 카테고리 체계를 더 세분화하려면 라벨뿐 아니라 사용자와 분류 기준 합의 필요.
+
+#### [2026-06-03] 매니저 CounselingTab의 educatorId 필터 버그 수정
+
+- **Context & Ambiguity:** 기존 `CounselingTab`은 `r.managerId === currentUser?.id`로 필터했으나, 변환기는 해당 필드를 `educatorId`로 매핑한다(=`r.managerId`는 항상 undefined). 즉 필터가 사실상 동작하지 않던 잠복 버그였다. 요청 범위(작성 기능)와 별개지만 같은 파일을 건드리는 김에 고칠지 판단이 필요했다.
+- **Your Choice & Action:** `r.educatorId === currentUser?.id`로 수정했다. 작성 기능 추가와 함께 같은 탭에서 처리.
+- **Reasoning & Justification:** 작성 기능을 붙이는 순간 이 필터가 실제로 의미를 가지게 되므로(매니저는 본인이 작성/담당한 상담만 봐야 함), 방치하면 신규 기능이 잘못된 데이터를 보여준다. 인접 코드의 명백한 결함이라 spontaneous refactoring 범위로 판단.
+- **Potential Risk / Review Required:** 과거에 필터가 무력화돼 있던 동안 매니저가 "전체 상담"을 봐 왔을 가능성(데이터가 적어 드러나지 않았을 수 있음). 수정 후 매니저 화면에 본인 작성분만 나오는지, 기존 코칭으로 생성된 상담이 정상 표시되는지 확인 요망.
+
+#### [2026-06-03] CounselingFormModal 단일 컴포넌트 재사용 + 학생상세는 탭 신설
+
+- **Context & Ambiguity:** 작성 진입점을 "상담 탭 + 학생상세 양쪽"으로 하기로 했는데, 매니저/관리자/학생상세 3곳의 학생 선택 범위가 제각각(담당만/전체/고정 1명)이다. 모달을 3벌 만들지, 1벌로 분기할지 모호했다.
+- **Your Choice & Action:** 모달 1개(`CounselingFormModal`)로 통일하고 `fixedStudent`(고정) vs `students`(드롭다운) prop으로 분기했다. 학생상세 페이지는 기존 탭 구조(`마인드/일기/.../진로설계`)에 `상담` 탭을 끝에 추가하는 방식으로 진입점을 마련했다(별도 모달 트리거 버튼을 본문에 흩뿌리지 않음).
+- **Reasoning & Justification:** 마크업·저장 로직 중복을 피하고, 권한별 학생 목록 주입만 호출부 책임으로 분리. 학생상세는 이미 탭 패러다임이라 새 섹션을 탭으로 얹는 게 일관적이고 발견성이 좋다.
+- **Potential Risk / Review Required:** 학생상세의 `상담` 탭은 매니저/관리자 공용 페이지에 모두 노출된다. 매니저가 담당 외 학생 상세에 접근하는 경로가 생기면 그 학생에게도 작성 가능해지므로, 라우팅 단의 접근 제어가 유일한 방어선이다(RLS는 anon_all). `project_security_debt` 범위.
+
 #### [2026-05-27] 네트워크 실패 시 낙관적 업데이트 대신 자동 재시도 채택
 
 - **Context & Ambiguity:** Mobile Safari 네트워크 일시 단절 시 사용자에게 "저장 안 됨"으로 보이는 UX 버그를 잡아야 했다. 후보는 (A) 낙관적 업데이트 + 롤백, (B) 짧은 백오프로 자동 재시도, (C) IndexedDB 오프라인 큐. 사용자는 B를 선택했다.

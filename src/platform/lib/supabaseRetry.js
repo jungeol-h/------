@@ -15,6 +15,23 @@ import { reportError } from './sentry.js'
 
 const BACKOFF_MS = [300, 800, 2000]
 
+// 전역 토스트 브리지 — ToastProvider가 마운트되며 자신의 showErrorToast를 등록한다.
+// withWriteRetry는 모듈 함수라 React context에 직접 접근할 수 없으므로, 최종 실패
+// 시점에 이 슬롯을 통해 토스트를 띄운다. 등록 전(로그인 화면 등)이면 조용히 건너뛴다.
+let toastHandler = null
+export function registerErrorToast(fn) {
+  toastHandler = fn
+  return () => { if (toastHandler === fn) toastHandler = null }
+}
+function emitErrorToast(error, label) {
+  if (!toastHandler) return
+  try {
+    toastHandler({ error, label, eventId: error?.sentryEventId })
+  } catch {
+    // 토스트 실패가 원래 에러 흐름을 막지 않도록 무시
+  }
+}
+
 function isRetryable(error) {
   if (!error) return false
   if (error instanceof TypeError) return true
@@ -50,12 +67,14 @@ export async function withWriteRetry(fn, { label } = {}) {
       if (!isRetryable(err) || attempt === BACKOFF_MS.length) {
         const eventId = reportError(err, { where: label, retryCount: attempt })
         attachEventId(err, eventId)
+        emitErrorToast(err, label)
         return result
       }
     } catch (e) {
       if (!isRetryable(e) || attempt === BACKOFF_MS.length) {
         const eventId = reportError(e, { where: label, retryCount: attempt })
         attachEventId(e, eventId)
+        emitErrorToast(e, label)
         throw e
       }
     }

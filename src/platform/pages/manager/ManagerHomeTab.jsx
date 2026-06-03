@@ -3,7 +3,6 @@ import { AlertTriangle, X, CheckCheck, Clock, ClipboardList, MessageCircle, User
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
 import { getRiskStudents } from '../../context/selectors/riskDetection.js'
-import SaveErrorBox from '../../components/common/SaveErrorBox.jsx'
 
 export default function ManagerHomeTab() {
   const { currentUser } = useAuth()
@@ -26,11 +25,9 @@ export default function ManagerHomeTab() {
 
   const [modal, setModal] = useState(null)
   const [comment, setComment] = useState('')
-  const [coachError, setCoachError] = useState(null)
 
   const handleCoach = async () => {
     if (!modal) return
-    setCoachError(null)
     try {
       await recordCoaching({
         studentId: modal.student.id,
@@ -41,8 +38,8 @@ export default function ManagerHomeTab() {
       })
       setModal(null)
       setComment('')
-    } catch (e) {
-      setCoachError(e)
+    } catch {
+      // 저장 실패는 전역 Toast가 표면화한다.
     }
   }
 
@@ -169,7 +166,6 @@ export default function ManagerHomeTab() {
               rows={4}
               className="w-full border border-gray-200 rounded-xl p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-300"
             />
-            <SaveErrorBox error={coachError} userId={currentUser?.id} />
             <div className="flex gap-2">
               <button
                 onClick={() => setModal(null)}
