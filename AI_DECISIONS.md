@@ -1,3 +1,17 @@
+#### [2026-06-03] 학생 선택을 검색형 콤보박스로 직접 구현(무라이브러리)
+
+- **Context & Ambiguity:** 학생 수가 많아 일반 `select` 드롭다운 UX가 나쁘다는 지적. "검색·자동 드롭다운"을 요청했으나 라이브러리 사용 여부, 키보드 동작 범위, 선택 후 표시 방식은 미지정.
+- **Your Choice & Action:** 새 의존성 없이 `StudentCombobox.jsx`를 직접 구현 — input 필터링 + 드롭다운 + 키보드 내비(↑↓/Enter/Esc) + 외부 클릭 닫기 + 선택 해제(X) 버튼. 항목 선택은 input `blur`보다 먼저 확정되도록 `onMouseDown`+`preventDefault`로 처리. 활성 인덱스 리셋은 effect 대신 상태 변경 지점(입력/열기/해제)에서 인라인 처리(React Compiler의 set-state-in-effect 경고 회피). `labelOf`는 모듈 스코프로 올려 `useMemo` 의존성 추론 충돌 제거.
+- **Reasoning & Justification:** 베타 규모(50~60명)에 외부 콤보박스 라이브러리 도입은 과함 — 번들·의존성 증가 대비 이득 적음. 기존 코드도 라이브러리 없이 패턴을 직접 구현하는 결을 따름. `onMouseDown` 선택 확정은 input과 드롭다운이 공존할 때의 표준 회피책.
+- **Potential Risk / Review Required:** (1) 모바일 터치에서 `onMouseDown`+`preventDefault` 동작과 가상키보드 상호작용을 실기기 확인 권장. (2) 매우 많은 학생(수백+) 시 필터 후 전체 렌더 — 현재 규모엔 무방하나 확장 시 가상 스크롤 필요. (3) 학교/학년이 비어도 라벨 정규식(`/\s+\)/`)으로 괄호 정리하나 엣지 케이스 표시 확인 요망.
+
+#### [2026-06-03] 상담 탭을 모달 트리거에서 상시 노출 인라인 폼으로 전환
+
+- **Context & Ambiguity:** "버튼→모달" 대신 탭 진입 시 작성 폼이 상단에 상시 노출되고 아래에 리스트가 오는 구조로 바꿔달라는 요청. 단 (1) 폼 저장 성공 시의 피드백 방식, (2) 학생상세(`StudentDetailPage`)가 쓰던 기존 `CounselingFormModal`의 거취, (3) 저장 후 폼 상태 유지 여부가 명시되지 않았다.
+- **Your Choice & Action:** 매니저/관리자 탭이 거의 동일하므로 공용 `CounselingTabContent.jsx`로 추출하고 두 탭은 `students/records/showAuthor/authorId` props 차이만 넘기는 얇은 래퍼로 축소. 인라인 폼은 셀렉트 2개(피상담자·유형) 그리드 행 + 전폭 textarea + 우측 저장 버튼의 자연스러운 세로 스택. (초기엔 노션 PC 정책에 맞춰 가로 한 줄로 강제했으나 저장 버튼 overflow 버그가 생겨 사용자 지시로 가이드를 무시하고 세로 레이아웃으로 재구현.) 저장 성공 시 별도 성공 토스트 없이 **폼을 비워서**(학생·유형·내용 모두 초기화) 성공을 암시. `CounselingFormModal`은 학생상세에서 `fixedStudent`로 계속 쓰이므로 **삭제하지 않고 보존**.
+- **Reasoning & Justification:** 기존 토스트 인프라는 에러 전용(성공 토스트 어휘 없음)이라 폼 클리어가 가장 결이 맞는 성공 신호다. 학생상세는 "특정 학생 고정" 맥락이라 셀렉트 없는 모달이 여전히 적절 — 공용 컴포넌트로 억지로 합치면 props 분기만 늘어 모달을 유지하는 편이 깔끔.
+- **Potential Risk / Review Required:** (1) 저장 후 학생·유형까지 모두 비우므로 같은 학생을 연속 상담 기록할 때 매번 재선택해야 함 — 운영자가 불편해하면 학생/유형은 유지하는 편이 나을 수 있음. (2) textarea `resize-y`라 매우 길게 늘리면 가로 한 줄 정렬이 깨질 수 있으나 `items-stretch`로 허용 범위로 판단.
+
 #### [2026-06-03] 미마운트 Provider 크래시 수정 + 에러 토스트 전역 브리지로 일원화
 
 - **Context & Ambiguity:** `useFeedback must be used within FeedbackProvider` 런타임 크래시를 조사하니, `FeedbackProvider`/`ToastProvider`가 만들어져 있는데 `App.jsx` 트리에 **마운트되지 않은** 상태였다(최근 피드백 커밋이 Header에 FeedbackButton만 추가하고 Provider 배선을 누락). 또 `ToastProvider`(저장실패 토스트)는 어디서도 사용되지 않았고, 11곳이 인라인 `SaveErrorBox`로 에러를 표시 중이었다. "토스트로 일원화 + SaveErrorBox 제거"로 방향을 잡았는데, 모듈 함수인 `withWriteRetry`가 React context의 토스트 함수에 어떻게 닿을지가 관건이었다.
