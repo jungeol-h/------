@@ -16,11 +16,9 @@ npm run test     # Vitest (selector/이벤트 로직 단위테스트)
 
 React 19 · Vite 8 · react-router-dom v7 (BrowserRouter SPA) ·
 Tailwind CSS v4 · Recharts · lucide-react · Supabase · @react-pdf/renderer.
-JSX (not TypeScript). 배포: `andong.gooooookee.com` (Vercel).
+JSX (not TypeScript). 배포: `gooooookee.com` (Vercel).
 
 ## 코드 구조 (`src/platform/`)
-
-신규 플랫폼은 `src/platform/`
 
 - `context/` — 데이터 계층. 아래 "DataContext 구조" 참고.
 - `pages/` — 역할별 화면: `student/`(5탭) `manager/`(4탭) `admin/`(3탭) `shared/`
@@ -48,7 +46,7 @@ snake_case DB ↔ camelCase 변환은 `lib/supabaseHelpers.js`.
 
 ## 개발 규칙
 
-- **아이콘**: `lucide-react`만. 이모지를 UI 아이콘으로 쓰지 말 것.
+- 설계, 검증은 Claude Opus 4.8, 단순 구현은 Codex(MCP)를 sub agent로 적극 활용
 - **z-index**: Header/TabBar `z-40`, 모달 `z-50`.
 - **PDF**: `@react-pdf/renderer` 기반 `src/platform/pdf/`. 서버 렌더링 금지.
   추가 패턴은 메모리 `reference_pdf_infra` 참고.
@@ -60,8 +58,6 @@ snake_case DB ↔ camelCase 변환은 `lib/supabaseHelpers.js`.
 - `docs/3. 자료/개념 정리/` — 도메인 개념(자기주도지수, 알림, 리포트, M:N 배정),
   `유저 개념/` 아래 역할별 유저스토리
 - `docs/1. 프로젝트/산청 우정학사 중등부 베타테스트/` — 베타 요청사항·계정·교재
-
-docs는 클라이언트 기획 의도라 *원함*은 담지만 문서 간 모순이 있을 수 있음.
 
 # System Directive: Autonomous Decision Logging Rule
 
