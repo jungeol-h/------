@@ -72,6 +72,7 @@ describe('subjectBreakdown', () => {
       { subject: '수학', duration: 60 },
       { subject: '수학', duration: 40 },
       { subject: '영어', duration: 30 },
+      { subject: '과학', recordType: 'planner', plannedMin: 90 },
     ]
     expect(subjectBreakdown(records)).toEqual([
       { name: '수학', minutes: 100 },

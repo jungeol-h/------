@@ -78,8 +78,15 @@ CREATE TABLE IF NOT EXISTS learning_records (
   student_id   TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   date         DATE NOT NULL,
   subject      TEXT NOT NULL,
-  duration     INTEGER NOT NULL CHECK (duration > 0),  -- 분 단위
-  focus        INTEGER NOT NULL CHECK (focus BETWEEN 0 AND 100),
+  duration     INTEGER CHECK (duration IS NULL OR duration > 0),  -- 레거시 실제 학습시간(분)
+  focus        INTEGER CHECK (focus IS NULL OR focus BETWEEN 0 AND 100),
+  record_type  TEXT NOT NULL DEFAULT 'timer' CHECK (record_type IN ('planner', 'timer')),
+  status       TEXT NOT NULL DEFAULT 'done' CHECK (status IN ('pending', 'done')),
+  study_method TEXT,
+  content      TEXT,
+  planned_min  INTEGER CHECK (planned_min IS NULL OR planned_min > 0),
+  actual_duration INTEGER CHECK (actual_duration IS NULL OR actual_duration > 0),
+  migrated_todo_id TEXT,
   created_at   TIMESTAMPTZ DEFAULT NOW()
 );
 

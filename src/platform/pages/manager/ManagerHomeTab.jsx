@@ -3,6 +3,7 @@ import { AlertTriangle, X, CheckCheck, Clock, ClipboardList, MessageCircle, User
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
 import { getRiskStudents } from '../../context/selectors/riskDetection.js'
+import { actualMinutes } from '../../context/selectors/learningRecords.js'
 
 export default function ManagerHomeTab() {
   const { currentUser } = useAuth()
@@ -106,7 +107,9 @@ export default function ManagerHomeTab() {
         <div className="space-y-2">
           {myStudents.map(s => {
             const isRisk = riskStudents.some(r => r.student.id === s.id)
-            const totalMin = data.learningRecords.filter(r => r.studentId === s.id).reduce((sum, r) => sum + r.duration, 0)
+            const totalMin = data.learningRecords
+              .filter(r => r.studentId === s.id)
+              .reduce((sum, r) => sum + actualMinutes(r), 0)
             const pendingCount = data.tasks.filter(t => t.studentId === s.id && t.status === 'pending').length
             const counselingCount = data.counselingRecords.filter(r => r.studentId === s.id).length
             return (

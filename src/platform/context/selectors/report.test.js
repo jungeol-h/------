@@ -6,6 +6,7 @@ const data = {
   learningRecords: [
     { studentId: 's1', date: '2026-05-16', subject: '수학', duration: 60, focus: 80 },
     { studentId: 's1', date: '2026-05-16', subject: '영어', duration: 40, focus: 60 },
+    { studentId: 's1', date: '2026-05-16', subject: '과학', recordType: 'planner', plannedMin: 90, focus: null },
     { studentId: 's1', date: '2026-05-12', subject: '수학', duration: 30, focus: 50 },
   ],
   tasks: [

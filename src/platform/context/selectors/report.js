@@ -4,12 +4,13 @@
 import { getSelfDirectedIndex } from './indices.js'
 import { lastSevenDays, getWeeklyLearning, toDateStr } from './weeklyLearning.js'
 import { subjectBreakdown } from './studentView.js'
+import { actualMinutes, timeTrackedRecords } from './learningRecords.js'
 
 // 일간 리포트 — docs 리포트.md "학습자 개인화 리포트(일간)" 항목.
 export function getDailyReport(data, studentId, dateStr) {
   const date = dateStr ?? toDateStr(new Date())
 
-  const learning = data.learningRecords.filter(
+  const learning = timeTrackedRecords(data.learningRecords).filter(
     (r) => r.studentId === studentId && r.date === date
   )
   const tasks = data.tasks.filter((t) => t.studentId === studentId)
@@ -26,7 +27,7 @@ export function getDailyReport(data, studentId, dateStr) {
 
   return {
     date,
-    totalMinutes: learning.reduce((s, r) => s + (r.duration ?? 0), 0),
+    totalMinutes: learning.reduce((s, r) => s + actualMinutes(r), 0),
     bySubject: subjectBreakdown(learning),
     taskDone: tasks.filter((t) => t.status === 'done').length,
     taskTotal: tasks.length,
@@ -40,7 +41,7 @@ export function getWeeklyReport(data, studentId, today = new Date()) {
   const days = lastSevenDays(today)
   const inWeek = (d) => days.includes(d)
 
-  const learning = data.learningRecords.filter(
+  const learning = timeTrackedRecords(data.learningRecords).filter(
     (r) => r.studentId === studentId && inWeek(r.date)
   )
   const tasks = data.tasks.filter((t) => t.studentId === studentId)
@@ -54,7 +55,7 @@ export function getWeeklyReport(data, studentId, today = new Date()) {
 
   return {
     days,
-    totalMinutes: learning.reduce((s, r) => s + (r.duration ?? 0), 0),
+    totalMinutes: learning.reduce((s, r) => s + actualMinutes(r), 0),
     dailyMinutes: getWeeklyLearning(data, studentId, today),
     bySubject: subjectBreakdown(learning),
     taskRate: taskTotal > 0 ? Math.round((taskDone / taskTotal) * 100) : null,

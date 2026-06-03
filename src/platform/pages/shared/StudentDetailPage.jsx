@@ -12,6 +12,7 @@ import { COUNSELING_TYPE_LABELS } from '../../data/counselingTypes.js'
 import CounselingFormModal from '../../components/counseling/CounselingFormModal.jsx'
 import { STAGE_META, STAGE_ORDER } from '../../data/stageFeedbackLibrary.js'
 import { DOMAIN_LABELS } from '../../data/questions.js'
+import { actualMinutes, methodBreakdown } from '../../context/selectors/learningRecords.js'
 import {
   calcDomainScores, calcStageScores, calcStageGrades,
   getStageStatus, getStateType, buildCoachingReport, selectTasks, getTypeName, scoreToGrade,
@@ -144,17 +145,19 @@ function LearningSection({ studentId, data }) {
     .slice()
     .sort((a, b) => (b.date > a.date ? 1 : -1))
 
-  const totalMin = records.reduce((s, r) => s + (r.duration ?? 0), 0)
+  const timeRecords = records.filter((r) => actualMinutes(r) > 0)
+  const totalMin = timeRecords.reduce((s, r) => s + actualMinutes(r), 0)
 
   // 과목별 합계
   const bySubject = {}
-  records.forEach((r) => {
-    bySubject[r.subject] = (bySubject[r.subject] ?? 0) + (r.duration ?? 0)
+  timeRecords.forEach((r) => {
+    bySubject[r.subject] = (bySubject[r.subject] ?? 0) + actualMinutes(r)
   })
   const subjectData = Object.entries(bySubject)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 8)
     .map(([name, minutes]) => ({ name, minutes }))
+  const methodData = methodBreakdown(timeRecords, 8)
 
   if (records.length === 0) {
     return <p className="text-sm text-gray-400 py-8 text-center">학습 기록이 없습니다.</p>
@@ -168,7 +171,7 @@ function LearningSection({ studentId, data }) {
           <p className="text-xs text-gray-500 mt-0.5">총 학습 (분)</p>
         </div>
         <div className="bg-indigo-50 rounded-xl p-3 text-center">
-          <p className="text-xl font-bold text-indigo-600">{records.length}</p>
+          <p className="text-xl font-bold text-indigo-600">{timeRecords.length}</p>
           <p className="text-xs text-gray-500 mt-0.5">기록 횟수</p>
         </div>
       </div>
@@ -187,6 +190,20 @@ function LearningSection({ studentId, data }) {
         </div>
       )}
 
+      {methodData.length > 0 && (
+        <div className="bg-white rounded-2xl p-4 shadow-sm">
+          <h4 className="text-sm font-bold text-gray-700 mb-3">학습법별 학습시간 (분)</h4>
+          <ResponsiveContainer width="100%" height={160}>
+            <BarChart data={methodData} layout="vertical" margin={{ top: 0, right: 16, left: 0, bottom: 0 }}>
+              <XAxis type="number" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+              <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={70} axisLine={false} tickLine={false} />
+              <Tooltip formatter={(v) => [`${v}분`]} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+              <Bar dataKey="minutes" fill="#10b981" radius={[0, 4, 4, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
       <div className="space-y-2">
         {records.slice(0, 30).map((r) => (
           <div key={r.id} className="bg-white rounded-xl p-3 shadow-sm flex items-center gap-3">
@@ -196,9 +213,14 @@ function LearningSection({ studentId, data }) {
                 <span className="text-xs text-gray-400">{r.date}</span>
               </div>
               <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-xs text-blue-600 font-semibold">{r.duration}분</span>
-                <span className="text-xs text-gray-400">집중도 {r.focus}%</span>
+                {actualMinutes(r) > 0 && (
+                  <span className="text-xs text-blue-600 font-semibold">{actualMinutes(r)}분</span>
+                )}
+                <span className="text-xs text-gray-400">{r.recordType === 'planner' ? '계획' : '타이머'}</span>
+                {r.studyMethod && <span className="text-xs text-gray-400">{r.studyMethod}</span>}
+                {r.focus != null && <span className="text-xs text-gray-400">집중도 {r.focus}%</span>}
               </div>
+              {r.content && <p className="text-xs text-gray-500 mt-1 whitespace-pre-wrap">{r.content}</p>}
             </div>
           </div>
         ))}

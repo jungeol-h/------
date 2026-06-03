@@ -2,6 +2,7 @@ import { Trophy, Clock, AlertCircle, CheckCircle2, Circle, Sun, Cloud, CloudRain
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+import { actualMinutes } from '../../context/selectors/learningRecords.js'
 
 function getMoodWeather(mindRecord) {
   if (!mindRecord) return { Icon: Cloud, color: 'text-gray-300', label: '미입력' }
@@ -27,7 +28,10 @@ export default function DashboardTab() {
   const today = new Date().toISOString().slice(0, 10)
   const todayRecords = myRecords.filter(r => r.date === today)
   const subjectMap = {}
-  todayRecords.forEach(r => { subjectMap[r.subject] = (subjectMap[r.subject] || 0) + r.duration })
+  todayRecords.forEach(r => {
+    const minutes = actualMinutes(r)
+    if (minutes > 0) subjectMap[r.subject] = (subjectMap[r.subject] || 0) + minutes
+  })
   const subjectData = Object.entries(subjectMap).map(([subject, duration]) => ({ subject, duration }))
   const todayTotalMin = subjectData.reduce((sum, d) => sum + d.duration, 0)
 

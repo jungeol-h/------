@@ -43,6 +43,12 @@ export const toLearningRecord = (row) => ({
   date: row.date,
   subject: row.subject,
   duration: row.duration,
+  actualDuration: row.actual_duration ?? row.duration ?? null,
+  recordType: row.record_type ?? 'timer',
+  status: row.status ?? 'done',
+  studyMethod: row.study_method ?? '',
+  content: row.content ?? '',
+  plannedMin: row.planned_min ?? null,
   focus: row.focus,
 })
 

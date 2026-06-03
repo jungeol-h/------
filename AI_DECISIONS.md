@@ -130,3 +130,10 @@
 - **Your Choice & Action:** UI 노출 파일(메타·헤더·로그인·PDF 메타)만 교체. `docs/`·`CLAUDE.md`·mock 데이터·배포 도메인은 미수정 — `project_rebrand_namaek` 메모리에 미완 항목으로 기록.
 - **Reasoning & Justification:** mock 처리는 별도 질문으로 사용자에게 확인 받음(→ UI만). docs는 양이 많고 클라이언트 기획 의도 문서라 일괄 치환 시 의도 왜곡 위험. CLAUDE.md는 "안동형 자기주도학습…"으로 시작하는 도메인 정의라 별도 합의 필요.
 - **Potential Risk / Review Required:** `CLAUDE.md` 첫 줄 도메인 정의는 새 컨버세이션 시 컨텍스트로 항상 로드되니, 다음 작업에서 AI가 여전히 "안동형"으로 인식할 수 있음. 우선순위 높은 별도 작업으로 처리 권장.
+
+#### [2026-06-04] 학습 계획과 타이머를 `learning_records` 단일 원장으로 통합
+
+- **Context & Ambiguity:** 사용자는 UI에서는 플래너와 타이머를 분리하되 DB는 한 테이블로 단순화하길 원했다. 기존 DB에는 `todo_items`와 `learning_records`가 분리되어 있고, 기존 `learning_records.duration/focus`는 NOT NULL이라 계획-only 기록을 저장할 수 없었다.
+- **Your Choice & Action:** `learning_records`에 `record_type`, `status`, `study_method`, `content`, `planned_min`, `actual_duration`, `migrated_todo_id`를 추가하고 `duration/focus` NOT NULL을 해제했다. 기존 `duration`은 레거시 호환용으로 유지하고, 앱에서는 `actualDuration ?? duration`으로 읽게 했다.
+- **Reasoning & Justification:** 기존 통계와 레거시 데이터 손상을 피하면서 계획-only, 완료 계획, 타이머 기록을 한 원장에 담기 위한 최소 변경이다. `todo_items`는 즉시 삭제하지 않고 마이그레이션으로 이관만 해 롤백/감사 여지를 남겼다.
+- **Potential Risk / Review Required:** 운영 DB에 `scripts/unify-learning-records.sql`가 먼저 적용되지 않으면 Supabase schema cache에서 새 컬럼을 찾지 못해 insert가 실패한다. 실제 배포 전 마이그레이션 적용 순서와 schema cache 갱신을 반드시 확인해야 한다.

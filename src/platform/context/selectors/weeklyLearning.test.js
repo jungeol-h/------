@@ -31,6 +31,17 @@ describe('getWeeklyLearning', () => {
     expect(result.find((d) => d.day === '05-16').minutes).toBe(75)
   })
 
+  it('계획-only 기록은 학습시간에 합산하지 않는다', () => {
+    const data = {
+      learningRecords: [
+        { studentId: 's1', date: '2026-05-16', recordType: 'planner', plannedMin: 60 },
+        { studentId: 's1', date: '2026-05-16', recordType: 'timer', actualDuration: 45 },
+      ],
+    }
+    const result = getWeeklyLearning(data, 's1', today)
+    expect(result.find((d) => d.day === '05-16').minutes).toBe(45)
+  })
+
   it('7일 범위 밖 기록은 제외', () => {
     const data = {
       learningRecords: [

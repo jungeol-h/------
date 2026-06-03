@@ -2,6 +2,7 @@ import { User, AlertCircle } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
 import { getMindStatus } from '../../context/selectors/riskDetection.js'
+import { actualMinutes } from '../../context/selectors/learningRecords.js'
 import { useNavigate } from 'react-router-dom'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 
@@ -42,7 +43,7 @@ export default function StudentListTab() {
           const risk = RISK_LABELS[s.riskLevel] || RISK_LABELS.normal
           const lastMind = data.mindRecords.filter((r) => r.studentId === s.id).slice(-1)[0]
           const records = data.learningRecords.filter((r) => r.studentId === s.id)
-          const totalMin = records.reduce((sum, r) => sum + r.duration, 0)
+          const totalMin = records.reduce((sum, r) => sum + actualMinutes(r), 0)
           const chartData = getWeeklyLearning(s.id)
           const hasAlert = getMindStatus(data.mindRecords.filter((r) => r.studentId === s.id)) !== null
 

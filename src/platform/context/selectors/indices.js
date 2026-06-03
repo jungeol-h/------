@@ -1,4 +1,5 @@
 // [Read] 분석 지표 산출 — data를 인자로 받는 순수함수
+import { actualMinutes, timeTrackedRecords } from './learningRecords.js'
 //
 // docs/3. 자료/개념 정리/유저 개념/학습자/학생.md 의 자기주도지수 공식 구현.
 // 공식: (1일 학습시간 점수) + (자가평가 점수) 합산 50점 만점 → 백분위 환산.
@@ -29,14 +30,14 @@ export function selfEvalScore(dayRecords) {
 
 // 하루치 자기주도 점수(0~20점): 학습시간 점수 + 자가평가 점수.
 export function dailySelfDirectedScore(dayRecords) {
-  const totalMin = dayRecords.reduce((s, r) => s + (r.duration ?? 0), 0)
+  const totalMin = dayRecords.reduce((s, r) => s + actualMinutes(r), 0)
   return learningTimeScore(totalMin) + selfEvalScore(dayRecords)
 }
 
 // 한 학생의 자기주도지수(0~100). 최근 학습기록 있는 날들의 일평균 점수를
 // 20점 만점 기준 백분위로 환산. 기록이 없으면 null(미산출).
 export function getSelfDirectedIndex(data, studentId) {
-  const records = data.learningRecords.filter((r) => r.studentId === studentId)
+  const records = timeTrackedRecords(data.learningRecords).filter((r) => r.studentId === studentId)
   if (records.length === 0) return null
 
   const byDate = {}

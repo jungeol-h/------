@@ -1,5 +1,7 @@
 // [Read] 최근 7일 학습시간 집계 — data를 인자로 받는 순수함수
 
+import { actualMinutes } from './learningRecords.js'
+
 // Date → 'YYYY-MM-DD' 로컬 날짜 문자열. toISOString()은 UTC로 변환되어
 // 한국 시간대(UTC+9)에서 자정 무렵 날짜가 하루 밀리므로 쓰지 않는다.
 export function toDateStr(d) {
@@ -25,7 +27,7 @@ export function getWeeklyLearning(data, studentId, today = new Date()) {
   return lastSevenDays(today).map((date) => {
     const minutes = data.learningRecords
       .filter((r) => r.studentId === studentId && r.date === date)
-      .reduce((sum, r) => sum + (r.duration ?? 0), 0)
+      .reduce((sum, r) => sum + actualMinutes(r), 0)
     return { day: date.slice(5), minutes }
   })
 }

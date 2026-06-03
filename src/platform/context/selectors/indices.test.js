@@ -72,6 +72,14 @@ describe('getSelfDirectedIndex — 자기주도지수(0~100)', () => {
     // 평균 10/20 → 50점
     expect(getSelfDirectedIndex(data, 's1')).toBe(50)
   })
+  it('실제시간 없는 계획 기록은 지수 산출에서 제외', () => {
+    const data = {
+      learningRecords: [
+        { studentId: 's1', date: '2026-05-16', recordType: 'planner', plannedMin: 120 },
+      ],
+    }
+    expect(getSelfDirectedIndex(data, 's1')).toBeNull()
+  })
   it('다른 학생 기록은 섞이지 않는다', () => {
     const data = {
       learningRecords: [
