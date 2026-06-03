@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { GraduationCap, Eye, EyeOff, Loader, Download } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
@@ -10,25 +10,24 @@ const ROLE_PATHS = {
 }
 
 export default function LoginPage() {
-  const { login, loading, error } = useAuth()
+  const { currentUser, login, loading, error } = useAuth()
   const navigate = useNavigate()
   const [loginId, setLoginId] = useState('')
   const [password, setPassword] = useState('')
   const [showPw, setShowPw] = useState(false)
 
+  useEffect(() => {
+    if (currentUser) {
+      navigate(ROLE_PATHS[currentUser.role] ?? '/', { replace: true })
+    }
+  }, [currentUser, navigate])
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!loginId.trim() || !password.trim()) return
-    const success = await login(loginId, password)
-    if (success) {
-      // role은 login 후 currentUser에서 확인 — 잠시 후 AuthContext state 반영
-      // navigate는 currentUser 변경 후 ProtectedRoute가 처리하지만,
-      // 여기서 role별 경로로 바로 이동
-      const saved = localStorage.getItem('platform_user')
-      if (saved) {
-        const user = JSON.parse(saved)
-        navigate(ROLE_PATHS[user.role] ?? '/')
-      }
+    const user = await login(loginId, password)
+    if (user) {
+      navigate(ROLE_PATHS[user.role] ?? '/', { replace: true })
     }
   }
 
