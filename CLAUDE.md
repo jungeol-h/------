@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-안동형 자기주도학습·진로성장 관리 시스템. React 프로토타입.
+안동형 자기주도학습·진로성장 관리 시스템 '나매크'. React 웹앱.
 산청 우정학사 중등부 50~60명 베타테스트 운영 중 (2026-05-11~).
 
 ## 명령어
@@ -20,7 +20,7 @@ JSX (not TypeScript). 배포: `andong.gooooookee.com` (Vercel).
 
 ## 코드 구조 (`src/platform/`)
 
-신규 플랫폼은 `src/platform/`. 구 학습진단 코드는 `src/legacy/`(거의 미수정).
+신규 플랫폼은 `src/platform/`
 
 - `context/` — 데이터 계층. 아래 "DataContext 구조" 참고.
 - `pages/` — 역할별 화면: `student/`(5탭) `manager/`(4탭) `admin/`(3탭) `shared/`
