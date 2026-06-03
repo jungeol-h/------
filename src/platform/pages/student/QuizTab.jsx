@@ -1,7 +1,37 @@
-import { useState, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight, ClipboardCheck, CheckCircle2, XCircle, RotateCcw, Loader } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
+
+const DRAFT_PREFIX = 'quiz_draft'
+
+function getDraftKey(studentId, setId) {
+  if (!studentId || !setId) return null
+  return `${DRAFT_PREFIX}:${studentId}:${setId}`
+}
+
+function readDraft(key) {
+  if (!key) return null
+  try {
+    const parsed = JSON.parse(localStorage.getItem(key) ?? 'null')
+    if (!parsed || typeof parsed !== 'object') return null
+    return {
+      step: Number.isInteger(parsed.step) ? parsed.step : 0,
+      rawByQid: parsed.rawByQid && typeof parsed.rawByQid === 'object' ? parsed.rawByQid : {},
+    }
+  } catch {
+    return null
+  }
+}
+
+function removeDraft(key) {
+  if (!key) return
+  try {
+    localStorage.removeItem(key)
+  } catch {
+    // localStorage 접근 실패는 응시 흐름을 막지 않는다.
+  }
+}
 
 export default function QuizTab() {
   const { currentUser } = useAuth()
@@ -42,21 +72,58 @@ export default function QuizTab() {
     () => Object.fromEntries(activeQuestions.map((q) => [q.id, q])),
     [activeQuestions]
   )
+  const draftKey = useMemo(() => getDraftKey(studentId, activeSetId), [studentId, activeSetId])
+  const hasDraftAnswer = useMemo(
+    () => Object.values(rawByQid).some((v) => String(v ?? '').trim().length > 0),
+    [rawByQid]
+  )
+
+  useEffect(() => {
+    if (mode !== 'playing' || !draftKey) return
+    try {
+      localStorage.setItem(
+        draftKey,
+        JSON.stringify({ step, rawByQid, updatedAt: new Date().toISOString() })
+      )
+    } catch {
+      // 저장 공간 부족 등은 사용자 응시를 막지 않는다.
+    }
+  }, [draftKey, mode, rawByQid, step])
+
+  useEffect(() => {
+    if (mode !== 'playing' || !hasDraftAnswer) return
+    const handleBeforeUnload = (event) => {
+      event.preventDefault()
+      event.returnValue = ''
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [hasDraftAnswer, mode])
+
+  useEffect(() => {
+    if (mode !== 'playing' || activeQuestions.length === 0) return
+    if (step >= activeQuestions.length) setStep(activeQuestions.length - 1)
+  }, [activeQuestions.length, mode, step])
 
   function openSet(setId) {
     const existing = myAttempts.find((a) => a.quizSetId === setId)
+    const nextDraftKey = getDraftKey(studentId, setId)
+    const draft = readDraft(nextDraftKey)
     setActiveSetId(setId)
-    setStep(0)
     if (existing) {
+      removeDraft(nextDraftKey)
+      setStep(0)
       setResultAttempt(existing)
       setMode('result')
     } else {
-      setRawByQid({})
+      setStep(draft?.step ?? 0)
+      setRawByQid(draft?.rawByQid ?? {})
       setMode('playing')
     }
   }
 
-  function backToList() {
+  function backToList({ clearDraft = false } = {}) {
+    if (clearDraft) removeDraft(draftKey)
     setActiveSetId(null)
     setMode('list')
     setResultAttempt(null)
@@ -73,6 +140,7 @@ export default function QuizTab() {
     setSubmitting(true)
     try {
       const attempt = await submitQuizAttempt(studentId, activeSetId, rawByQid)
+      removeDraft(draftKey)
       setResultAttempt(attempt)
       setMode('result')
     } catch {
@@ -80,6 +148,13 @@ export default function QuizTab() {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  function confirmCancelAttempt() {
+    if (hasDraftAnswer && !window.confirm('응시를 취소하면 입력한 답안이 사라집니다. 정말 나가시겠습니까?')) {
+      return
+    }
+    backToList({ clearDraft: true })
   }
 
   // ── 목록 화면 ──────────────────────────────────────────────
@@ -149,7 +224,7 @@ export default function QuizTab() {
       return (
         <div className="py-6 text-center text-sm text-gray-400">
           문제를 불러오는 중...
-          <button onClick={backToList} className="block mx-auto mt-4 text-indigo-600 text-xs">목록으로</button>
+          <button onClick={confirmCancelAttempt} className="block mx-auto mt-4 text-indigo-600 text-xs">목록으로</button>
         </div>
       )
     }
@@ -229,9 +304,14 @@ export default function QuizTab() {
           </p>
         )}
 
-        <button onClick={backToList} className="block w-full text-xs text-gray-400 mt-2 underline">
+        <div className="pt-6">
+          <button
+            onClick={confirmCancelAttempt}
+            className="block w-full text-xs text-gray-400 py-3 underline underline-offset-2"
+          >
           나가기 (응시 취소)
-        </button>
+          </button>
+        </div>
       </div>
     )
   }
