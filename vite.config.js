@@ -2,8 +2,19 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
+import { sentryVitePlugin } from '@sentry/vite-plugin'
+
+const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN
+const sentryOrg = process.env.SENTRY_ORG
+const sentryProject = process.env.SENTRY_PROJECT
+const sentryRelease = process.env.SENTRY_RELEASE
 
 export default defineConfig({
+  // sourcemap: true — 베타 단계 디버깅 편의 우선. Sentry stack trace에서
+  // minified $g 대신 실제 함수명/파일/라인이 보이도록.
+  build: {
+    sourcemap: true,
+  },
   plugins: [
     react(),
     tailwindcss(),
@@ -30,10 +41,21 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
       },
     }),
-  ],
+    // Sentry 환경변수 4종이 모두 있을 때만 활성화. 로컬/PR 빌드에선 조용히 skip.
+    sentryAuthToken && sentryOrg && sentryProject &&
+      sentryVitePlugin({
+        authToken: sentryAuthToken,
+        org: sentryOrg,
+        project: sentryProject,
+        release: sentryRelease ? { name: sentryRelease } : undefined,
+      }),
+  ].filter(Boolean),
   base: '/',
   test: {
     environment: 'jsdom',
     globals: true,
+  },
+  esbuild: {
+    jsx: 'automatic',
   },
 })

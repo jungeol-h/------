@@ -56,24 +56,28 @@ describe('withWriteRetry', () => {
     )
   })
 
-  it('PostgreSQL unique violation(23505) → 즉시 반환, 재시도 없음', async () => {
+  it('PostgreSQL unique violation(23505) → 즉시 반환 + Sentry 보고 (가시성 우선)', async () => {
+    reportError.mockReturnValue('evt-23505')
     const fn = vi.fn().mockResolvedValue({ data: null, error: { code: '23505', message: 'duplicate' } })
 
     const result = await withWriteRetry(fn, { label: 't' })
 
     expect(result.error.code).toBe('23505')
+    expect(result.error.sentryEventId).toBe('evt-23505')
     expect(fn).toHaveBeenCalledTimes(1)
-    expect(reportError).not.toHaveBeenCalled()
+    expect(reportError).toHaveBeenCalledTimes(1)
   })
 
-  it('401 인증 에러 → 즉시 반환', async () => {
+  it('401 인증 에러 → 즉시 반환 + Sentry 보고', async () => {
+    reportError.mockReturnValue('evt-401')
     const fn = vi.fn().mockResolvedValue({ data: null, error: { status: 401, message: 'Unauthorized' } })
 
     const result = await withWriteRetry(fn, { label: 't' })
 
     expect(result.error.status).toBe(401)
+    expect(result.error.sentryEventId).toBe('evt-401')
     expect(fn).toHaveBeenCalledTimes(1)
-    expect(reportError).not.toHaveBeenCalled()
+    expect(reportError).toHaveBeenCalledTimes(1)
   })
 
   it('503 후 성공 → 재시도하여 성공', async () => {

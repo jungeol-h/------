@@ -7,6 +7,9 @@
 //
 // fetch 자체가 throw하는 경로(Mobile Safari의 TypeError: Load failed 등)도
 // 같이 흡수해서 마지막 시도에서만 reject한다.
+//
+// 모든 최종 실패는 Sentry로 보고하고, event_id를 error 객체에 sentryEventId 로
+// 부착해 호출자(Toast UI)가 신고 본문 prefill에 사용할 수 있게 한다.
 
 import { reportError } from './sentry.js'
 
@@ -29,6 +32,15 @@ function isRetryable(error) {
   return false
 }
 
+function attachEventId(error, eventId) {
+  if (!eventId || !error || typeof error !== 'object') return
+  try {
+    error.sentryEventId = eventId
+  } catch {
+    // frozen object 등 — 무시
+  }
+}
+
 export async function withWriteRetry(fn, { label } = {}) {
   for (let attempt = 0; attempt <= BACKOFF_MS.length; attempt++) {
     try {
@@ -36,12 +48,14 @@ export async function withWriteRetry(fn, { label } = {}) {
       const err = result?.error
       if (!err) return result
       if (!isRetryable(err) || attempt === BACKOFF_MS.length) {
-        if (attempt > 0) reportError(err, { where: label, retryCount: attempt })
+        const eventId = reportError(err, { where: label, retryCount: attempt })
+        attachEventId(err, eventId)
         return result
       }
     } catch (e) {
       if (!isRetryable(e) || attempt === BACKOFF_MS.length) {
-        reportError(e, { where: label, retryCount: attempt })
+        const eventId = reportError(e, { where: label, retryCount: attempt })
+        attachEventId(e, eventId)
         throw e
       }
     }

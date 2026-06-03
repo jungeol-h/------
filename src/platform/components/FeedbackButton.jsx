@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { MessageSquarePlus, X } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
 import { supabase } from '../lib/supabase.js'
+import { useFeedback } from './FeedbackProvider.jsx'
 
 const TYPES = [
   { value: 'bug', label: '버그' },
@@ -12,22 +13,22 @@ const TYPES = [
 
 export default function FeedbackButton() {
   const { currentUser } = useAuth()
-  const [open, setOpen] = useState(false)
+  const { isOpen, prefillText, open, close } = useFeedback()
   const [type, setType] = useState('bug')
   const [content, setContent] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [done, setDone] = useState(false)
 
-  const handleOpen = () => {
-    setType('bug')
-    setContent('')
-    setError(null)
-    setDone(false)
-    setOpen(true)
-  }
-
-  const handleClose = () => setOpen(false)
+  // 모달이 열릴 때마다 prefill을 textarea에 주입하고 다른 상태는 리셋.
+  useEffect(() => {
+    if (isOpen) {
+      setType('bug')
+      setContent(prefillText ?? '')
+      setError(null)
+      setDone(false)
+    }
+  }, [isOpen, prefillText])
 
   const handleSubmit = async () => {
     if (!content.trim()) return
@@ -44,7 +45,7 @@ export default function FeedbackButton() {
       })
       if (dbError) throw dbError
       setDone(true)
-      setTimeout(() => setOpen(false), 1500)
+      setTimeout(() => close(), 1500)
     } catch {
       setError('제출 중 오류가 발생했습니다. 다시 시도해주세요.')
     } finally {
@@ -55,7 +56,7 @@ export default function FeedbackButton() {
   return (
     <>
       <button
-        onClick={handleOpen}
+        onClick={open}
         className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 border border-gray-200 rounded-lg px-2 py-1.5 flex-shrink-0"
         title="피드백 보내기"
       >
@@ -63,13 +64,13 @@ export default function FeedbackButton() {
         <span>피드백</span>
       </button>
 
-      {open && (
+      {isOpen && (
         <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center px-4 pb-4 sm:pb-0">
-          <div className="absolute inset-0 bg-black/40" onClick={handleClose} />
+          <div className="absolute inset-0 bg-black/40" onClick={close} />
           <div className="relative z-10 w-full max-w-sm bg-white rounded-2xl shadow-xl p-5 flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <h2 className="font-bold text-gray-900 text-base">피드백 보내기</h2>
-              <button onClick={handleClose} className="text-gray-400 hover:text-gray-600">
+              <button onClick={close} className="text-gray-400 hover:text-gray-600">
                 <X size={18} />
               </button>
             </div>
@@ -98,7 +99,7 @@ export default function FeedbackButton() {
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   placeholder="어떤 점이 불편하셨나요?"
-                  rows={4}
+                  rows={6}
                   className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-blue-300"
                 />
 
