@@ -137,3 +137,24 @@
 - **Your Choice & Action:** `learning_records`에 `record_type`, `status`, `study_method`, `content`, `planned_min`, `actual_duration`, `migrated_todo_id`를 추가하고 `duration/focus` NOT NULL을 해제했다. 기존 `duration`은 레거시 호환용으로 유지하고, 앱에서는 `actualDuration ?? duration`으로 읽게 했다.
 - **Reasoning & Justification:** 기존 통계와 레거시 데이터 손상을 피하면서 계획-only, 완료 계획, 타이머 기록을 한 원장에 담기 위한 최소 변경이다. `todo_items`는 즉시 삭제하지 않고 마이그레이션으로 이관만 해 롤백/감사 여지를 남겼다.
 - **Potential Risk / Review Required:** 운영 DB에 `scripts/unify-learning-records.sql`가 먼저 적용되지 않으면 Supabase schema cache에서 새 컬럼을 찾지 못해 insert가 실패한다. 실제 배포 전 마이그레이션 적용 순서와 schema cache 갱신을 반드시 확인해야 한다.
+
+#### [2026-06-04] 학습 계획 삭제를 열린 카드 하단 즉시 삭제로 구현
+
+- **Context & Ambiguity:** 사용자는 오늘의 학습 계획 삭제와 DB 연동을 요구했지만, 삭제 버튼 위치와 확인 절차는 지정하지 않았다.
+- **Your Choice & Action:** 삭제 버튼을 각 계획 카드의 편집 영역 하단 왼쪽에 배치하고, 저장된 계획은 버튼 클릭 즉시 `learning_records`에서 삭제하도록 했다. 아직 DB에 저장되지 않은 신규 draft 행은 로컬 draft만 제거한다.
+- **Reasoning & Justification:** 사용자가 확인 모달 제거를 명시했고, 버튼이 접힌 카드가 아니라 편집 영역 안에 있어 우발 클릭 가능성이 상대적으로 낮다고 판단했다. 별도 확인 단계를 없애면 학생이 계획을 빠르게 정리할 수 있다.
+- **Potential Risk / Review Required:** 삭제가 즉시 실행되며 되돌리기 기능은 없다. 실수 삭제 피드백이 나오면 스낵바 undo나 휴지통/soft delete를 검토해야 한다.
+
+#### [2026-06-04] 상단 학습 타이머를 계획 레코드 누적 방식으로 전환
+
+- **Context & Ambiguity:** 새 정책은 상단 타이머가 오늘의 학습 계획 중 하나를 선택해 실행하고 해당 계획에 시간이 누적되는 방향이었지만, 기존 별도 `timer` 레코드와 계획 카드 내부 행별 타이머를 어떻게 처리할지는 명시되지 않았다.
+- **Your Choice & Action:** 학생 학습 탭에서는 별도 `timer` 레코드 생성을 중단하고, 선택한 `planner` 레코드의 `actual_duration`/`duration`을 `updateLearningRecord`로 누적 업데이트하게 했다. 계획 카드 내부 행별 타이머 UI는 제거하고, 수동 학습시간 보정 입력은 유지했다.
+- **Reasoning & Justification:** 현재 DB는 이미 `learning_records` 단일 원장 안에 `planner.actual_duration`을 저장할 수 있으므로 스키마 변경 없이 정책을 반영할 수 있다. 상단 타이머와 카드 내부 타이머를 둘 다 두면 같은 시간을 두 경로로 기록하는 중복/혼동이 생긴다.
+- **Potential Risk / Review Required:** 기존에 생성된 `record_type='timer'` 레코드는 통계에 계속 포함된다. 새 UI에서는 더 만들지 않지만, 과거 데이터와 새 계획 누적 데이터가 함께 집계되는 방식이 운영 리포트 기대와 맞는지 확인해야 한다.
+
+#### [2026-06-04] 타이머 계획 선택 UI를 chip에서 select로 전환
+
+- **Context & Ambiguity:** 사용자가 chip 기반 선택 UI가 부적절하다고 지적했지만, 대체 컴포넌트 형태는 지정하지 않았다.
+- **Your Choice & Action:** 상단 타이머의 계획 선택을 가로 chip 목록에서 단일 `select` 컨트롤로 바꿨고, 실행 중에는 선택 변경을 막았다.
+- **Reasoning & Justification:** 오늘 계획은 실행 대상 1개를 고르는 단일 선택 문제라 chip보다 select가 의미상 명확하다. 계획 개수가 늘어나도 가로 스크롤이나 버튼 폭 문제가 줄어든다.
+- **Potential Risk / Review Required:** 네이티브 select는 모바일에서 안정적이지만 시각적 개성은 낮다. 더 세련된 UX가 필요하면 커스텀 드롭다운으로 확장할 수 있다.

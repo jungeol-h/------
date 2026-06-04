@@ -49,6 +49,7 @@ export const toLearningRecord = (row) => ({
   studyMethod: row.study_method ?? '',
   content: row.content ?? '',
   plannedMin: row.planned_min ?? null,
+  sortOrder: row.sort_order ?? null,
   focus: row.focus,
 })
 

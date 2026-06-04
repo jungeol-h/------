@@ -86,6 +86,7 @@ CREATE TABLE IF NOT EXISTS learning_records (
   content      TEXT,
   planned_min  INTEGER CHECK (planned_min IS NULL OR planned_min > 0),
   actual_duration INTEGER CHECK (actual_duration IS NULL OR actual_duration > 0),
+  sort_order   INTEGER,
   migrated_todo_id TEXT,
   created_at   TIMESTAMPTZ DEFAULT NOW()
 );

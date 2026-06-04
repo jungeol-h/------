@@ -47,11 +47,11 @@ export function useLearningDomain(setData) {
   )
 
   const addLearningPlan = useCallback(
-    async (studentId, { subject, studyMethod, content, plannedMin = null }) => {
+    async (studentId, { date = todayStr(), subject, studyMethod, content, plannedMin = null, sortOrder = null }) => {
       const row = {
         id: makeId('l'),
         student_id: studentId,
-        date: todayStr(),
+        date,
         subject,
         duration: null,
         actual_duration: null,
@@ -61,6 +61,7 @@ export function useLearningDomain(setData) {
         study_method: studyMethod,
         content,
         planned_min: plannedMin || null,
+        sort_order: sortOrder,
       }
       const { error } = await withWriteRetry(
         () => supabase.from('learning_records').insert(row),
@@ -114,6 +115,7 @@ export function useLearningDomain(setData) {
       if (patch.studyMethod !== undefined) snake.study_method = patch.studyMethod || null
       if (patch.content !== undefined) snake.content = patch.content
       if (patch.plannedMin !== undefined) snake.planned_min = patch.plannedMin || null
+      if (patch.sortOrder !== undefined) snake.sort_order = patch.sortOrder
       if (patch.actualDuration !== undefined) {
         snake.actual_duration = patch.actualDuration || null
         snake.duration = patch.actualDuration || null
@@ -143,9 +145,47 @@ export function useLearningDomain(setData) {
                 study_method: Object.hasOwn(snake, 'study_method') ? snake.study_method : r.studyMethod,
                 content: Object.hasOwn(snake, 'content') ? snake.content : r.content,
                 planned_min: Object.hasOwn(snake, 'planned_min') ? snake.planned_min : r.plannedMin,
+                sort_order: Object.hasOwn(snake, 'sort_order') ? snake.sort_order : r.sortOrder,
               })
             : r
         ),
+      }))
+    },
+    [setData]
+  )
+
+  const reorderLearningPlans = useCallback(
+    async (updates) => {
+      if (!updates?.length) return
+      const results = await Promise.all(updates.map(({ id, sortOrder }) =>
+        withWriteRetry(
+          () => supabase.from('learning_records').update({ sort_order: sortOrder }).eq('id', id),
+          { label: 'reorderLearningPlans' }
+        )
+      ))
+      const error = results.find((res) => res.error)?.error
+      if (error) throw error
+      const orderMap = new Map(updates.map(({ id, sortOrder }) => [id, sortOrder]))
+      setData((prev) => ({
+        ...prev,
+        learningRecords: prev.learningRecords.map((r) =>
+          orderMap.has(r.id) ? { ...r, sortOrder: orderMap.get(r.id) } : r
+        ),
+      }))
+    },
+    [setData]
+  )
+
+  const deleteLearningRecord = useCallback(
+    async (recordId) => {
+      const { error } = await withWriteRetry(
+        () => supabase.from('learning_records').delete().eq('id', recordId),
+        { label: 'deleteLearningRecord' }
+      )
+      if (error) throw error
+      setData((prev) => ({
+        ...prev,
+        learningRecords: prev.learningRecords.filter((r) => r.id !== recordId),
       }))
     },
     [setData]
@@ -163,6 +203,8 @@ export function useLearningDomain(setData) {
     addLearningPlan,
     addTimerLearningRecord,
     updateLearningRecord,
+    reorderLearningPlans,
+    deleteLearningRecord,
     completeLearningPlan,
   }
 }
