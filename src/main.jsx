@@ -3,8 +3,10 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 import { initSentry, Sentry } from './platform/lib/sentry.js'
+import { registerServiceWorker } from './registerServiceWorker.js'
 
 initSentry()
+registerServiceWorker()
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
