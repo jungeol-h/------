@@ -23,6 +23,10 @@ import {
   todayPlansFor,
   todaySubjectBreakdown,
 } from './learningTabLogic.js'
+import {
+  ACTUAL_TIME_STEPS,
+  TEMP_ALLOW_PAST_ACTUAL_EDIT,
+} from './tempBetaNotice.js'
 
 const SUBJECTS = [
   '국어', '영어', '수학', '과학', '사회', '도덕',
@@ -80,7 +84,7 @@ function formatPlanDate(dateStr) {
   }).format(date)
 }
 
-function TimePresetControl({ label, value, onChange, onCommit }) {
+function TimePresetControl({ label, value, onChange, onCommit, title = '목표 시간', steps = TIME_STEPS }) {
   const activeValue = Number(value || 0)
 
   const handleStep = (delta) => {
@@ -93,7 +97,7 @@ function TimePresetControl({ label, value, onChange, onCommit }) {
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
-        <span className="text-[11px] font-bold text-gray-500">목표 시간</span>
+        <span className="text-[11px] font-bold text-gray-500">{title}</span>
         <span className={`px-2 py-1 rounded-lg text-xs font-bold ${
           activeValue > 0
             ? 'bg-blue-600 text-white border border-blue-600'
@@ -103,7 +107,7 @@ function TimePresetControl({ label, value, onChange, onCommit }) {
         </span>
       </div>
       <div className="grid grid-cols-4 gap-1">
-        {TIME_STEPS.map((step) => (
+        {steps.map((step) => (
           <button
             key={step.label}
             type="button"
@@ -173,6 +177,7 @@ function PlanTab({ studentId, records }) {
     setDraftKeys([])
     setOpenRowKey(null)
     setReorderMode(false)
+    setPastActual({})
   }, [selectedDate])
 
   const updateDraft = (key, patch) => {
@@ -264,6 +269,34 @@ function PlanTab({ studentId, records }) {
       // 저장 실패는 전역 Toast가 표면화한다.
     } finally {
       setDeletingKey(null)
+    }
+  }
+
+  // [임시] 타이머 버그 보정: 과거 날짜 계획의 실제 학습시간 직접입력.
+  // 철수 시 pastActual 관련 상태/핸들러와 tempBetaNotice import를 제거.
+  const [pastActual, setPastActual] = useState({})
+  const [savingActualKey, setSavingActualKey] = useState(null)
+
+  const pastActualValue = (row) => {
+    if (pastActual[row.key] !== undefined) return pastActual[row.key]
+    return row.record ? String(actualMinutes(row.record) || '') : ''
+  }
+
+  const saveActualDuration = async (row) => {
+    if (!row.record || savingActualKey) return
+    const minutes = Number(pastActualValue(row)) || 0
+    setSavingActualKey(row.key)
+    try {
+      await updateLearningRecord(row.record.id, { actualDuration: minutes || null })
+      setPastActual((prev) => {
+        const next = { ...prev }
+        delete next[row.key]
+        return next
+      })
+    } catch {
+      // 저장 실패는 전역 Toast가 표면화한다.
+    } finally {
+      setSavingActualKey(null)
     }
   }
 
@@ -548,6 +581,32 @@ function PlanTab({ studentId, records }) {
                           <p className="text-sm font-bold text-blue-600 mt-1">{actual > 0 ? formatMinutes(actual) : '-'}</p>
                         </div>
                       </div>
+
+                      {/* [임시] 타이머 버그 보정용 실제 학습시간 직접입력. 철수 시 이 블록 제거. */}
+                      {TEMP_ALLOW_PAST_ACTUAL_EDIT && row.record && (
+                        <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 space-y-2">
+                          <p className="text-[11px] font-bold text-amber-700">
+                            타이머 오류로 빠진 시간을 직접 보정하세요
+                          </p>
+                          <TimePresetControl
+                            title="실제 학습"
+                            label="미입력"
+                            value={pastActualValue(row)}
+                            steps={ACTUAL_TIME_STEPS}
+                            onChange={(value) => setPastActual((prev) => ({ ...prev, [row.key]: value }))}
+                            onCommit={(value) => setPastActual((prev) => ({ ...prev, [row.key]: value }))}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => saveActualDuration(row)}
+                            disabled={savingActualKey === row.key}
+                            className="w-full h-10 rounded-lg bg-amber-600 text-white text-sm font-bold disabled:bg-gray-200 disabled:text-gray-400 active:scale-95 flex items-center justify-center gap-1.5"
+                          >
+                            <Save size={14} />
+                            실제 학습시간 저장
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <>
