@@ -854,6 +854,29 @@ function SubjectRatioBar({ records }) {
   )
 }
 
+const TIMER_STORAGE_KEY = 'namac_timer_state'
+
+// 타이머는 매초 +1 누적이 아니라 timestamp 기준으로 경과시간을 계산한다.
+// 모바일에서 화면이 꺼지면 setInterval이 throttle/정지되지만, 시작 시각과의
+// 차이로 계산하므로 화면이 다시 켜질 때 정확한 경과시간이 복구된다.
+// accumulatedMs: 일시정지로 누적된 시간, startedAt: 현재 구간 시작 시각(ms, 정지 시 null).
+function computeElapsedSeconds({ accumulatedMs, startedAt }) {
+  const runningMs = startedAt ? Date.now() - startedAt : 0
+  return Math.floor((accumulatedMs + runningMs) / 1000)
+}
+
+function loadTimerState() {
+  try {
+    const raw = localStorage.getItem(TIMER_STORAGE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    if (typeof parsed !== 'object' || parsed === null) return null
+    return parsed
+  } catch {
+    return null
+  }
+}
+
 function StudyTab({ records, todayPlans }) {
   const { updateLearningRecord, completeLearningPlan } = useData()
   const [running, setRunning] = useState(false)
@@ -862,35 +885,139 @@ function StudyTab({ records, todayPlans }) {
   const [saved, setSaved] = useState(false)
   const [completionWarning, setCompletionWarning] = useState(null)
   const intervalRef = useRef(null)
+  // timestamp 기반 측정값. running 동안 startedAt이 set되고, 일시정지하면
+  // 경과분이 accumulatedMs로 합산된 뒤 startedAt이 null이 된다.
+  const timerRef = useRef({ accumulatedMs: 0, startedAt: null })
+  const restoredRef = useRef(false)
 
-  useEffect(() => {
-    if (running) {
-      intervalRef.current = setInterval(() => setElapsed((e) => e + 1), 1000)
-    } else {
-      clearInterval(intervalRef.current)
+  // 마운트 시 localStorage에서 진행 중이던 타이머 복구 (새로고침/탭 닫힘 대응).
+  if (!restoredRef.current) {
+    restoredRef.current = true
+    const saved = loadTimerState()
+    if (saved && saved.selectedPlanId) {
+      timerRef.current = {
+        accumulatedMs: Number(saved.accumulatedMs) || 0,
+        startedAt: saved.running ? Number(saved.startedAt) || Date.now() : null,
+      }
     }
+  }
+
+  const persistTimerState = (state) => {
+    try {
+      localStorage.setItem(
+        TIMER_STORAGE_KEY,
+        JSON.stringify({
+          selectedPlanId: state.selectedPlanId,
+          running: state.running,
+          accumulatedMs: timerRef.current.accumulatedMs,
+          startedAt: timerRef.current.startedAt,
+        }),
+      )
+    } catch {
+      // 저장 실패는 무시 (타이머 동작 자체엔 영향 없음).
+    }
+  }
+
+  const clearTimerState = () => {
+    try {
+      localStorage.removeItem(TIMER_STORAGE_KEY)
+    } catch {
+      // 무시
+    }
+  }
+
+  // 복구된 selectedPlanId가 오늘 계획에 아직 존재하면 한 번 반영.
+  useEffect(() => {
+    const saved = loadTimerState()
+    if (!saved || !saved.selectedPlanId) return
+    const planExists = todayPlans.some((plan) => plan.id === saved.selectedPlanId)
+    if (planExists) {
+      setSelectedPlanId(saved.selectedPlanId)
+      setRunning(Boolean(saved.running))
+      setElapsed(computeElapsedSeconds(timerRef.current))
+    } else {
+      timerRef.current = { accumulatedMs: 0, startedAt: null }
+      clearTimerState()
+    }
+    // 마운트 시 1회만 복구.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // running 동안 1초마다 timestamp diff로 elapsed를 재계산 (값을 직접 +1 하지 않음).
+  // 화면 꺼짐으로 인터벌이 throttle돼도 다음 tick이 정확한 절대값을 찍어 drift가 없다.
+  useEffect(() => {
+    if (!running) {
+      clearInterval(intervalRef.current)
+      return undefined
+    }
+    setElapsed(computeElapsedSeconds(timerRef.current))
+    intervalRef.current = setInterval(() => {
+      setElapsed(computeElapsedSeconds(timerRef.current))
+    }, 1000)
     return () => clearInterval(intervalRef.current)
   }, [running])
 
+  // 화면이 다시 보일 때 즉시 재계산 → 켜자마자 정확한 경과시간 반영.
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible' && timerRef.current.startedAt) {
+        setElapsed(computeElapsedSeconds(timerRef.current))
+      }
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [])
+
   const selectedPlan = todayPlans.find((plan) => plan.id === selectedPlanId) ?? null
+
+  const resetTimer = () => {
+    timerRef.current = { accumulatedMs: 0, startedAt: null }
+    setElapsed(0)
+    setRunning(false)
+  }
 
   const selectTimerPlan = (planId) => {
     if (running) return
     const nextPlanId = selectedPlanId === planId ? null : planId
     setSelectedPlanId(nextPlanId)
+    timerRef.current = { accumulatedMs: 0, startedAt: null }
     setElapsed(0)
     setSaved(false)
+    if (nextPlanId) {
+      persistTimerState({ selectedPlanId: nextPlanId, running: false })
+    } else {
+      clearTimerState()
+    }
+  }
+
+  const toggleTimer = () => {
+    if (running) {
+      // 일시정지: 현재 구간 경과분을 누적에 합산하고 startedAt 비움.
+      if (timerRef.current.startedAt) {
+        timerRef.current.accumulatedMs += Date.now() - timerRef.current.startedAt
+        timerRef.current.startedAt = null
+      }
+      setRunning(false)
+      setElapsed(computeElapsedSeconds(timerRef.current))
+      persistTimerState({ selectedPlanId, running: false })
+    } else {
+      // 시작/재개: 현재 시각을 구간 시작으로 기록.
+      timerRef.current.startedAt = Date.now()
+      setRunning(true)
+      persistTimerState({ selectedPlanId, running: true })
+    }
   }
 
   const handleTimerSave = async () => {
-    if (elapsed < 10 || !selectedPlan) return
-    const minutes = Math.max(1, Math.round(elapsed / 60))
+    const totalSeconds = computeElapsedSeconds(timerRef.current)
+    if (totalSeconds < 10 || !selectedPlan) return
+    const minutes = Math.max(1, Math.round(totalSeconds / 60))
     try {
       await updateLearningRecord(selectedPlan.id, {
         actualDuration: actualMinutes(selectedPlan) + minutes,
       })
-      setElapsed(0)
-      setRunning(false)
+      resetTimer()
+      clearTimerState()
       setSaved(true)
       setTimeout(() => setSaved(false), 1800)
     } catch {
@@ -957,11 +1084,11 @@ function StudyTab({ records, todayPlans }) {
                 saved={saved && plan.id === selectedPlanId}
                 canSave={elapsed >= 10 && plan.id === selectedPlanId}
                 onSelect={selectTimerPlan}
-                onToggleTimer={() => setRunning((current) => !current)}
+                onToggleTimer={toggleTimer}
                 onSave={handleTimerSave}
                 onReset={() => {
-                  setElapsed(0)
-                  setRunning(false)
+                  resetTimer()
+                  clearTimerState()
                 }}
                 onComplete={requestComplete}
               />
