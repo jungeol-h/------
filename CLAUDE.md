@@ -46,7 +46,7 @@ snake_case DB ↔ camelCase 변환은 `lib/supabaseHelpers.js`.
 
 ## 개발 규칙
 
-- 설계, 검증은 Claude Opus 4.8, 단순 구현은 Codex(MCP)를 sub agent로 적극 활용
+- 토큰 절약을 위해 설계는 Fable 5가 직접 하되, 구현, 코드 작성은 Opus 서브 에이전트를 적극 활용해야 한다.
 - **z-index**: Header/TabBar `z-40`, 모달 `z-50`.
 - **PDF**: `@react-pdf/renderer` 기반 `src/platform/pdf/`. 서버 렌더링 금지.
   추가 패턴은 메모리 `reference_pdf_infra` 참고.
@@ -54,6 +54,8 @@ snake_case DB ↔ camelCase 변환은 `lib/supabaseHelpers.js`.
   기존 코드·docs는 더미 흔적/클라이언트 목소리일 수 있어 근거 삼기 전 검증 (`feedback_question_assumptions`).
 
 ## 기획 문서 (`docs/`)
+
+(다소 오래되어 일단 신뢰도 떨어짐. 현재 세션의 요구사항에 더 집중)
 
 - `docs/3. 자료/개념 정리/` — 도메인 개념(자기주도지수, 알림, 리포트, M:N 배정),
   `유저 개념/` 아래 역할별 유저스토리

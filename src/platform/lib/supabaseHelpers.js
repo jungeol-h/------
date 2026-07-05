@@ -53,6 +53,41 @@ export const toLearningRecord = (row) => ({
   focus: row.focus,
 })
 
+// TIME 컬럼은 'HH:MM:SS'로 오므로 'HH:MM'으로 자른다
+const toHHMM = (t) => (t ? String(t).slice(0, 5) : null)
+
+export const toAttendanceRecord = (row) => ({
+  id: row.id,
+  studentId: row.student_id,
+  date: row.date,
+  status: row.status ?? 'present',
+  checkInAt: row.check_in_at ?? null,
+  checkOutAt: row.check_out_at ?? null,
+  scheduledArrival: toHHMM(row.scheduled_arrival),
+  scheduledDeparture: toHHMM(row.scheduled_departure),
+  checkoutStatus: row.checkout_status ?? null,
+  source: row.source ?? 'kiosk',
+  note: row.note ?? '',
+})
+
+export const toAttendanceSchedule = (row) => ({
+  id: row.id,
+  studentId: row.student_id,
+  dayOfWeek: row.day_of_week,
+  arrivalTime: toHHMM(row.arrival_time),
+  departureTime: toHHMM(row.departure_time),
+})
+
+export const toAttendanceNotification = (row) => ({
+  id: row.id,
+  studentId: row.student_id,
+  date: row.date,
+  type: row.type,
+  message: row.message,
+  resolved: row.resolved ?? false,
+  createdAt: row.created_at,
+})
+
 export const toTask = (row) => ({
   id: row.id,
   studentId: row.student_id,

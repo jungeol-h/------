@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "docs/1. 프로젝트/산청 우정학사 중등부 베타테스트/쪽지시험(확인평가) 기능 추가/요청 사항.md",
+                "file": "docs/1. Task/4. 누적 통계 및 데이터베이스 구조 (학습 탭 반영).md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "요청 사항"
+              "title": "4. 누적 통계 및 데이터베이스 구조 (학습 탭 반영)"
             }
           }
         ]
@@ -184,19 +184,23 @@
       "bases:새 베이스 생성하기": false
     }
   },
-  "active": "84b406f95a233014",
+  "active": "fad6998be5931b1a",
   "lastOpenFiles": [
-    "docs/3. 자료/quiz-app/src/lib/schemas",
-    "docs/3. 자료/quiz-app/src/lib/queries.ts",
-    "docs/3. 자료/quiz-app/src/lib/grading.ts",
-    "docs/3. 자료/quiz-app/src/lib/db.ts",
-    "docs/3. 자료/quiz-app/src/lib/admin-auth.ts",
-    "docs/3. 자료/quiz-app/src/components/admin",
-    "docs/3. 자료/quiz-app/src/components/QuizPlayer.tsx",
-    "docs/3. 자료/quiz-app/src/app/units",
-    "docs/3. 자료/quiz-app/src/app/quiz",
-    "docs/3. 자료/quiz-app/src/app/page.tsx",
-    "docs/3. 자료/quiz-app/src/app/layout.tsx",
+    "docs/1. Task/3. 학부모 전용 대시보드 (앱 내 구현).md",
+    "docs/1. Task/2. 카카오톡 알림 연동 (알림톡 서비스).md",
+    "docs/1. Task/1. 출결 판정 및 긴급 알림 로직 (시간 기준 강화).md",
+    "src/platform/pages/manager/attendancePages.test.jsx",
+    "dist/workbox-9c191d2f.js",
+    "dist/workbox-9c191d2f.js.map",
+    "dist/sw.js",
+    "dist/sw.js.map",
+    "dist/manifest.webmanifest",
+    "dist/index.html",
+    "dist/assets/workbox-window.prod.es5-BB95nvgn.js.map",
+    "dist/assets/workbox-window.prod.es5-BB95nvgn.js",
+    "dist/assets/react-pdf.browser-DgLlzYGf.js.map",
+    "docs/1. Task/4. 누적 통계 및 데이터베이스 구조 (학습 탭 반영).md",
+    "docs/1. Task/출결 판정 및 긴급 알림 로직 (시간 기준 강화).md",
     "docs/3. 자료/quiz-app/node_modules/zod-validation-error/README.v3.md",
     "docs/3. 자료/quiz-app/node_modules/zod-validation-error/README.md",
     "docs/3. 자료/quiz-app/node_modules/zod/README.md",
@@ -217,11 +221,6 @@
     "docs/3. 자료/quiz-app/node_modules/uri-js/README.md",
     "docs/3. 자료/quiz-app/node_modules/update-browserslist-db/README.md",
     "docs/3. 자료/quiz-app/node_modules/undici-types/README.md",
-    "docs/3. 자료/quiz-app/node_modules/unrs-resolver/README.md",
-    "docs/3. 자료/quiz-app/node_modules/unbox-primitive/README.md",
-    "docs/3. 자료/quiz-app/node_modules/unbox-primitive/CHANGELOG.md",
-    "docs/3. 자료/quiz-app/node_modules/typescript-eslint/README.md",
-    "docs/3. 자료/quiz-app/node_modules/typescript/SECURITY.md",
     "docs/3. 자료/quiz-app/public/window.svg",
     "docs/3. 자료/quiz-app/public/vercel.svg",
     "docs/3. 자료/quiz-app/public/next.svg",

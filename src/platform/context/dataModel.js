@@ -8,6 +8,8 @@ export const EMPTY = {
   diaryRecords: [],
   learningRecords: [],
   attendanceRecords: [],
+  attendanceSchedules: [],
+  attendanceNotifications: [],
   tasks: [],
   counselingRecords: [],
   alerts: [],
