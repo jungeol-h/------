@@ -58,6 +58,8 @@ export function DataProvider({ children }) {
           fetched = await fetchForManager(currentUser.id)
         } else if (currentUser.role === 'admin') {
           fetched = await fetchForAdmin()
+        } else if (['instructor', 'consultant', 'viewer'].includes(currentUser.role)) {
+          fetched = await fetchForAdmin()
         } else {
           fetched = EMPTY
         }

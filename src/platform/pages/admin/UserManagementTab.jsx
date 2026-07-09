@@ -9,7 +9,7 @@ import DownloadPdfButton from '../../pdf/components/DownloadPdfButton.jsx'
 import { buildFilename, nowDateTime } from '../../pdf/utils/formatters.js'
 import { authorOf } from '../../pdf/config/meta.js'
 
-const ROLE_LABELS = { student: '학생', manager: '학습매니저', admin: '관리자' }
+const ROLE_LABELS = { student: '학생', manager: '학습매니저', admin: '관리자', instructor: '교과강사', consultant: '컨설턴트', viewer: '열람자' }
 const RISK_LABELS = {
   normal:  { label: '정상', color: 'text-green-600 bg-green-100' },
   warning: { label: '주의', color: 'text-yellow-600 bg-yellow-100' },
@@ -26,7 +26,7 @@ function gradeWeight(g) {
   return m ? parseInt(m[1], 10) : 99
 }
 
-export default function UserManagementTab() {
+export default function UserManagementTab({ readOnly = false }) {
   const { data, createStudent, updateStudent, setStudentStatus } = useData()
   const { currentUser } = useAuth()
   const navigate = useNavigate()
@@ -37,6 +37,9 @@ export default function UserManagementTab() {
   const [query, setQuery] = useState('')
   const [sortKey, setSortKey] = useState('name') // 'name' | 'grade' | 'manager' | 'risk' | 'selfIndex'
   const [sortDir, setSortDir] = useState('asc')  // 'asc' | 'desc'
+
+  // 열람 전용(viewer) 경로에서는 학생 상세도 viewer 경로로 이동한다.
+  const detailBase = currentUser?.role === 'viewer' ? '/viewer/student' : '/admin/student'
 
   const managers = data.educators.filter((e) => e.role === 'manager')
   const allStudents = data.students
@@ -186,13 +189,15 @@ export default function UserManagementTab() {
               />
               비활성 표시
             </label>
-            <button
-              onClick={() => setModal({ mode: 'create' })}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700"
-            >
-              <Plus size={14} />
-              학생 추가
-            </button>
+            {!readOnly && (
+              <button
+                onClick={() => setModal({ mode: 'create' })}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700"
+              >
+                <Plus size={14} />
+                학생 추가
+              </button>
+            )}
           </div>
         </div>
 
@@ -267,7 +272,7 @@ export default function UserManagementTab() {
                   className={`grid grid-cols-[1fr_70px_44px_56px_44px_32px] items-center px-3 py-2.5 border-b border-gray-50 last:border-0 transition-colors ${
                     isInactive ? 'bg-gray-50/60 opacity-70' : 'hover:bg-gray-50 active:bg-gray-100'
                   } cursor-pointer`}
-                  onClick={() => navigate(`/admin/student/${s.id}`)}
+                  onClick={() => navigate(`${detailBase}/${s.id}`)}
                 >
                   <div className="flex items-center gap-2 min-w-0 pr-2">
                     <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
@@ -301,6 +306,9 @@ export default function UserManagementTab() {
                     {risk.label}
                   </span>
                   <span className="text-right text-sm font-bold text-blue-600">{s.selfIndex}점</span>
+                  {readOnly ? (
+                    <span aria-hidden />
+                  ) : (
                   <div className="flex justify-center relative">
                     <button
                       onClick={(e) => {
@@ -343,6 +351,7 @@ export default function UserManagementTab() {
                       </>
                     )}
                   </div>
+                  )}
                 </div>
               )
             })
@@ -379,7 +388,7 @@ export default function UserManagementTab() {
         </div>
       </section>
 
-      {modal && (
+      {!readOnly && modal && (
         <StudentFormModal
           mode={modal.mode}
           initial={modal.mode === 'edit' ? modal.student : undefined}

@@ -7,6 +7,9 @@ const ROLE_PATHS = {
   student: '/student',
   manager: '/manager',
   admin: '/admin',
+  instructor: '/instructor',
+  consultant: '/consultant',
+  viewer: '/viewer',
 }
 
 export default function LoginPage() {

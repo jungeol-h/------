@@ -2,7 +2,7 @@
 
 import { useCallback } from 'react'
 import { supabase } from '../../lib/supabase.js'
-import { toTodoItem } from '../../lib/supabaseHelpers.js'
+import { toTodoItem, toTask } from '../../lib/supabaseHelpers.js'
 import { makeId } from '../dataModel.js'
 import { withWriteRetry } from '../../lib/supabaseRetry.js'
 
@@ -97,5 +97,70 @@ export function useTaskDomain(data, setData) {
     [data.todoItems, setData]
   )
 
-  return { toggleTask, addTodoItem, updateTodoItem, toggleTodo }
+  // 과제 부여 (교과강사/컨설턴트/매니저/관리자가 학생에게 과제 배정)
+  const addTask = useCallback(
+    async ({ studentId, title, subject, dueDate, dueTime, assignerId, assignerName }) => {
+      const row = {
+        id: makeId('t'),
+        student_id: studentId,
+        title,
+        subject,
+        due_date: dueDate,
+        due_time: dueTime || '23:59',
+        status: 'pending',
+        assigner_id: assignerId ?? null,
+        assigner_name: assignerName ?? null,
+      }
+      const { error } = await withWriteRetry(
+        () => supabase.from('tasks').insert(row),
+        { label: 'addTask' }
+      )
+      if (error) throw error
+      setData((prev) => ({
+        ...prev,
+        tasks: [toTask(row), ...prev.tasks],
+      }))
+    },
+    [setData]
+  )
+
+  // 과제 수정 (제목/과목/마감일/마감시간)
+  const updateTask = useCallback(
+    async (id, patch) => {
+      const snake = {}
+      if (patch.title !== undefined) snake.title = patch.title
+      if (patch.subject !== undefined) snake.subject = patch.subject
+      if (patch.dueDate !== undefined) snake.due_date = patch.dueDate
+      if (patch.dueTime !== undefined) snake.due_time = patch.dueTime
+      if (Object.keys(snake).length === 0) return
+      const { error } = await withWriteRetry(
+        () => supabase.from('tasks').update(snake).eq('id', id),
+        { label: 'updateTask' }
+      )
+      if (error) throw error
+      setData((prev) => ({
+        ...prev,
+        tasks: prev.tasks.map((t) => (t.id === id ? { ...t, ...patch } : t)),
+      }))
+    },
+    [setData]
+  )
+
+  // 과제 삭제
+  const deleteTask = useCallback(
+    async (id) => {
+      const { error } = await withWriteRetry(
+        () => supabase.from('tasks').delete().eq('id', id),
+        { label: 'deleteTask' }
+      )
+      if (error) throw error
+      setData((prev) => ({
+        ...prev,
+        tasks: prev.tasks.filter((t) => t.id !== id),
+      }))
+    },
+    [setData]
+  )
+
+  return { toggleTask, addTask, updateTask, deleteTask, addTodoItem, updateTodoItem, toggleTodo }
 }

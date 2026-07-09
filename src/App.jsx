@@ -7,6 +7,8 @@ import LoginPage from './platform/pages/LoginPage.jsx'
 import StudentDashboard from './platform/pages/student/StudentDashboard.jsx'
 import ManagerDashboard from './platform/pages/manager/ManagerDashboard.jsx'
 import AdminDashboard from './platform/pages/admin/AdminDashboard.jsx'
+import EducatorDashboard from './platform/pages/educator/EducatorDashboard.jsx'
+import ViewerDashboard from './platform/pages/viewer/ViewerDashboard.jsx'
 import ProtectedRoute from './platform/components/layout/ProtectedRoute.jsx'
 import InstallGuidePage from './platform/pages/InstallGuidePage.jsx'
 
@@ -40,6 +42,30 @@ export default function App() {
                 element={
                   <ProtectedRoute role="admin">
                     <AdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/instructor/*"
+                element={
+                  <ProtectedRoute role="instructor">
+                    <EducatorDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/consultant/*"
+                element={
+                  <ProtectedRoute role="consultant">
+                    <EducatorDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/viewer/*"
+                element={
+                  <ProtectedRoute role="viewer">
+                    <ViewerDashboard />
                   </ProtectedRoute>
                 }
               />

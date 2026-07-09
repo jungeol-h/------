@@ -6,8 +6,9 @@ export const ROLE_LABEL = {
   manager: '학습매니저',
   student: '학생',
   parent: '학부모',
-  instructor: '강사',
+  instructor: '교과강사',
   consultant: '컨설턴트',
+  viewer: '열람자',
 }
 
 export function authorOf(user) {

@@ -8,12 +8,18 @@ const ROLE_LABELS = {
   student: '학생',
   manager: '학습매니저',
   admin: '관리자',
+  instructor: '교과강사',
+  consultant: '컨설턴트',
+  viewer: '열람자',
 }
 
 const ROLE_COLORS = {
   student: 'bg-blue-500',
   manager: 'bg-emerald-500',
   admin: 'bg-violet-500',
+  instructor: 'bg-amber-500',
+  consultant: 'bg-teal-500',
+  viewer: 'bg-slate-500',
 }
 
 export default function Header({ title, badge, back }) {

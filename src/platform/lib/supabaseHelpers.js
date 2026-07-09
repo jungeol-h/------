@@ -96,6 +96,7 @@ export const toTask = (row) => ({
   dueDate: row.due_date,
   dueTime: row.due_time ?? '23:59',
   status: row.status ?? 'pending',
+  assignerId: row.assigner_id ?? null,
   assignerName: row.assigner_name ?? '',
 })
 

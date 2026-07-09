@@ -1,18 +1,35 @@
 import { useState } from 'react'
-import { CheckCheck } from 'lucide-react'
+import { CheckCheck, Pencil, Trash2 } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
+import { useAuth } from '../../context/AuthContext.jsx'
 import { COUNSELING_TYPES, COUNSELING_TYPE_LABELS } from '../../data/counselingTypes.js'
 import StudentCombobox from './StudentCombobox.jsx'
+import CounselingFormModal from './CounselingFormModal.jsx'
 
 // 매니저/관리자 상담 탭 공용 본문.
 // 상단에 인라인 작성 폼(버튼→모달 없이 바로 입력), 아래에 기존 상담 리스트.
 // 두 역할의 차이는 props로만 분기: 작성 대상(students)·노출 기록(records)·작성자 표시(showAuthor).
-export default function CounselingTabContent({ students, records, showAuthor = false, authorId }) {
-  const { addCounselingRecord, data } = useData()
+// readOnly=true면 작성 폼과 카드 수정/삭제 버튼을 숨긴다(열람 전용 역할).
+export default function CounselingTabContent({ students, records, showAuthor = false, authorId, readOnly = false }) {
+  const { addCounselingRecord, deleteCounselingRecord, data } = useData()
+  const { currentUser } = useAuth()
   const [studentId, setStudentId] = useState('')
   const [type, setType] = useState('mind')
   const [content, setContent] = useState('')
   const [saving, setSaving] = useState(false)
+  const [editRecord, setEditRecord] = useState(null)
+
+  const canManage = (r) =>
+    !readOnly && (r.educatorId === currentUser?.id || currentUser?.role === 'admin')
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('이 상담 기록을 삭제할까요?')) return
+    try {
+      await deleteCounselingRecord(id)
+    } catch {
+      // 실패는 전역 Toast가 표면화한다.
+    }
+  }
 
   const fieldClass =
     'border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300'
@@ -38,6 +55,7 @@ export default function CounselingTabContent({ students, records, showAuthor = f
   return (
     <div className="py-6 space-y-6">
       {/* ── 새 상담 작성 ── */}
+      {!readOnly && (
       <section className="bg-white rounded-2xl shadow-sm p-5 space-y-4">
         <h2 className="text-base font-bold text-gray-900">새 상담 기록</h2>
 
@@ -80,6 +98,7 @@ export default function CounselingTabContent({ students, records, showAuthor = f
           </button>
         </div>
       </section>
+      )}
 
       {/* ── 기존 상담 리스트 ── */}
       <section className="space-y-3">
@@ -100,7 +119,27 @@ export default function CounselingTabContent({ students, records, showAuthor = f
                         {COUNSELING_TYPE_LABELS[r.type] || r.type}
                       </span>
                     </div>
-                    <span className="text-xs text-gray-400">{r.date}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-400">{r.date}</span>
+                      {canManage(r) && (
+                        <>
+                          <button
+                            onClick={() => setEditRecord(r)}
+                            className="text-gray-400 hover:text-blue-600 p-0.5"
+                            aria-label="상담 수정"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(r.id)}
+                            className="text-gray-400 hover:text-red-600 p-0.5"
+                            aria-label="상담 삭제"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                   <p className="text-sm text-gray-600">{r.comment}</p>
                   {showAuthor && author && (
@@ -112,6 +151,14 @@ export default function CounselingTabContent({ students, records, showAuthor = f
           </div>
         )}
       </section>
+
+      {editRecord && (
+        <CounselingFormModal
+          record={editRecord}
+          authorId={authorId}
+          onClose={() => setEditRecord(null)}
+        />
+      )}
     </div>
   )
 }

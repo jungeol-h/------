@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
-import { User, AlertCircle, Plus } from 'lucide-react'
+import { User, AlertCircle, Plus, Pencil, Trash2 } from 'lucide-react'
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid, Cell,
@@ -10,6 +10,10 @@ import { useData } from '../../context/DataContext.jsx'
 import { getMindStatus } from '../../context/selectors/riskDetection.js'
 import { COUNSELING_TYPE_LABELS } from '../../data/counselingTypes.js'
 import CounselingFormModal from '../../components/counseling/CounselingFormModal.jsx'
+import TaskFormModal from '../../components/tasks/TaskFormModal.jsx'
+import DownloadPdfButton from '../../pdf/components/DownloadPdfButton.jsx'
+import { buildFilename, nowDateTime } from '../../pdf/utils/formatters.js'
+import { authorOf } from '../../pdf/config/meta.js'
 import { STAGE_META, STAGE_ORDER } from '../../data/stageFeedbackLibrary.js'
 import { DOMAIN_LABELS } from '../../data/questions.js'
 import { actualMinutes, methodBreakdown } from '../../context/selectors/learningRecords.js'
@@ -230,7 +234,12 @@ function LearningSection({ studentId, data }) {
 }
 
 // ─── 탭: 과제 ─────────────────────────────────────────────────
-function TaskSection({ studentId, data }) {
+function TaskSection({ studentId, data, currentUser, canWrite = false }) {
+  const [showForm, setShowForm] = useState(false)
+  const [editTask, setEditTask] = useState(null)
+  const { deleteTask } = useData()
+
+  const student = data.students.find((s) => s.id === studentId)
   const tasks = data.tasks
     .filter((t) => t.studentId === studentId)
     .slice()
@@ -239,47 +248,98 @@ function TaskSection({ studentId, data }) {
   const pending = tasks.filter((t) => t.status === 'pending')
   const done = tasks.filter((t) => t.status === 'done')
 
-  if (tasks.length === 0) {
-    return <p className="text-sm text-gray-400 py-8 text-center">과제가 없습니다.</p>
+  // 본인 부여분 or admin 수정/삭제 가능. assignerId 없는 기존 과제는 admin만.
+  const canManage = (t) =>
+    canWrite && (t.assignerId === currentUser?.id || currentUser?.role === 'admin')
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('이 과제를 삭제할까요?')) return
+    try {
+      await deleteTask(id)
+    } catch {
+      // 실패는 전역 Toast가 표면화한다.
+    }
   }
+
+  const ManageButtons = ({ t }) =>
+    canManage(t) ? (
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <button onClick={() => setEditTask(t)} className="text-gray-400 hover:text-blue-600 p-0.5" aria-label="과제 수정">
+          <Pencil size={14} />
+        </button>
+        <button onClick={() => handleDelete(t.id)} className="text-gray-400 hover:text-red-600 p-0.5" aria-label="과제 삭제">
+          <Trash2 size={14} />
+        </button>
+      </div>
+    ) : null
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-orange-50 rounded-xl p-3 text-center">
-          <p className="text-xl font-bold text-orange-600">{pending.length}</p>
-          <p className="text-xs text-gray-500 mt-0.5">미완료</p>
-        </div>
-        <div className="bg-green-50 rounded-xl p-3 text-center">
-          <p className="text-xl font-bold text-green-600">{done.length}</p>
-          <p className="text-xs text-gray-500 mt-0.5">완료</p>
-        </div>
-      </div>
-
-      {pending.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-xs text-gray-500 font-semibold">미완료 과제</p>
-          {pending.map((t) => (
-            <div key={t.id} className="bg-white rounded-xl p-3 shadow-sm border-l-4 border-orange-400">
-              <p className="font-semibold text-sm text-gray-800">{t.title}</p>
-              <p className="text-xs text-gray-400 mt-0.5">
-                {t.subject}{t.assignerName ? ` · 출제: ${t.assignerName}` : ''} · 마감 {t.dueDate}
-              </p>
-            </div>
-          ))}
+      {canWrite && (
+        <div className="flex justify-end">
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex items-center gap-1 bg-emerald-500 text-white text-sm font-bold px-3 py-2 rounded-xl hover:bg-emerald-600 active:scale-95 transition-all"
+          >
+            <Plus size={16} /> 과제 추가
+          </button>
         </div>
       )}
 
-      {done.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-xs text-gray-500 font-semibold">완료된 과제</p>
-          {done.map((t) => (
-            <div key={t.id} className="bg-gray-50 rounded-xl p-3 opacity-60">
-              <p className="font-semibold text-sm text-gray-500 line-through">{t.title}</p>
-              <p className="text-xs text-gray-400 mt-0.5">{t.subject}{t.assignerName ? ` · ${t.assignerName}` : ''}</p>
+      {tasks.length === 0 ? (
+        <p className="text-sm text-gray-400 py-8 text-center">과제가 없습니다.</p>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-orange-50 rounded-xl p-3 text-center">
+              <p className="text-xl font-bold text-orange-600">{pending.length}</p>
+              <p className="text-xs text-gray-500 mt-0.5">미완료</p>
             </div>
-          ))}
-        </div>
+            <div className="bg-green-50 rounded-xl p-3 text-center">
+              <p className="text-xl font-bold text-green-600">{done.length}</p>
+              <p className="text-xs text-gray-500 mt-0.5">완료</p>
+            </div>
+          </div>
+
+          {pending.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs text-gray-500 font-semibold">미완료 과제</p>
+              {pending.map((t) => (
+                <div key={t.id} className="bg-white rounded-xl p-3 shadow-sm border-l-4 border-orange-400 flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm text-gray-800">{t.title}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {t.subject}{t.assignerName ? ` · 출제: ${t.assignerName}` : ''} · 마감 {t.dueDate}
+                    </p>
+                  </div>
+                  <ManageButtons t={t} />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {done.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs text-gray-500 font-semibold">완료된 과제</p>
+              {done.map((t) => (
+                <div key={t.id} className="bg-gray-50 rounded-xl p-3 opacity-60 flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm text-gray-500 line-through">{t.title}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{t.subject}{t.assignerName ? ` · ${t.assignerName}` : ''}</p>
+                  </div>
+                  <ManageButtons t={t} />
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {showForm && (
+        <TaskFormModal fixedStudent={student} onClose={() => setShowForm(false)} />
+      )}
+      {editTask && (
+        <TaskFormModal task={editTask} onClose={() => setEditTask(null)} />
       )}
     </div>
   )
@@ -525,8 +585,10 @@ function CareerDesignSection({ studentId, data }) {
 }
 
 // ─── 탭: 상담 ─────────────────────────────────────────────────
-function CounselingSection({ studentId, data, authorId }) {
+function CounselingSection({ studentId, data, currentUser, canWrite = true }) {
   const [showForm, setShowForm] = useState(false)
+  const [editRecord, setEditRecord] = useState(null)
+  const authorId = currentUser?.id
 
   const student = data.students.find((s) => s.id === studentId)
   const records = data.counselingRecords
@@ -534,15 +596,58 @@ function CounselingSection({ studentId, data, authorId }) {
     .slice()
     .sort((a, b) => (b.date > a.date ? 1 : -1))
 
+  const { deleteCounselingRecord } = useData()
+
+  const canManage = (r) =>
+    canWrite && (r.educatorId === currentUser?.id || currentUser?.role === 'admin')
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('이 상담 기록을 삭제할까요?')) return
+    try {
+      await deleteCounselingRecord(id)
+    } catch {
+      // 실패는 전역 Toast가 표면화한다.
+    }
+  }
+
+  const handleDownloadPdf = useCallback(async () => {
+    const sorted = records.slice().sort((a, b) => (a.date > b.date ? 1 : -1))
+    const [{ downloadPdf }, { default: CounselingReport }] = await Promise.all([
+      import('../../pdf/utils/downloadPdf.js'),
+      import('../../pdf/reports/CounselingReport.jsx'),
+    ])
+    await downloadPdf(
+      <CounselingReport
+        student={{ name: student?.name, school: student?.school, grade: student?.grade }}
+        records={sorted.map((r) => ({
+          date: r.date,
+          typeLabel: COUNSELING_TYPE_LABELS[r.type] || r.type,
+          authorName: data.educators.find((e) => e.id === r.educatorId)?.name ?? '-',
+          content: r.comment,
+        }))}
+        generatedAt={nowDateTime()}
+        author={authorOf(currentUser)}
+      />,
+      buildFilename('상담보고서', student?.name),
+    )
+  }, [records, student, data.educators, currentUser])
+
   return (
     <div className="space-y-3">
-      <div className="flex justify-end">
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-1 bg-emerald-500 text-white text-sm font-bold px-3 py-2 rounded-xl hover:bg-emerald-600 active:scale-95 transition-all"
-        >
-          <Plus size={16} /> 상담 작성
-        </button>
+      <div className="flex justify-end gap-2">
+        <DownloadPdfButton
+          onDownload={handleDownloadPdf}
+          label="상담 보고서"
+          disabled={records.length === 0}
+        />
+        {canWrite && (
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex items-center gap-1 bg-emerald-500 text-white text-sm font-bold px-3 py-2 rounded-xl hover:bg-emerald-600 active:scale-95 transition-all"
+          >
+            <Plus size={16} /> 상담 작성
+          </button>
+        )}
       </div>
 
       {records.length === 0 ? (
@@ -556,7 +661,27 @@ function CounselingSection({ studentId, data, authorId }) {
                 <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">
                   {COUNSELING_TYPE_LABELS[r.type] || r.type}
                 </span>
-                <span className="text-xs text-gray-400">{r.date}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-400">{r.date}</span>
+                  {canManage(r) && (
+                    <>
+                      <button
+                        onClick={() => setEditRecord(r)}
+                        className="text-gray-400 hover:text-blue-600 p-0.5"
+                        aria-label="상담 수정"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(r.id)}
+                        className="text-gray-400 hover:text-red-600 p-0.5"
+                        aria-label="상담 삭제"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
               <p className="text-sm text-gray-600">{r.comment}</p>
               {author && <p className="text-xs text-gray-400 mt-2">작성: {author.name}</p>}
@@ -570,6 +695,14 @@ function CounselingSection({ studentId, data, authorId }) {
           fixedStudent={student}
           authorId={authorId}
           onClose={() => setShowForm(false)}
+        />
+      )}
+
+      {editRecord && (
+        <CounselingFormModal
+          record={editRecord}
+          authorId={authorId}
+          onClose={() => setEditRecord(null)}
         />
       )}
     </div>
@@ -641,10 +774,10 @@ export default function StudentDetailPage() {
       {activeTab === 0 && <MindSection studentId={studentId} data={data} getWeeklyLearning={getWeeklyLearning} />}
       {activeTab === 1 && <DiarySection studentId={studentId} data={data} />}
       {activeTab === 2 && <LearningSection studentId={studentId} data={data} />}
-      {activeTab === 3 && <TaskSection studentId={studentId} data={data} />}
+      {activeTab === 3 && <TaskSection studentId={studentId} data={data} currentUser={currentUser} canWrite={currentUser?.role !== 'viewer'} />}
       {activeTab === 4 && <LearningDiagnosisSection studentId={studentId} data={data} />}
       {activeTab === 5 && <CareerDesignSection studentId={studentId} data={data} />}
-      {activeTab === 6 && <CounselingSection studentId={studentId} data={data} authorId={currentUser?.id} />}
+      {activeTab === 6 && <CounselingSection studentId={studentId} data={data} currentUser={currentUser} canWrite={currentUser?.role !== 'viewer'} />}
     </div>
   )
 }
