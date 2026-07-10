@@ -10,6 +10,7 @@ const ROLE_PATHS = {
   instructor: '/instructor',
   consultant: '/consultant',
   viewer: '/viewer',
+  parent: '/parent',
 }
 
 export default function LoginPage() {

@@ -5,12 +5,13 @@ import {
   toUser, toMindRecord, toDiaryRecord, toLearningRecord, toTask,
   toTodoItem, toCareerDesignResult, toLearningDiagnosisResult,
   toAssignment, toQuizSet, toQuizQuestion, toQuizAttempt,
+  toAttendanceRecord, toAttendanceSchedule,
   collectRows,
 } from '../../lib/supabaseHelpers.js'
 import { EMPTY } from '../dataModel.js'
 
 export async function fetchForStudent(userId) {
-  const [userRes, assnRes, mindRes, learningRes, tasksRes, todoRes, diaryRes, careerRes, diagRes, attemptsRes] = await Promise.all([
+  const [userRes, assnRes, mindRes, learningRes, tasksRes, todoRes, diaryRes, careerRes, diagRes, attemptsRes, attendanceRes, schedulesRes] = await Promise.all([
     supabase.from('users').select('*').eq('id', userId).limit(1),
     supabase.from('assignments').select('*').eq('student_id', userId),
     supabase.from('mind_records').select('*', { count: 'exact' }).eq('student_id', userId).order('date', { ascending: false }).limit(2000),
@@ -21,6 +22,8 @@ export async function fetchForStudent(userId) {
     supabase.from('career_results').select('*').eq('student_id', userId).order('created_at', { ascending: false }).limit(1),
     supabase.from('diagnosis_results').select('*').eq('student_id', userId).order('created_at', { ascending: false }).limit(1),
     supabase.from('quiz_attempts').select('*').eq('student_id', userId),
+    supabase.from('attendance_records').select('*').eq('student_id', userId).order('date', { ascending: false }),
+    supabase.from('attendance_schedules').select('*').eq('student_id', userId),
   ])
 
   const errors = []
@@ -61,6 +64,8 @@ export async function fetchForStudent(userId) {
     quizSets: setRows.map(toQuizSet),
     quizQuestions: collectRows(questionsRes, 'quiz_questions', errors).map(toQuizQuestion),
     quizAttempts: collectRows(attemptsRes, 'quiz_attempts', errors).map(toQuizAttempt),
+    attendanceRecords: collectRows(attendanceRes, 'attendance_records', errors).map(toAttendanceRecord),
+    attendanceSchedules: collectRows(schedulesRes, 'attendance_schedules', errors).map(toAttendanceSchedule),
     _fetchErrors: errors,
     _fetchMeta: meta,
   }

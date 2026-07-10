@@ -5,6 +5,7 @@ import { getMindStatus } from '../../context/selectors/riskDetection.js'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useNavigate } from 'react-router-dom'
 import StudentFormModal from '../../components/admin/StudentFormModal.jsx'
+import ParentManagementModal from '../../components/admin/ParentManagementModal.jsx'
 import DownloadPdfButton from '../../pdf/components/DownloadPdfButton.jsx'
 import { buildFilename, nowDateTime } from '../../pdf/utils/formatters.js'
 import { authorOf } from '../../pdf/config/meta.js'
@@ -34,6 +35,7 @@ export default function UserManagementTab({ readOnly = false }) {
   const [showInactive, setShowInactive] = useState(false)
   const [modal, setModal] = useState(null) // { mode: 'create' } | { mode: 'edit', student }
   const [menuOpenId, setMenuOpenId] = useState(null)
+  const [showParentModal, setShowParentModal] = useState(false)
   const [query, setQuery] = useState('')
   const [sortKey, setSortKey] = useState('name') // 'name' | 'grade' | 'manager' | 'risk' | 'selfIndex'
   const [sortDir, setSortDir] = useState('asc')  // 'asc' | 'desc'
@@ -166,11 +168,21 @@ export default function UserManagementTab({ readOnly = false }) {
     <div className="py-6 space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold text-gray-900">사용자 관리</h2>
-        <DownloadPdfButton
-          onDownload={handleDownloadPdf}
-          label="학생 목록 보고서"
-          disabled={visibleStudents.length === 0}
-        />
+        <div className="flex items-center gap-2">
+          {!readOnly && (
+            <button
+              onClick={() => setShowParentModal(true)}
+              className="px-2.5 py-1.5 rounded-lg bg-rose-600 text-white text-xs font-semibold hover:bg-rose-700"
+            >
+              학부모 계정
+            </button>
+          )}
+          <DownloadPdfButton
+            onDownload={handleDownloadPdf}
+            label="학생 목록 보고서"
+            disabled={visibleStudents.length === 0}
+          />
+        </div>
       </div>
 
       {/* ── 학생 목록 ── */}
@@ -397,6 +409,10 @@ export default function UserManagementTab({ readOnly = false }) {
           onSubmit={modal.mode === 'edit' ? handleEdit : handleCreate}
           onClose={() => setModal(null)}
         />
+      )}
+
+      {!readOnly && showParentModal && (
+        <ParentManagementModal onClose={() => setShowParentModal(false)} />
       )}
     </div>
   )

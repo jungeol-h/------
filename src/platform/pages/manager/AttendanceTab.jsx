@@ -4,11 +4,12 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Siren, X, CheckCheck, MonitorSmartphone, CalendarClock, Pencil, Copy,
+  Siren, X, CheckCheck, MonitorSmartphone, CalendarClock, Pencil, Copy, FileSpreadsheet,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
 import { supabase } from '../../lib/supabase.js'
+import AttendanceExcelModal from '../../components/attendance/AttendanceExcelModal.jsx'
 import {
   getTodayAttendanceBoard,
   getUnresolvedAttendanceNotifications,
@@ -75,6 +76,7 @@ export default function AttendanceTab() {
 
   const [editModal, setEditModal] = useState(null) // { student, record }
   const [scheduleStudentId, setScheduleStudentId] = useState('')
+  const [excelOpen, setExcelOpen] = useState(false)
 
   return (
     <div className="py-6 space-y-6">
@@ -113,6 +115,17 @@ export default function AttendanceTab() {
         <MonitorSmartphone size={20} />
         등·하원 키오스크 열기
       </button>
+
+      {/* 출결 엑셀 추출 */}
+      <button
+        onClick={() => setExcelOpen(true)}
+        className="w-full bg-emerald-500 text-white rounded-2xl p-4 flex items-center justify-center gap-2 font-bold active:scale-95 transition-all"
+      >
+        <FileSpreadsheet size={20} />
+        출결 엑셀 추출
+      </button>
+
+      <AttendanceExcelModal open={excelOpen} onClose={() => setExcelOpen(false)} />
 
       {/* 오늘 현황판 */}
       <div>

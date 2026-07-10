@@ -7,6 +7,9 @@ import {
 } from 'recharts'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
+import { supabase } from '../../lib/supabase.js'
+import { toAttendanceRecord } from '../../lib/supabaseHelpers.js'
+import { buildReflectionData } from '../../context/selectors/reflectionReport.js'
 import { getMindStatus } from '../../context/selectors/riskDetection.js'
 import { COUNSELING_TYPE_LABELS } from '../../data/counselingTypes.js'
 import CounselingFormModal from '../../components/counseling/CounselingFormModal.jsx'
@@ -632,9 +635,51 @@ function CounselingSection({ studentId, data, currentUser, canWrite = true }) {
     )
   }, [records, student, data.educators, currentUser])
 
+  const handleDownloadReflection = useCallback(async () => {
+    // admin/manager fetch에는 이 학생의 출결이 없다 → 여기서만 lazy fetch.
+    let attendanceRecords = []
+    try {
+      const res = await supabase
+        .from('attendance_records')
+        .select('*')
+        .eq('student_id', studentId)
+        .order('date', { ascending: false })
+      if (res.error) throw res.error
+      attendanceRecords = (res.data ?? []).map(toAttendanceRecord)
+    } catch {
+      alert('출결 기록을 불러오지 못했습니다. 출결 없이 리포트를 생성합니다.')
+      attendanceRecords = []
+    }
+
+    // learning/mind는 page data에 이미 있음. 출결만 주입해 selector 재사용.
+    const merged = { ...data, attendanceRecords }
+    const { attendance, learning, mind } = buildReflectionData(merged, studentId)
+
+    const [{ downloadPdf }, { default: ReflectionReport }] = await Promise.all([
+      import('../../pdf/utils/downloadPdf.js'),
+      import('../../pdf/reports/ReflectionReport.jsx'),
+    ])
+    await downloadPdf(
+      <ReflectionReport
+        student={{ name: student?.name, school: student?.school, grade: student?.grade }}
+        attendance={attendance}
+        learning={learning}
+        mind={mind}
+        generatedAt={nowDateTime()}
+        author={authorOf(currentUser)}
+      />,
+      buildFilename('종합성찰리포트', student?.name),
+    )
+  }, [studentId, student, data, currentUser])
+
   return (
     <div className="space-y-3">
       <div className="flex justify-end gap-2">
+        <DownloadPdfButton
+          onDownload={handleDownloadReflection}
+          label="종합 성찰 리포트"
+          className="bg-blue-600 hover:bg-blue-700"
+        />
         <DownloadPdfButton
           onDownload={handleDownloadPdf}
           label="상담 보고서"

@@ -11,6 +11,7 @@ const ROLE_LABELS = {
   instructor: '교과강사',
   consultant: '컨설턴트',
   viewer: '열람자',
+  parent: '학부모',
 }
 
 const ROLE_COLORS = {
@@ -20,6 +21,7 @@ const ROLE_COLORS = {
   instructor: 'bg-amber-500',
   consultant: 'bg-teal-500',
   viewer: 'bg-slate-500',
+  parent: 'bg-rose-500',
 }
 
 export default function Header({ title, badge, back }) {

@@ -1,8 +1,10 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useRef, useState } from 'react'
+import { FileSpreadsheet } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid } from 'recharts'
 import { useData } from '../../context/DataContext.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
 import DownloadPdfButton from '../../pdf/components/DownloadPdfButton.jsx'
+import AttendanceExcelModal from '../../components/attendance/AttendanceExcelModal.jsx'
 import { buildFilename, nowDateTime } from '../../pdf/utils/formatters.js'
 import { authorOf } from '../../pdf/config/meta.js'
 
@@ -12,6 +14,7 @@ export default function StatisticsTab() {
   const hasStats = data.monthlyStats.length > 0
   const barRef = useRef(null)
   const lineRef = useRef(null)
+  const [excelOpen, setExcelOpen] = useState(false)
 
   const handleDownloadPdf = useCallback(async () => {
     const periodLabel = hasStats
@@ -53,12 +56,23 @@ export default function StatisticsTab() {
     <div className="py-6 space-y-5">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold text-gray-900">통계 & 분석</h2>
-        <DownloadPdfButton
-          onDownload={handleDownloadPdf}
-          label="월간 보고서"
-          disabled={!hasStats}
-        />
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setExcelOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500 text-white text-sm font-bold active:scale-95 transition-all"
+          >
+            <FileSpreadsheet size={16} />
+            출결 엑셀
+          </button>
+          <DownloadPdfButton
+            onDownload={handleDownloadPdf}
+            label="월간 보고서"
+            disabled={!hasStats}
+          />
+        </div>
       </div>
+
+      <AttendanceExcelModal open={excelOpen} onClose={() => setExcelOpen(false)} />
 
       {!hasStats && (
         <div className="bg-gray-50 rounded-2xl p-6 text-center text-gray-400">

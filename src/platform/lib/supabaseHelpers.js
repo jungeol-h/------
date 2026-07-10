@@ -157,6 +157,12 @@ export const toLearningDiagnosisResult = (row) => ({
   typeName: row.type_name ?? '',
 })
 
+export const toParentChild = (row) => ({
+  id: row.id,
+  parentId: row.parent_id,
+  studentId: row.student_id,
+})
+
 // flat 형식 [{ educatorId, studentId }] — 기존 컴포넌트 코드와 호환
 export const toAssignment = (row) => ({
   educatorId: row.educator_id,

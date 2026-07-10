@@ -9,6 +9,7 @@ import ManagerDashboard from './platform/pages/manager/ManagerDashboard.jsx'
 import AdminDashboard from './platform/pages/admin/AdminDashboard.jsx'
 import EducatorDashboard from './platform/pages/educator/EducatorDashboard.jsx'
 import ViewerDashboard from './platform/pages/viewer/ViewerDashboard.jsx'
+import ParentDashboard from './platform/pages/parent/ParentDashboard.jsx'
 import ProtectedRoute from './platform/components/layout/ProtectedRoute.jsx'
 import InstallGuidePage from './platform/pages/InstallGuidePage.jsx'
 
@@ -66,6 +67,14 @@ export default function App() {
                 element={
                   <ProtectedRoute role="viewer">
                     <ViewerDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/parent/*"
+                element={
+                  <ProtectedRoute role="parent">
+                    <ParentDashboard />
                   </ProtectedRoute>
                 }
               />

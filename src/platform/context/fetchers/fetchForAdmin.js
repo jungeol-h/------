@@ -7,7 +7,7 @@ import {
   toUser, toMindRecord, toDiaryRecord, toLearningRecord, toTask,
   toCounselingRecord, toAlert, toCareerDesignResult,
   toLearningDiagnosisResult, toAssignment, toQuizSet, toQuizQuestion,
-  toQuizAttempt, collectRows,
+  toQuizAttempt, toParentChild, collectRows,
 } from '../../lib/supabaseHelpers.js'
 import { EMPTY } from '../dataModel.js'
 
@@ -15,13 +15,14 @@ export async function fetchForAdmin() {
   const errors = []
   const meta = {}
 
-  const [usersRes, assnRes, alertsRes, counselingRes, statsRes, setsRes] = await Promise.all([
+  const [usersRes, assnRes, alertsRes, counselingRes, statsRes, setsRes, parentChildrenRes] = await Promise.all([
     supabase.from('users').select('*').order('grade').order('login_id'),
     supabase.from('assignments').select('*'),
     supabase.from('alerts').select('*').order('created_at', { ascending: false }),
     supabase.from('counseling_records').select('*').order('date', { ascending: false }),
     supabase.from('monthly_stats').select('*').order('id'),
     supabase.from('quiz_sets').select('*').order('grade').order('round'),
+    supabase.from('parent_children').select('*'),
   ])
 
   const allUsers = collectRows(usersRes, 'users', errors)
@@ -58,7 +59,9 @@ export async function fetchForAdmin() {
   return {
     ...EMPTY,
     students: allUsers.filter((u) => u.role === 'student').map(toUser),
-    educators: allUsers.filter((u) => u.role !== 'student').map(toUser),
+    educators: allUsers.filter((u) => u.role !== 'student' && u.role !== 'parent').map(toUser),
+    parents: allUsers.filter((u) => u.role === 'parent').map(toUser),
+    parentChildren: collectRows(parentChildrenRes, 'parent_children', errors).map(toParentChild),
     assignments: collectRows(assnRes, 'assignments', errors).map(toAssignment),
     alerts: collectRows(alertsRes, 'alerts', errors).map(toAlert),
     counselingRecords: collectRows(counselingRes, 'counseling_records', errors).map(toCounselingRecord),

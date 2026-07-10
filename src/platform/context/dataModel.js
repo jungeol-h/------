@@ -21,6 +21,8 @@ export const EMPTY = {
   quizSets: [],
   quizQuestions: [],
   quizAttempts: [],
+  parents: [],
+  parentChildren: [],
   // 침묵 실패 방지용 메타. fetch 시점에 채워진다.
   _fetchErrors: [], // [{ table, message }] — 로드 실패한 쿼리
   _fetchMeta: {},   // { tableName: { fetched, total } } — limit 잘림 탐지

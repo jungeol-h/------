@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   CalendarDays, Check, ChevronDown, ChevronUp, Clock, GripVertical, Pause, Play, Plus,
   RotateCcw, Save, Trash2,
@@ -7,6 +7,11 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recha
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
 import { toDateStr } from '../../context/selectors/weeklyLearning.js'
+import { getAttendanceSummary } from '../../context/selectors/attendanceStats.js'
+import { buildReflectionData } from '../../context/selectors/reflectionReport.js'
+import DownloadPdfButton from '../../pdf/components/DownloadPdfButton.jsx'
+import { buildFilename, nowDateTime } from '../../pdf/utils/formatters.js'
+import { authorOf } from '../../pdf/config/meta.js'
 import {
   STUDY_METHODS,
   actualMinutes,
@@ -1171,7 +1176,118 @@ function StudyTab({ records, todayPlans }) {
   )
 }
 
-function StatsTab({ records }) {
+const ATT_STATUS_BADGE = {
+  present: { label: '출석', cls: 'bg-emerald-100 text-emerald-700' },
+  late: { label: '지각', cls: 'bg-amber-100 text-amber-700' },
+  absent: { label: '결석', cls: 'bg-red-100 text-red-700' },
+}
+const EARLY_LEAVE_BADGE = { label: '조퇴', cls: 'bg-blue-100 text-blue-700' }
+
+// timestamptz(ISO) → 'HH:MM', 없거나 파싱 불가면 '—'
+function tsToHM(ts) {
+  if (!ts) return '—'
+  const d = new Date(ts)
+  if (Number.isNaN(d.getTime())) return '—'
+  const hh = String(d.getHours()).padStart(2, '0')
+  const mm = String(d.getMinutes()).padStart(2, '0')
+  return `${hh}:${mm}`
+}
+
+function AttendanceSection({ data, studentId, currentUser, hasLearning }) {
+  const [showAll, setShowAll] = useState(false)
+  const { counts, records: attRecords } = getAttendanceSummary(data, studentId)
+  const visible = showAll ? attRecords : attRecords.slice(0, 30)
+  const hasAttendance = attRecords.length > 0
+
+  const handleDownloadPdf = useCallback(async () => {
+    const student = data.students.find((s) => s.id === studentId)
+    const { attendance, learning, mind } = buildReflectionData(data, studentId)
+    const [{ downloadPdf }, { default: ReflectionReport }] = await Promise.all([
+      import('../../pdf/utils/downloadPdf.js'),
+      import('../../pdf/reports/ReflectionReport.jsx'),
+    ])
+    await downloadPdf(
+      <ReflectionReport
+        student={{ name: student?.name, school: student?.school, grade: student?.grade }}
+        attendance={attendance}
+        learning={learning}
+        mind={mind}
+        generatedAt={nowDateTime()}
+        author={authorOf(currentUser)}
+      />,
+      buildFilename('종합성찰리포트', student?.name),
+    )
+  }, [data, studentId, currentUser])
+
+  return (
+    <section className="bg-white rounded-xl p-4 shadow-sm space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-bold text-gray-700">출결 기록</h3>
+        <DownloadPdfButton
+          onDownload={handleDownloadPdf}
+          label="종합 성찰 리포트"
+          disabled={!hasAttendance && !hasLearning}
+        />
+      </div>
+
+      <div className="grid grid-cols-4 gap-2">
+        <div className="rounded-lg bg-emerald-50 p-2 text-center">
+          <p className="text-lg font-bold text-emerald-600">{counts.present}</p>
+          <p className="text-xs text-gray-500">출석</p>
+        </div>
+        <div className="rounded-lg bg-amber-50 p-2 text-center">
+          <p className="text-lg font-bold text-amber-600">{counts.late}</p>
+          <p className="text-xs text-gray-500">지각</p>
+        </div>
+        <div className="rounded-lg bg-blue-50 p-2 text-center">
+          <p className="text-lg font-bold text-blue-600">{counts.earlyLeave}</p>
+          <p className="text-xs text-gray-500">조퇴</p>
+        </div>
+        <div className="rounded-lg bg-red-50 p-2 text-center">
+          <p className="text-lg font-bold text-red-600">{counts.absent}</p>
+          <p className="text-xs text-gray-500">결석</p>
+        </div>
+      </div>
+
+      {!hasAttendance ? (
+        <p className="text-sm text-gray-400 py-6 text-center">출결 기록이 없어요</p>
+      ) : (
+        <>
+          <ul className="divide-y divide-gray-100">
+            {visible.map((r) => {
+              const badge = ATT_STATUS_BADGE[r.status] || { label: r.status, cls: 'bg-gray-100 text-gray-600' }
+              return (
+                <li key={r.id} className="flex items-center justify-between py-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-700 tabular-nums">{r.date}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${badge.cls}`}>{badge.label}</span>
+                    {r.checkoutStatus === 'early_leave' && (
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${EARLY_LEAVE_BADGE.cls}`}>{EARLY_LEAVE_BADGE.label}</span>
+                    )}
+                  </div>
+                  <span className="text-xs text-gray-400 tabular-nums">
+                    {tsToHM(r.checkInAt)} ~ {tsToHM(r.checkOutAt)}
+                  </span>
+                </li>
+              )
+            })}
+          </ul>
+          {!showAll && attRecords.length > 30 && (
+            <button
+              type="button"
+              onClick={() => setShowAll(true)}
+              className="w-full text-xs font-semibold text-blue-600 py-2 hover:bg-blue-50 rounded-lg transition-colors"
+            >
+              더보기 ({attRecords.length - 30}건)
+            </button>
+          )}
+        </>
+      )}
+    </section>
+  )
+}
+
+function StatsTab({ records, data, studentId, currentUser }) {
   const today = toDateStr(new Date())
   const timeRecords = records.filter((r) => actualMinutes(r) > 0)
   const todayTimeRecords = timeRecords.filter((r) => r.date === today)
@@ -1242,6 +1358,13 @@ function StatsTab({ records }) {
           아직 실제 학습시간 기록이 없어요
         </section>
       )}
+
+      <AttendanceSection
+        data={data}
+        studentId={studentId}
+        currentUser={currentUser}
+        hasLearning={timeRecords.length > 0}
+      />
     </div>
   )
 }
@@ -1293,7 +1416,7 @@ export default function LearningTab() {
         <StudyTab records={records} todayPlans={todayPlans} />
       </div>
       <div className={activeTab === 'stats' ? 'block' : 'hidden'}>
-        <StatsTab records={records} />
+        <StatsTab records={records} data={data} studentId={currentUser?.id} currentUser={currentUser} />
       </div>
     </div>
   )
