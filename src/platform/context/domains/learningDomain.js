@@ -47,7 +47,7 @@ export function useLearningDomain(setData) {
   )
 
   const addLearningPlan = useCallback(
-    async (studentId, { date = todayStr(), subject, studyMethod, content, plannedMin = null, sortOrder = null }) => {
+    async (studentId, { date = todayStr(), subject, studyMethod, content, plannedMin = null, sortOrder = null, startTime = null }) => {
       const row = {
         id: makeId('l'),
         student_id: studentId,
@@ -62,6 +62,7 @@ export function useLearningDomain(setData) {
         content,
         planned_min: plannedMin || null,
         sort_order: sortOrder,
+        start_time: startTime || null,
       }
       const { error } = await withWriteRetry(
         () => supabase.from('learning_records').insert(row),
@@ -116,6 +117,7 @@ export function useLearningDomain(setData) {
       if (patch.content !== undefined) snake.content = patch.content
       if (patch.plannedMin !== undefined) snake.planned_min = patch.plannedMin || null
       if (patch.sortOrder !== undefined) snake.sort_order = patch.sortOrder
+      if (patch.startTime !== undefined) snake.start_time = patch.startTime || null
       if (patch.actualDuration !== undefined) {
         snake.actual_duration = patch.actualDuration || null
         snake.duration = patch.actualDuration || null
@@ -146,6 +148,7 @@ export function useLearningDomain(setData) {
                 content: Object.hasOwn(snake, 'content') ? snake.content : r.content,
                 planned_min: Object.hasOwn(snake, 'planned_min') ? snake.planned_min : r.plannedMin,
                 sort_order: Object.hasOwn(snake, 'sort_order') ? snake.sort_order : r.sortOrder,
+                start_time: Object.hasOwn(snake, 'start_time') ? snake.start_time : r.startTime,
               })
             : r
         ),

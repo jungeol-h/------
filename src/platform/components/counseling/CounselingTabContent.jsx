@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CheckCheck, Pencil, Trash2 } from 'lucide-react'
+import { CheckCheck, Pencil, Trash2, Siren } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
 import {
@@ -12,6 +12,7 @@ import StudentCombobox from './StudentCombobox.jsx'
 import CounselingFormModal from './CounselingFormModal.jsx'
 import CounselingContentFields from './CounselingContentFields.jsx'
 import CounselingRecordBody from './CounselingRecordBody.jsx'
+import UrgentReportModal from './UrgentReportModal.jsx'
 
 const EMPTY_FIELDS = { topic: '', diagnosis: '', advice: '', followUp: '', note: '', nextAppointment: '' }
 
@@ -28,6 +29,10 @@ export default function CounselingTabContent({ students, records, showAuthor = f
   const [fields, setFields] = useState(EMPTY_FIELDS)
   const [saving, setSaving] = useState(false)
   const [editRecord, setEditRecord] = useState(null)
+  const [showUrgent, setShowUrgent] = useState(false)
+
+  // 긴급 보고는 관리자에게 보내는 것 — 관리자 본인·열람 전용 역할에는 숨김
+  const canUrgentReport = !readOnly && currentUser?.role !== 'admin'
 
   const canManage = (r) =>
     !readOnly && (r.educatorId === currentUser?.id || currentUser?.role === 'admin')
@@ -67,6 +72,17 @@ export default function CounselingTabContent({ students, records, showAuthor = f
   return (
     <div className="py-6 space-y-6">
       {/* ── 새 상담 작성 ── */}
+      {canUrgentReport && (
+        <button
+          type="button"
+          onClick={() => setShowUrgent(true)}
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl border border-red-200 bg-red-50 text-red-600 text-sm font-bold hover:bg-red-100 active:scale-[0.99] transition"
+        >
+          <Siren size={15} />
+          긴급 보고 · 건의
+        </button>
+      )}
+
       {!readOnly && (
       <section className="bg-white rounded-2xl shadow-sm p-5 space-y-4">
         <h2 className="text-base font-bold text-gray-900">새 상담 기록</h2>
@@ -187,6 +203,8 @@ export default function CounselingTabContent({ students, records, showAuthor = f
           onClose={() => setEditRecord(null)}
         />
       )}
+
+      {showUrgent && <UrgentReportModal onClose={() => setShowUrgent(false)} />}
     </div>
   )
 }

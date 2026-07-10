@@ -1,8 +1,13 @@
-import { Trophy, Clock, AlertCircle, CheckCircle2, Circle, Sun, Cloud, CloudRain, Cloudy } from 'lucide-react'
+import { Clock, AlertCircle, CheckCircle2, Circle, Sun, Cloud, CloudRain, Cloudy, MessageCircle } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { actualMinutes } from '../../context/selectors/learningRecords.js'
+import { getAttendanceSummary } from '../../context/selectors/attendanceStats.js'
+import { getStudentHomeMessages } from '../../context/selectors/homeMessages.js'
+import { todayPlansFor } from './learningTabLogic.js'
+import ClockTimetable from '../../components/student/ClockTimetable.jsx'
 
 function getMoodWeather(mindRecord) {
   if (!mindRecord) return { Icon: Cloud, color: 'text-gray-300', label: '미입력' }
@@ -16,8 +21,13 @@ function getMoodWeather(mindRecord) {
 export default function DashboardTab() {
   const { currentUser } = useAuth()
   const { data } = useData()
+  const navigate = useNavigate()
 
   const student = data.students.find((s) => s.id === currentUser?.id) ?? currentUser
+  const attendanceCounts = getAttendanceSummary(data, currentUser?.id).counts
+  const attendedDays = attendanceCounts.present + attendanceCounts.late
+  const todayPlans = todayPlansFor(data.learningRecords, currentUser?.id)
+  const homeMessages = getStudentHomeMessages(data, currentUser?.id)
   const myRecords = data.learningRecords.filter(r => r.studentId === currentUser?.id)
   const myTasks = data.tasks.filter(t => t.studentId === currentUser?.id)
   const todayMind = data.mindRecords.filter(r => r.studentId === currentUser?.id).slice(-1)[0]
@@ -42,29 +52,17 @@ export default function DashboardTab() {
       {/* 환영 배너 */}
       <div className="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl p-5 text-white">
         <p className="text-sm opacity-80">안녕하세요</p>
-        <h2 className="text-xl font-bold mt-0.5">{student?.name || currentUser?.name} 학생</h2>
+        <div className="flex items-end justify-between gap-2 flex-wrap">
+          <h2 className="text-xl font-bold mt-0.5">{student?.name || currentUser?.name} 학생</h2>
+          <p className="text-xs opacity-80 font-semibold">
+            출석 {attendedDays}일 · 로그인 {data.loginCount ?? '-'}회
+          </p>
+        </div>
         <p className="text-sm opacity-70 mt-1">{student?.school} · {student?.grade}</p>
       </div>
 
-      {/* 자기주도지수 */}
-      <div className="bg-white rounded-2xl p-4 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs text-gray-500">자기주도지수</p>
-            <p className="text-3xl font-bold text-blue-600 mt-1">{student?.selfIndex ?? '--'}</p>
-          </div>
-          <div className="w-12 h-12 bg-yellow-50 rounded-xl flex items-center justify-center">
-            <Trophy size={28} className="text-yellow-500" />
-          </div>
-        </div>
-        <div className="mt-3 bg-gray-100 rounded-full h-2">
-          <div
-            className="bg-blue-500 h-2 rounded-full transition-all"
-            style={{ width: `${student?.selfIndex ?? 0}%` }}
-          />
-        </div>
-        <p className="text-xs text-gray-400 mt-1 text-right">목표: 100점</p>
-      </div>
+      {/* 오늘의 학습계획표 (부채꼴 타임테이블) */}
+      <ClockTimetable plans={todayPlans} onGoPlan={() => navigate('/student/learning')} />
 
       {/* 요약 카드 3개 */}
       <div className="grid grid-cols-3 gap-3">
@@ -147,10 +145,29 @@ export default function DashboardTab() {
         ))}
       </div>
 
-      {/* 날짜 */}
-      <p className="text-center text-xs text-gray-400">
-        {new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}
-      </p>
+      {/* 선생님 코멘트·리마인더 말풍선 */}
+      {homeMessages.length > 0 && (
+        <div className="bg-white rounded-2xl p-4 shadow-sm">
+          <h3 className="text-sm font-bold text-gray-700 mb-3">알림 · 선생님 한마디</h3>
+          <div className="space-y-2.5">
+            {homeMessages.map((msg) => (
+              <div key={msg.id} className="flex items-start gap-2">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                  msg.kind === 'coach' ? 'bg-blue-50 text-blue-500'
+                    : msg.kind === 'task' ? 'bg-red-50 text-red-400'
+                    : 'bg-emerald-50 text-emerald-500'
+                }`}>
+                  <MessageCircle size={15} />
+                </div>
+                <div className="bg-gray-50 rounded-2xl rounded-tl-sm px-3 py-2 flex-1 min-w-0">
+                  <p className="text-[10px] font-bold text-gray-400">{msg.title}</p>
+                  <p className="text-sm text-gray-700 mt-0.5 break-words">{msg.text}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

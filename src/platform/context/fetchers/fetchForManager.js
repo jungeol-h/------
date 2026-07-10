@@ -7,7 +7,7 @@ import {
   toCounselingRecord, toAlert, toCareerDesignResult,
   toLearningDiagnosisResult, toAssignment, toQuizSet, toQuizQuestion,
   toQuizAttempt, toAttendanceRecord, toAttendanceSchedule,
-  toAttendanceNotification, collectRows,
+  toAttendanceNotification, toUrgentReport, collectRows,
 } from '../../lib/supabaseHelpers.js'
 import { EMPTY } from '../dataModel.js'
 
@@ -48,10 +48,11 @@ export async function fetchForManager(userId) {
   const attendanceSince = new Date(Date.now() - 60 * 86400000).toISOString().slice(0, 10)
   const notificationsSince = new Date(Date.now() - 7 * 86400000).toISOString()
 
-  const [mindRes, alertsRes, counselingRes, tasksRes, learningRes, diaryRes, careerRes, diagRes, attemptsRes, setsRes, attendanceRes, schedulesRes, attNotiRes] = await Promise.all([
+  const [mindRes, alertsRes, counselingRes, tasksRes, learningRes, diaryRes, careerRes, diagRes, attemptsRes, setsRes, attendanceRes, schedulesRes, attNotiRes, urgentRes, educatorsRes] = await Promise.all([
     supabase.from('mind_records').select('*', { count: 'exact' }).in('student_id', studentIds).order('date', { ascending: false }).limit(2000),
     supabase.from('alerts').select('*').eq('manager_id', userId).order('created_at', { ascending: false }),
-    supabase.from('counseling_records').select('*').eq('manager_id', userId).order('date', { ascending: false }),
+    // 담당 학생의 상담 기록 전체 — 작성자 무관 열람 (2026-07 클라이언트: 학생별 기록은 모든 강사 열람)
+    supabase.from('counseling_records').select('*').in('student_id', studentIds).order('date', { ascending: false }),
     supabase.from('tasks').select('*').in('student_id', studentIds),
     supabase.from('learning_records').select('*', { count: 'exact' }).in('student_id', studentIds).order('date', { ascending: false }).limit(3000),
     supabase.from('diary_records').select('*', { count: 'exact' }).in('student_id', studentIds).order('date', { ascending: false }).limit(2000),
@@ -62,6 +63,10 @@ export async function fetchForManager(userId) {
     supabase.from('attendance_records').select('*').in('student_id', studentIds).gte('date', attendanceSince).order('date', { ascending: false }),
     supabase.from('attendance_schedules').select('*').in('student_id', studentIds),
     supabase.from('attendance_notifications').select('*').in('student_id', studentIds).or(`resolved.eq.false,created_at.gte.${notificationsSince}`).order('created_at', { ascending: false }),
+    // 본인이 보낸 긴급 보고 (확인 여부 표시용)
+    supabase.from('urgent_reports').select('*').eq('author_id', userId).order('created_at', { ascending: false }),
+    // 상담 작성자 표시용 교직원 목록 (학생/학부모 제외)
+    supabase.from('users').select('*').not('role', 'in', '("student","parent")'),
   ])
 
   const recordMeta = (res, table) => {
@@ -81,6 +86,8 @@ export async function fetchForManager(userId) {
   return {
     ...EMPTY,
     students: activeStudents.map(toUser),
+    educators: collectRows(educatorsRes, 'users', errors).map(toUser),
+    urgentReports: collectRows(urgentRes, 'urgent_reports', errors).map(toUrgentReport),
     assignments,
     mindRecords: collectRows(mindRes, 'mind_records', errors).map(toMindRecord),
     alerts: collectRows(alertsRes, 'alerts', errors).map(toAlert),

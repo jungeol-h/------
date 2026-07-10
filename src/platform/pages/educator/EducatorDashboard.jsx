@@ -32,7 +32,7 @@ export default function EducatorDashboard() {
   // 공통 탭 + instructor 전용 확인평가 탭 + consultant 전용 외부상담 탭.
   const tabs = [
     { path: `${basePath}/students`, label: '학생', icon: Users },
-    { path: `${basePath}/counseling`, label: '상담', icon: MessageSquare },
+    { path: `${basePath}/counseling`, label: '업무보고', icon: MessageSquare },
     { path: `${basePath}/tasks`, label: '과제', icon: ClipboardList },
     ...(isInstructor
       ? [{ path: `${basePath}/quiz`, label: '확인평가', icon: ClipboardCheck }]

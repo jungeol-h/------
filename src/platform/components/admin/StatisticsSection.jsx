@@ -1,12 +1,14 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { FileSpreadsheet, BarChart2 } from 'lucide-react'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid, Cell } from 'recharts'
 import { useData } from '../../context/DataContext.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
 import DownloadPdfButton from '../../pdf/components/DownloadPdfButton.jsx'
 import AttendanceExcelModal from '../attendance/AttendanceExcelModal.jsx'
 import { buildFilename, nowDateTime } from '../../pdf/utils/formatters.js'
 import { authorOf } from '../../pdf/config/meta.js'
+import { getAttendanceTotals, getAvgLearningMinutes, getCounselingTypeCounts } from '../../context/selectors/adminStats.js'
+import { formatMinutes } from '../../pages/student/learningTabLogic.js'
 
 // 통계 섹션 — 구 '통계' 탭 콘텐츠를 관리자 홈 하단에 임베드 (요청: 통계를 홈 맨 아래로).
 export default function StatisticsSection() {
@@ -16,6 +18,12 @@ export default function StatisticsSection() {
   const barRef = useRef(null)
   const lineRef = useRef(null)
   const [excelOpen, setExcelOpen] = useState(false)
+
+  // 확장 통계 — 누적 출결(관리자 fetch 윈도 60일) / 학습시간 평균(30일) / 업무횟수(유형별)
+  const attendanceTotals = useMemo(() => getAttendanceTotals(data), [data])
+  const avgLearningMin = useMemo(() => getAvgLearningMinutes(data), [data])
+  const typeCounts = useMemo(() => getCounselingTypeCounts(data), [data])
+  const hasAttendance = attendanceTotals.present + attendanceTotals.late + attendanceTotals.absent > 0
 
   const handleDownloadPdf = useCallback(async () => {
     const periodLabel = hasStats
@@ -77,6 +85,48 @@ export default function StatisticsSection() {
       </div>
 
       <AttendanceExcelModal open={excelOpen} onClose={() => setExcelOpen(false)} />
+
+      {/* 누적 출결 (최근 60일) + 학습시간 평균 (최근 30일) */}
+      <div className="grid grid-cols-2 gap-2">
+        <div className="bg-white rounded-2xl p-4 shadow-sm">
+          <p className="text-xs text-gray-500">누적 출결 <span className="text-gray-400">(최근 60일)</span></p>
+          {hasAttendance ? (
+            <div className="flex items-baseline gap-2 mt-1 flex-wrap">
+              <span className="text-lg font-bold text-blue-600">출석 {attendanceTotals.present + attendanceTotals.late}</span>
+              <span className="text-xs text-yellow-600 font-semibold">지각 {attendanceTotals.late}</span>
+              <span className="text-xs text-red-500 font-semibold">결석 {attendanceTotals.absent}</span>
+              {attendanceTotals.earlyLeave > 0 && (
+                <span className="text-xs text-orange-500 font-semibold">조퇴 {attendanceTotals.earlyLeave}</span>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400 mt-1">기록 없음</p>
+          )}
+        </div>
+        <div className="bg-white rounded-2xl p-4 shadow-sm">
+          <p className="text-xs text-gray-500">1인당 학습시간 <span className="text-gray-400">(최근 30일)</span></p>
+          <p className="text-lg font-bold text-emerald-600 mt-1">{formatMinutes(avgLearningMin)}</p>
+        </div>
+      </div>
+
+      {/* 업무횟수 — 상담(업무보고) 유형별 */}
+      {typeCounts.length > 0 && (
+        <div className="bg-white rounded-2xl p-4 shadow-sm">
+          <h3 className="font-semibold text-gray-800 mb-3">업무횟수 (유형별)</h3>
+          <ResponsiveContainer width="100%" height={Math.max(120, typeCounts.length * 32)}>
+            <BarChart data={typeCounts} layout="vertical" margin={{ top: 0, right: 30, left: 12, bottom: 0 }}>
+              <XAxis type="number" allowDecimals={false} tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+              <YAxis type="category" dataKey="label" tick={{ fontSize: 11, fill: '#4b5563' }} axisLine={false} tickLine={false} width={92} />
+              <Tooltip formatter={(v) => [`${v}건`, '업무횟수']} contentStyle={{ fontSize: 12, borderRadius: 8, border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }} />
+              <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+                {typeCounts.map((entry, i) => (
+                  <Cell key={entry.type} fill={['#6366f1', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#0891b2', '#db2777'][i % 8]} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
 
       {!hasStats && (
         <div className="bg-gray-50 rounded-2xl p-6 text-center text-gray-400">

@@ -32,18 +32,8 @@ import {
   ACTUAL_TIME_STEPS,
   TEMP_ALLOW_PAST_ACTUAL_EDIT,
 } from './tempBetaNotice.js'
-
-const SUBJECTS = [
-  '국어', '영어', '수학', '과학', '사회', '도덕',
-  '역사(한국사)', '기술가정', '한문', '정보',
-  '교양 독서', '진로 독서', '진로 탐구',
-]
-
-const SUBJECT_COLORS = [
-  '#2563eb', '#16a34a', '#f59e0b', '#dc2626', '#7c3aed',
-  '#0891b2', '#65a30d', '#ea580c', '#db2777', '#0d9488',
-  '#4f46e5', '#9333ea', '#57534e',
-]
+import { SUBJECTS, SUBJECT_COLORS } from '../../data/subjects.js'
+import DailySelfScoreSection from './DailySelfScoreSection.jsx'
 
 const TIME_STEPS = [
   { label: '-10', value: -10 },
@@ -57,6 +47,7 @@ const EMPTY_PLAN = {
   studyMethod: '',
   content: '',
   plannedMin: '',
+  startTime: '',
 }
 
 function formatTime(sec) {
@@ -215,6 +206,7 @@ function PlanTab({ studentId, records }) {
       studyMethod: rowValue(row, 'studyMethod'),
       content: rowValue(row, 'content'),
       plannedMin: rowValue(row, 'plannedMin'),
+      startTime: rowValue(row, 'startTime'),
     }
     if (!value.subject) return null
     const payload = {
@@ -222,6 +214,7 @@ function PlanTab({ studentId, records }) {
       studyMethod: value.studyMethod,
       content: value.content?.trim() ?? '',
       plannedMin: value.plannedMin ? Number(value.plannedMin) : null,
+      startTime: value.startTime || null,
     }
     try {
       if (row.record) {
@@ -657,6 +650,18 @@ function PlanTab({ studentId, records }) {
                     onChange={(value) => updateFieldValue(row, 'plannedMin', value)}
                     onCommit={(value) => updateFieldValue(row, 'plannedMin', value)}
                   />
+
+                  <label className="block space-y-1">
+                    <span className="text-[11px] font-bold text-gray-500">
+                      시작 시각 (선택) — 입력하면 홈 화면 학습계획표에 표시돼요
+                    </span>
+                    <input
+                      type="time"
+                      value={rowValue(row, 'startTime') ?? ''}
+                      onChange={(e) => updateFieldValue(row, 'startTime', e.target.value)}
+                      className="w-full h-10 px-3 rounded-lg border border-gray-200 bg-white text-sm focus:outline-none focus:border-blue-400"
+                    />
+                  </label>
 
                   <div className="flex justify-between gap-2 pt-1">
                     <button
@@ -1323,6 +1328,8 @@ function StatsTab({ records, data, studentId, currentUser }) {
           <p className="text-2xl font-bold text-amber-600">{actualRate ?? '-'}<span className="text-sm font-normal text-gray-500">{actualRate == null ? '' : '%'}</span></p>
         </div>
       </section>
+
+      <DailySelfScoreSection studentId={studentId} />
 
       {pieData.length > 0 ? (
         <section className="bg-white rounded-xl p-4 shadow-sm">

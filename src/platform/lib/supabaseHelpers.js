@@ -53,10 +53,11 @@ export const toLearningRecord = (row) => ({
   plannedMin: row.planned_min ?? null,
   sortOrder: row.sort_order ?? null,
   focus: row.focus,
+  startTime: toHHMM(row.start_time),
 })
 
 // TIME 컬럼은 'HH:MM:SS'로 오므로 'HH:MM'으로 자른다
-const toHHMM = (t) => (t ? String(t).slice(0, 5) : null)
+function toHHMM(t) { return t ? String(t).slice(0, 5) : null }
 
 export const toAttendanceRecord = (row) => ({
   id: row.id,
@@ -173,6 +174,44 @@ export const toParentChild = (row) => ({
   id: row.id,
   parentId: row.parent_id,
   studentId: row.student_id,
+})
+
+export const toDailySelfScore = (row) => ({
+  id: row.id,
+  studentId: row.student_id,
+  date: row.date,
+  score: row.score,
+  memo: row.memo ?? '',
+})
+
+// jsonb 컬럼은 이미 배열로 오지만, 문자열로 저장된 경우도 방어한다
+const toArray = (v) => {
+  if (Array.isArray(v)) return v
+  if (typeof v === 'string') {
+    try { return JSON.parse(v) } catch { return [] }
+  }
+  return []
+}
+
+export const toWorkPlan = (row) => ({
+  id: row.id,
+  authorId: row.author_id,
+  planDate: row.plan_date,
+  planTime: row.plan_time ?? '',
+  types: toArray(row.types),
+  studentIds: toArray(row.student_ids),
+  memo: row.memo ?? '',
+  createdAt: row.created_at,
+})
+
+export const toUrgentReport = (row) => ({
+  id: row.id,
+  authorId: row.author_id,
+  content: row.content,
+  confirmed: row.confirmed ?? false,
+  confirmedBy: row.confirmed_by ?? null,
+  confirmedAt: row.confirmed_at ?? null,
+  createdAt: row.created_at,
 })
 
 // flat 형식 [{ educatorId, studentId }] — 기존 컴포넌트 코드와 호환

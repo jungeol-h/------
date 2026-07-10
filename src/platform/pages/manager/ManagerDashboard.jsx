@@ -16,7 +16,7 @@ const TABS = [
   { path: '/manager/home', label: '홈', icon: Home },
   { path: '/manager/attendance', label: '출결', icon: CalendarCheck },
   { path: '/manager/students', label: '학생', icon: Users },
-  { path: '/manager/counseling', label: '상담', icon: MessageSquare },
+  { path: '/manager/counseling', label: '업무보고', icon: MessageSquare },
   { path: '/manager/quiz', label: '확인평가', icon: ClipboardCheck },
 ]
 

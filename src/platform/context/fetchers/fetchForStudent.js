@@ -6,12 +6,15 @@ import {
   toTodoItem, toCareerDesignResult, toLearningDiagnosisResult,
   toAssignment, toQuizSet, toQuizQuestion, toQuizAttempt,
   toAttendanceRecord, toAttendanceSchedule,
+  toDailySelfScore, toCounselingRecord, toWorkPlan,
   collectRows,
 } from '../../lib/supabaseHelpers.js'
 import { EMPTY } from '../dataModel.js'
+import { toDateStr } from '../selectors/weeklyLearning.js'
 
 export async function fetchForStudent(userId) {
-  const [userRes, assnRes, mindRes, learningRes, tasksRes, todoRes, diaryRes, careerRes, diagRes, attemptsRes, attendanceRes, schedulesRes] = await Promise.all([
+  const todayStr = toDateStr(new Date())
+  const [userRes, assnRes, mindRes, learningRes, tasksRes, todoRes, diaryRes, careerRes, diagRes, attemptsRes, attendanceRes, schedulesRes, loginCountRes, selfScoresRes, counselingRes, workPlansRes] = await Promise.all([
     supabase.from('users').select('*').eq('id', userId).limit(1),
     supabase.from('assignments').select('*').eq('student_id', userId),
     supabase.from('mind_records').select('*', { count: 'exact' }).eq('student_id', userId).order('date', { ascending: false }).limit(2000),
@@ -24,6 +27,13 @@ export async function fetchForStudent(userId) {
     supabase.from('quiz_attempts').select('*').eq('student_id', userId),
     supabase.from('attendance_records').select('*').eq('student_id', userId).order('date', { ascending: false }),
     supabase.from('attendance_schedules').select('*').eq('student_id', userId),
+    // 로그인 횟수 — 행 전송 없이 count만
+    supabase.from('login_logs').select('*', { count: 'exact', head: true }).eq('user_id', userId),
+    supabase.from('daily_self_scores').select('*').eq('student_id', userId).order('date', { ascending: false }).limit(60),
+    // 홈 말풍선용 — 상담 본문(content 등)은 학생에게 노출하지 않도록 제한 컬럼만
+    supabase.from('counseling_records').select('id,student_id,date,type,follow_up,next_appointment').eq('student_id', userId).order('date', { ascending: false }).limit(10),
+    // 본인이 태그된 예정 업무계획 (일정 리마인더용)
+    supabase.from('work_plans').select('*').contains('student_ids', JSON.stringify([userId])).gte('plan_date', todayStr),
   ])
 
   const errors = []
@@ -66,6 +76,10 @@ export async function fetchForStudent(userId) {
     quizAttempts: collectRows(attemptsRes, 'quiz_attempts', errors).map(toQuizAttempt),
     attendanceRecords: collectRows(attendanceRes, 'attendance_records', errors).map(toAttendanceRecord),
     attendanceSchedules: collectRows(schedulesRes, 'attendance_schedules', errors).map(toAttendanceSchedule),
+    loginCount: loginCountRes?.error ? null : loginCountRes?.count ?? null,
+    dailySelfScores: collectRows(selfScoresRes, 'daily_self_scores', errors).map(toDailySelfScore),
+    counselingRecords: collectRows(counselingRes, 'counseling_records', errors).map(toCounselingRecord),
+    workPlans: collectRows(workPlansRes, 'work_plans', errors).map(toWorkPlan),
     _fetchErrors: errors,
     _fetchMeta: meta,
   }

@@ -45,6 +45,10 @@ export function AuthProvider({ children }) {
       const user = toUser(data)
       setCurrentUser(user)
       setSentryUser(user)
+      // 로그인 기록 — 실패해도 로그인 흐름을 막지 않는다 (fire-and-forget)
+      supabase.from('login_logs').insert({ user_id: user.id }).then(({ error: logError }) => {
+        if (logError) reportError(logError, { where: 'login.logInsert' })
+      })
       return user
     } catch (e) {
       reportError(e, { where: 'login' })

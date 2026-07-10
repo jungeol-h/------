@@ -1,16 +1,19 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Users, AlertTriangle, Bell, CalendarX, TrendingDown,
   UserCog, ClipboardCheck, ChevronRight,
-  ShieldCheck, ShieldAlert,
+  ShieldCheck, ShieldAlert, CalendarDays, Siren,
 } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
 import { getRiskStudents, getMindCautionStudents } from '../../context/selectors/riskDetection.js'
 import { getAttendanceCautionStudents } from '../../context/selectors/attendanceStats.js'
-import { getLearningCautionStudents } from '../../context/selectors/weeklyLearning.js'
+import { getLearningCautionStudents, toDateStr } from '../../context/selectors/weeklyLearning.js'
 import { getReconciliationIssues } from '../../context/selectors/reconciliation.js'
+import { getWorkPlansForDate } from '../../context/selectors/workPlans.js'
+import { COUNSELING_TYPE_LABELS } from '../../data/counselingTypes.js'
 import StatisticsSection from '../../components/admin/StatisticsSection.jsx'
+import UrgentReportListModal from '../../components/admin/UrgentReportListModal.jsx'
 
 const GRADE_ORDER = { 중1: 1, 중2: 2, 중3: 3, 고1: 4, 고2: 5, 고3: 6 }
 const gradeWeight = (g) => GRADE_ORDER[g] ?? 99
@@ -25,6 +28,8 @@ const RISK_LABEL = { danger: '위험', warning: '주의', normal: '정상' }
 export default function AdminHomeTab() {
   const { data } = useData()
   const navigate = useNavigate()
+  const [showUrgentList, setShowUrgentList] = useState(false)
+  const unconfirmedUrgent = data.urgentReports.filter((r) => !r.confirmed).length
 
   const stats = useMemo(() => {
     const active = data.students.filter((s) => (s.status ?? 'active') === 'active')
@@ -63,6 +68,9 @@ export default function AdminHomeTab() {
   }), [data])
 
   const reconciliation = useMemo(() => getReconciliationIssues(data), [data])
+
+  // 4단: 오늘의 업무 일정 (업무계획 탭에서 등록한 오늘 일정)
+  const todayPlans = useMemo(() => getWorkPlansForDate(data, toDateStr(new Date())), [data])
 
   const managerCount = data.educators.filter((e) => e.role === 'manager').length
   const quizSetCount = data.quizSets.length
@@ -110,7 +118,21 @@ export default function AdminHomeTab() {
       {/* ── 2단: 핵심 지표 (주의 학생) ─────────────────────── */}
       <section>
         <h3 className="text-sm font-bold text-gray-500 mb-2">핵심 지표</h3>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <button
+            type="button"
+            onClick={() => setShowUrgentList(true)}
+            className={`rounded-2xl shadow-sm p-3 text-left transition active:scale-[0.98] ${
+              unconfirmedUrgent > 0 ? 'bg-red-50 border border-red-200 hover:bg-red-100/60' : 'bg-white hover:bg-gray-50'
+            }`}
+          >
+            <div className="flex items-center gap-1.5 mb-1">
+              <Siren size={13} className="text-red-600" />
+              <p className="text-[11px] text-gray-500">긴급 업무보고</p>
+            </div>
+            <p className="text-xl font-bold text-red-700">{unconfirmedUrgent}<span className="text-xs font-normal text-gray-400 ml-0.5">건</span></p>
+            <p className="text-[10px] text-gray-400 mt-0.5">미확인 보고·건의</p>
+          </button>
           <div className="bg-white rounded-2xl shadow-sm p-3">
             <div className="flex items-center gap-1.5 mb-1">
               <CalendarX size={13} className="text-red-500" />
@@ -182,6 +204,55 @@ export default function AdminHomeTab() {
       {/* ── 시스템 정합성 점검 ───────────────────────────── */}
       <ReconciliationSection issues={reconciliation} onGoUsers={() => navigate('/admin/users')} />
 
+      {/* ── 4단: 오늘의 업무 일정 ─────────────────────────── */}
+      <section className="bg-white rounded-2xl shadow-sm p-4">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <CalendarDays size={16} className="text-blue-600" />
+            <h3 className="text-sm font-bold text-gray-800">오늘의 업무 일정</h3>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/admin/plans')}
+            className="text-[11px] font-semibold text-blue-600 hover:text-blue-700"
+          >
+            업무계획 →
+          </button>
+        </div>
+        {todayPlans.length === 0 ? (
+          <p className="text-xs text-gray-400 py-2 text-center">오늘 예정된 업무가 없습니다.</p>
+        ) : (
+          <ul className="space-y-1.5">
+            {todayPlans.map((plan) => (
+              <li key={plan.id}>
+                <button
+                  type="button"
+                  onClick={() => navigate('/admin/plans')}
+                  className="w-full flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2 text-left hover:bg-blue-50 transition"
+                >
+                  <span className="text-xs font-bold text-gray-700 flex-shrink-0 w-11">
+                    {plan.planTime || '—'}
+                  </span>
+                  <span className="flex gap-1 flex-shrink-0">
+                    {plan.types.map((t) => (
+                      <span key={t} className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700">
+                        {COUNSELING_TYPE_LABELS[t] ?? t}
+                      </span>
+                    ))}
+                  </span>
+                  <span className="text-xs text-gray-600 truncate flex-1">
+                    {plan.studentIds
+                      .map((sid) => data.students.find((s) => s.id === sid)?.name ?? '?')
+                      .join(', ')}
+                    {plan.memo && <span className="text-gray-400"> · {plan.memo}</span>}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
       {/* ── 탭 진입 카드 ─────────────────────────────────── */}
       <section>
         <h3 className="text-sm font-bold text-gray-500 mb-2">상세 메뉴</h3>
@@ -209,6 +280,8 @@ export default function AdminHomeTab() {
 
       {/* ── 5단: 통계 (구 통계 탭 → 홈 하단) ────────────────── */}
       <StatisticsSection />
+
+      {showUrgentList && <UrgentReportListModal onClose={() => setShowUrgentList(false)} />}
     </div>
   )
 }

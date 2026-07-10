@@ -7,7 +7,8 @@ import {
   toUser, toMindRecord, toDiaryRecord, toLearningRecord, toTask,
   toCounselingRecord, toAlert, toCareerDesignResult,
   toLearningDiagnosisResult, toAssignment, toQuizSet, toQuizQuestion,
-  toQuizAttempt, toParentChild, collectRows,
+  toQuizAttempt, toParentChild, toAttendanceRecord, toWorkPlan,
+  toUrgentReport, collectRows,
 } from '../../lib/supabaseHelpers.js'
 import { EMPTY } from '../dataModel.js'
 
@@ -15,7 +16,7 @@ export async function fetchForAdmin() {
   const errors = []
   const meta = {}
 
-  const [usersRes, assnRes, alertsRes, counselingRes, statsRes, setsRes, parentChildrenRes] = await Promise.all([
+  const [usersRes, assnRes, alertsRes, counselingRes, statsRes, setsRes, parentChildrenRes, workPlansRes, urgentReportsRes] = await Promise.all([
     supabase.from('users').select('*').order('grade').order('login_id'),
     supabase.from('assignments').select('*'),
     supabase.from('alerts').select('*').order('created_at', { ascending: false }),
@@ -23,6 +24,8 @@ export async function fetchForAdmin() {
     supabase.from('monthly_stats').select('*').order('id'),
     supabase.from('quiz_sets').select('*').order('grade').order('round'),
     supabase.from('parent_children').select('*'),
+    supabase.from('work_plans').select('*').order('plan_date', { ascending: false }).limit(1000),
+    supabase.from('urgent_reports').select('*').order('created_at', { ascending: false }),
   ])
 
   const allUsers = collectRows(usersRes, 'users', errors)
@@ -32,7 +35,10 @@ export async function fetchForAdmin() {
   const setRows = collectRows(setsRes, 'quiz_sets', errors)
   const setIds = setRows.map((s) => s.id)
 
-  const [mindRes, learningRes, tasksRes, diaryRes, careerRes, diagRes, attemptsRes] = studentIds.length > 0
+  // 출결은 최근 60일 윈도 — 대시보드 출결 주의 지표·학생 목록 출결 컬럼용 (fetchForManager와 동일)
+  const attendanceSince = new Date(Date.now() - 60 * 86400000).toISOString().slice(0, 10)
+
+  const [mindRes, learningRes, tasksRes, diaryRes, careerRes, diagRes, attemptsRes, attendanceRes] = studentIds.length > 0
     ? await Promise.all([
         supabase.from('mind_records').select('*', { count: 'exact' }).in('student_id', studentIds).order('date', { ascending: false }).limit(3000),
         supabase.from('learning_records').select('*', { count: 'exact' }).in('student_id', studentIds).order('date', { ascending: false }).limit(5000),
@@ -41,8 +47,9 @@ export async function fetchForAdmin() {
         supabase.from('career_results').select('*').in('student_id', studentIds),
         supabase.from('diagnosis_results').select('*').in('student_id', studentIds),
         supabase.from('quiz_attempts').select('*').in('student_id', studentIds).order('submitted_at', { ascending: false }),
+        supabase.from('attendance_records').select('*').in('student_id', studentIds).gte('date', attendanceSince).order('date', { ascending: false }),
       ])
-    : [{ data: [] }, { data: [] }, { data: [] }, { data: [] }, { data: [] }, { data: [] }, { data: [] }]
+    : [{ data: [] }, { data: [] }, { data: [] }, { data: [] }, { data: [] }, { data: [] }, { data: [] }, { data: [] }]
 
   const recordMeta = (res, table) => {
     if (res?.error || res?.count == null) return
@@ -81,6 +88,9 @@ export async function fetchForAdmin() {
     quizSets: setRows.map(toQuizSet),
     quizQuestions: collectRows(questionsRes, 'quiz_questions', errors).map(toQuizQuestion),
     quizAttempts: collectRows(attemptsRes, 'quiz_attempts', errors).map(toQuizAttempt),
+    attendanceRecords: collectRows(attendanceRes, 'attendance_records', errors).map(toAttendanceRecord),
+    workPlans: collectRows(workPlansRes, 'work_plans', errors).map(toWorkPlan),
+    urgentReports: collectRows(urgentReportsRes, 'urgent_reports', errors).map(toUrgentReport),
     _fetchErrors: errors,
     _fetchMeta: meta,
   }

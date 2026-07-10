@@ -2,6 +2,10 @@ import { useState, useMemo, useCallback } from 'react'
 import { User, AlertCircle, Plus, MoreVertical, Pencil, UserX, UserCheck, Search, ArrowUp, ArrowDown } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
 import { getMindStatus } from '../../context/selectors/riskDetection.js'
+import { getStudentIndicatorMap } from '../../context/selectors/studentIndicators.js'
+import { LEARNING_CAUTION_RATE } from '../../context/selectors/weeklyLearning.js'
+import { ATTENDANCE_CAUTION_ABSENT_THRESHOLD } from '../../context/selectors/attendanceStats.js'
+import { formatPhone } from '../../utils/formatPhone.js'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useNavigate } from 'react-router-dom'
 import StudentFormModal from '../../components/admin/StudentFormModal.jsx'
@@ -11,21 +15,16 @@ import { buildFilename, nowDateTime } from '../../pdf/utils/formatters.js'
 import { authorOf } from '../../pdf/config/meta.js'
 
 const ROLE_LABELS = { student: '학생', manager: '학습매니저', admin: '관리자', instructor: '교과강사', consultant: '컨설턴트', viewer: '열람자' }
-const RISK_LABELS = {
-  normal:  { label: '정상', color: 'text-green-600 bg-green-100' },
-  warning: { label: '주의', color: 'text-yellow-600 bg-yellow-100' },
-  danger:  { label: '위험', color: 'text-red-600 bg-red-100' },
-}
 const GENDER_LABELS = { M: '남', F: '여' }
-const RISK_ORDER = { danger: 0, warning: 1, normal: 2 }
-const GRADE_ORDER = { '중1': 1, '중2': 2, '중3': 3, '고1': 4, '고2': 5, '고3': 6 }
-
-function gradeWeight(g) {
-  if (!g) return 99
-  if (GRADE_ORDER[g] != null) return GRADE_ORDER[g]
-  const m = g.match(/(\d+)/)
-  return m ? parseInt(m[1], 10) : 99
+// 학년 정렬 컬럼은 제거됨(학년은 이름 밑 병기) — GRADE_ORDER/gradeWeight도 함께 제거.
+// 마인드 자동 지표 배지 (studentIndicators.mind)
+const MIND_BADGES = {
+  good:    { label: '양호', color: 'text-green-600 bg-green-100' },
+  caution: { label: '주의', color: 'text-yellow-600 bg-yellow-100' },
+  risk:    { label: '위험', color: 'text-red-600 bg-red-100' },
 }
+// 학생 목록 그리드 컬럼 — 이름/담당/학생연락처/학부모연락처/출결/학습/마인드/과제/일정/지수/메뉴
+const LIST_GRID = 'grid-cols-[minmax(130px,1fr)_60px_100px_100px_48px_48px_52px_52px_44px_48px_32px]'
 
 export default function UserManagementTab({ readOnly = false }) {
   const { data, createStudent, updateStudent, setStudentStatus } = useData()
@@ -73,20 +72,12 @@ export default function UserManagementTab({ readOnly = false }) {
     const dir = sortDir === 'asc' ? 1 : -1
     const cmp = (a, b) => {
       switch (sortKey) {
-        case 'grade': {
-          const d = gradeWeight(a.grade) - gradeWeight(b.grade)
-          return d !== 0 ? d * dir : (a.name || '').localeCompare(b.name || '', 'ko')
-        }
         case 'manager': {
           const am = managerNameOf(a.id)
           const bm = managerNameOf(b.id)
           if (!am && bm) return 1
           if (am && !bm) return -1
           const d = am.localeCompare(bm, 'ko')
-          return d !== 0 ? d * dir : (a.name || '').localeCompare(b.name || '', 'ko')
-        }
-        case 'risk': {
-          const d = (RISK_ORDER[a.riskLevel] ?? 99) - (RISK_ORDER[b.riskLevel] ?? 99)
           return d !== 0 ? d * dir : (a.name || '').localeCompare(b.name || '', 'ko')
         }
         case 'selfIndex': {
@@ -118,6 +109,9 @@ export default function UserManagementTab({ readOnly = false }) {
 
   const findManagerId = (studentId) =>
     data.assignments.find((a) => a.studentId === studentId)?.educatorId ?? ''
+
+  // 출결/학습/마인드/과제/일정 지표 — 레코드 배열 1-pass로 학생별 Map 계산 (행별 selector 호출 금지)
+  const indicatorMap = useMemo(() => getStudentIndicatorMap(data), [data])
 
   const handleCreate = async (form) => {
     await createStudent(form)
@@ -167,7 +161,7 @@ export default function UserManagementTab({ readOnly = false }) {
   return (
     <div className="py-6 space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold text-gray-900">사용자 관리</h2>
+        <h2 className="text-lg font-bold text-gray-900">학생 관리</h2>
         <div className="flex items-center gap-2">
           {!readOnly && (
             <button
@@ -225,8 +219,9 @@ export default function UserManagementTab({ readOnly = false }) {
           />
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-          <div className="grid grid-cols-[1fr_70px_44px_56px_44px_32px] text-xs text-gray-400 font-semibold px-3 py-2 border-b border-gray-100 bg-gray-50">
+        <div className="bg-white rounded-2xl shadow-sm overflow-x-auto">
+          <div className="min-w-[760px]">
+          <div className={`grid ${LIST_GRID} text-xs text-gray-400 font-semibold px-3 py-2 border-b border-gray-100 bg-gray-50`}>
             <button
               type="button"
               onClick={() => toggleSort('name')}
@@ -241,20 +236,13 @@ export default function UserManagementTab({ readOnly = false }) {
             >
               담당 <SortIcon k="manager" />
             </button>
-            <button
-              type="button"
-              onClick={() => toggleSort('grade')}
-              className={`text-center flex items-center justify-center gap-1 hover:text-gray-600 ${sortKey === 'grade' ? 'text-gray-700' : ''}`}
-            >
-              학년 <SortIcon k="grade" />
-            </button>
-            <button
-              type="button"
-              onClick={() => toggleSort('risk')}
-              className={`text-center flex items-center justify-center gap-1 hover:text-gray-600 ${sortKey === 'risk' ? 'text-gray-700' : ''}`}
-            >
-              위험도 <SortIcon k="risk" />
-            </button>
+            <span className="text-center">학생 연락처</span>
+            <span className="text-center">학부모 연락처</span>
+            <span className="text-center" title="최근 30일 결석 횟수">출결</span>
+            <span className="text-center" title="최근 7일 계획 이행률">학습</span>
+            <span className="text-center" title="최근 마인드 기록 판정">마인드</span>
+            <span className="text-center" title="과제 완료/전체">과제</span>
+            <span className="text-center" title="업무계획에 태그된 횟수">일정</span>
             <button
               type="button"
               onClick={() => toggleSort('selfIndex')}
@@ -270,18 +258,20 @@ export default function UserManagementTab({ readOnly = false }) {
             </div>
           ) : (
             visibleStudents.map((s) => {
-              const risk = RISK_LABELS[s.riskLevel] || RISK_LABELS.normal
               const hasAlert = getMindStatus(data.mindRecords.filter((r) => r.studentId === s.id)) !== null
               const mgr = managers.find((m) =>
                 data.assignments.some((a) => a.studentId === s.id && a.educatorId === m.id)
               )
               const isInactive = s.status === 'inactive'
               const genderLabel = s.gender ? GENDER_LABELS[s.gender] : null
+              const ind = indicatorMap.get(s.id)
+              const mindBadge = ind?.mind ? MIND_BADGES[ind.mind] : null
+              const fulfillRate = ind?.fulfillment ? Math.round(ind.fulfillment.rate * 100) : null
 
               return (
                 <div
                   key={s.id}
-                  className={`grid grid-cols-[1fr_70px_44px_56px_44px_32px] items-center px-3 py-2.5 border-b border-gray-50 last:border-0 transition-colors ${
+                  className={`grid ${LIST_GRID} items-center px-3 py-2.5 border-b border-gray-50 last:border-0 transition-colors ${
                     isInactive ? 'bg-gray-50/60 opacity-70' : 'hover:bg-gray-50 active:bg-gray-100'
                   } cursor-pointer`}
                   onClick={() => navigate(`${detailBase}/${s.id}`)}
@@ -306,16 +296,37 @@ export default function UserManagementTab({ readOnly = false }) {
                         )}
                       </div>
                       <span className="text-xs text-gray-400 truncate block">
-                        {s.school || '학교 미입력'}{s.className ? ` · ${s.className}` : ''}
+                        {s.school || '학교 미입력'}{s.grade ? ` · ${s.grade}` : ''}{s.className ? ` ${s.className}` : ''}
                       </span>
                     </div>
                   </div>
                   <span className="text-center text-xs text-gray-500 truncate px-1">
                     {mgr ? mgr.name : <span className="text-orange-400">미배정</span>}
                   </span>
-                  <span className="text-center text-xs text-gray-600">{s.grade || '-'}</span>
-                  <span className={`text-center text-xs font-semibold px-1 py-0.5 rounded-full mx-auto ${risk.color}`}>
-                    {risk.label}
+                  <span className="text-center text-[11px] text-gray-600 whitespace-nowrap">{formatPhone(s.password) || '-'}</span>
+                  <span className="text-center text-[11px] text-gray-600 whitespace-nowrap">{formatPhone(s.parentPassword) || '-'}</span>
+                  <span className={`text-center text-xs font-semibold ${
+                    (ind?.absentCount ?? 0) >= ATTENDANCE_CAUTION_ABSENT_THRESHOLD ? 'text-red-600' : 'text-gray-600'
+                  }`} title="최근 30일 결석 횟수">
+                    {ind?.absentCount ? `결${ind.absentCount}` : '-'}
+                  </span>
+                  <span className={`text-center text-xs font-semibold ${
+                    fulfillRate != null && fulfillRate < LEARNING_CAUTION_RATE * 100 ? 'text-orange-600' : 'text-gray-600'
+                  }`} title="최근 7일 계획 이행률">
+                    {fulfillRate != null ? `${fulfillRate}%` : '-'}
+                  </span>
+                  {mindBadge ? (
+                    <span className={`text-center text-[11px] font-semibold px-1 py-0.5 rounded-full mx-auto ${mindBadge.color}`}>
+                      {mindBadge.label}
+                    </span>
+                  ) : (
+                    <span className="text-center text-xs text-gray-300">-</span>
+                  )}
+                  <span className="text-center text-xs text-gray-600" title="과제 완료/전체">
+                    {ind?.tasksTotal ? `${ind.tasksDone}/${ind.tasksTotal}` : '-'}
+                  </span>
+                  <span className="text-center text-xs text-gray-600" title="업무계획 태그 횟수">
+                    {ind?.planCount ? `${ind.planCount}회` : '-'}
                   </span>
                   <span className="text-right text-sm font-bold text-blue-600">{s.selfIndex}점</span>
                   {readOnly ? (
@@ -368,6 +379,7 @@ export default function UserManagementTab({ readOnly = false }) {
               )
             })
           )}
+          </div>
         </div>
       </section>
 
