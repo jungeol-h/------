@@ -14,6 +14,7 @@ import { getMindStatus } from '../../context/selectors/riskDetection.js'
 import { COUNSELING_TYPE_LABELS, COUNSELING_TARGET_LABELS } from '../../data/counselingTypes.js'
 import CounselingFormModal from '../../components/counseling/CounselingFormModal.jsx'
 import CounselingRecordBody from '../../components/counseling/CounselingRecordBody.jsx'
+import { educatorDisplayName } from '../../utils/educatorName.js'
 import TaskFormModal from '../../components/tasks/TaskFormModal.jsx'
 import DownloadPdfButton from '../../pdf/components/DownloadPdfButton.jsx'
 import { buildFilename, nowDateTime } from '../../pdf/utils/formatters.js'
@@ -633,7 +634,7 @@ function CounselingSection({ studentId, data, currentUser, canWrite = true }) {
           date: r.date,
           typeLabel: COUNSELING_TYPE_LABELS[r.type] || r.type,
           targetLabel: COUNSELING_TARGET_LABELS[r.targetType] ?? '학생',
-          authorName: data.educators.find((e) => e.id === r.educatorId)?.name ?? '-',
+          authorName: educatorDisplayName(data.educators.find((e) => e.id === r.educatorId)) ?? '-',
           content: r.comment,
         }))}
         generatedAt={nowDateTime()}
@@ -742,7 +743,7 @@ function CounselingSection({ studentId, data, currentUser, canWrite = true }) {
                 </div>
               </div>
               <CounselingRecordBody record={r} fallback={r.comment} />
-              {author && <p className="text-xs text-gray-400 mt-2">작성: {author.name}</p>}
+              {author && <p className="text-xs text-gray-400 mt-2">작성: {educatorDisplayName(author)}</p>}
             </div>
           )
         })

@@ -2,6 +2,7 @@ import { MessageSquare } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
 import { COUNSELING_TYPE_LABELS, COUNSELING_TARGET_LABELS } from '../../data/counselingTypes.js'
 import CounselingRecordBody from '../../components/counseling/CounselingRecordBody.jsx'
+import { educatorDisplayName } from '../../utils/educatorName.js'
 
 const TYPE_COLORS = {
   career_path: 'text-violet-700 bg-violet-100',
@@ -22,7 +23,7 @@ export default function ParentCommentTab({ child }) {
   const studentId = child.id
 
   const educatorName = (id) =>
-    data.educators.find((e) => e.id === id)?.name ?? '선생님'
+    educatorDisplayName(data.educators.find((e) => e.id === id)) ?? '선생님'
 
   const records = data.counselingRecords
     .filter((r) => r.studentId === studentId)

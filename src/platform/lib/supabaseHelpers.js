@@ -17,6 +17,7 @@ export const toUser = (row) => ({
   riskLevel: row.risk_level ?? 'normal',
   status: row.status ?? 'active',
   enrolledAt: row.enrolled_at ?? null,
+  subject: row.subject ?? '',
 })
 
 export const toMindRecord = (row) => ({

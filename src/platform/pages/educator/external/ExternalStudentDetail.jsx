@@ -6,6 +6,7 @@ import { COUNSELING_TYPE_LABELS, COUNSELING_TARGET_LABELS } from '../../../data/
 import DownloadPdfButton from '../../../pdf/components/DownloadPdfButton.jsx'
 import { buildFilename, nowDateTime } from '../../../pdf/utils/formatters.js'
 import { authorOf } from '../../../pdf/config/meta.js'
+import { educatorDisplayName } from '../../../utils/educatorName.js'
 import CounselingRecordBody from '../../../components/counseling/CounselingRecordBody.jsx'
 import ExternalCounselingForm from './ExternalCounselingForm.jsx'
 import { deleteRecord } from './externalData.js'
@@ -31,7 +32,7 @@ export default function ExternalStudentDetail({
   // 작성자명: DataContext.educators에서 매핑 (instructor/consultant/admin은
   // fetchForAdmin으로 educators 보유). 없으면 '-'.
   const authorName = (counselorId) =>
-    data.educators?.find((e) => e.id === counselorId)?.name ?? '-'
+    educatorDisplayName(data.educators?.find((e) => e.id === counselorId)) ?? '-'
 
   const sorted = records
     .slice()

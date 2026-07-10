@@ -7,6 +7,7 @@ import {
   COUNSELING_TARGET_TYPES, COUNSELING_TARGET_LABELS,
   composeCounselingContent,
 } from '../../data/counselingTypes.js'
+import { educatorDisplayName } from '../../utils/educatorName.js'
 import StudentCombobox from './StudentCombobox.jsx'
 import CounselingFormModal from './CounselingFormModal.jsx'
 import CounselingContentFields from './CounselingContentFields.jsx'
@@ -170,7 +171,7 @@ export default function CounselingTabContent({ students, records, showAuthor = f
                   </div>
                   <CounselingRecordBody record={r} fallback={r.comment} />
                   {showAuthor && author && (
-                    <p className="text-xs text-gray-400 mt-2">작성: {author.name}</p>
+                    <p className="text-xs text-gray-400 mt-2">작성: {educatorDisplayName(author)}</p>
                   )}
                 </div>
               )
