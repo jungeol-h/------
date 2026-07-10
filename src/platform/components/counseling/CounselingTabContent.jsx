@@ -12,7 +12,7 @@ import CounselingFormModal from './CounselingFormModal.jsx'
 import CounselingContentFields from './CounselingContentFields.jsx'
 import CounselingRecordBody from './CounselingRecordBody.jsx'
 
-const EMPTY_FIELDS = { topic: '', detail: '', followUp: '', note: '' }
+const EMPTY_FIELDS = { topic: '', diagnosis: '', advice: '', followUp: '', note: '', nextAppointment: '' }
 
 // 매니저/관리자 상담 탭 공용 본문.
 // 상단에 인라인 작성 폼(버튼→모달 없이 바로 입력), 아래에 기존 상담 리스트.

@@ -11,7 +11,7 @@ import CounselingContentFields from './CounselingContentFields.jsx'
 // 상담 작성 모달 — 매니저/관리자/학생상세에서 재사용. 코칭 모달(ManagerHomeTab) 패턴 차용.
 // fixedStudent가 있으면 해당 학생 고정, 없으면 students 목록에서 선택.
 // record가 있으면 수정 모드 — 학생 고정·내용/type 프리필 후 updateCounselingRecord 호출.
-// 구 기록(단일 comment) 수정 시엔 comment를 세부내용 칸에 프리필한다.
+// 구 기록(단일 comment) 수정 시엔 comment를 진단 칸에 프리필한다.
 export default function CounselingFormModal({ students = [], fixedStudent, record, authorId, onClose, onSaved }) {
   const { addCounselingRecord, updateCounselingRecord, data } = useData()
   const isEdit = !!record
@@ -21,9 +21,11 @@ export default function CounselingFormModal({ students = [], fixedStudent, recor
   const [targetType, setTargetType] = useState(record?.targetType ?? 'student')
   const [fields, setFields] = useState({
     topic: record?.topic ?? '',
-    detail: record ? (hasStructuredContent(record) ? record.detail : record.comment ?? '') : '',
+    diagnosis: record ? (hasStructuredContent(record) ? record.diagnosis : record.comment ?? '') : '',
+    advice: record?.advice ?? '',
     followUp: record?.followUp ?? '',
     note: record?.note ?? '',
+    nextAppointment: record?.nextAppointment ?? '',
   })
   const [saving, setSaving] = useState(false)
 

@@ -44,11 +44,13 @@ export function toProgramRecord(row) {
     content: row.content,
     type: row.type,
     targetType: row.target_type ?? 'student',
-    // 보고서 양식 4단계 — 구 기록은 단일 content만 존재
+    // 보고서 양식 6단계 — 구 기록은 단일 content만 존재
     topic: row.topic ?? '',
-    detail: row.detail ?? '',
+    diagnosis: row.diagnosis ?? '',
+    advice: row.advice ?? '',
     followUp: row.follow_up ?? '',
     note: row.note ?? '',
+    nextAppointment: row.next_appointment ?? '',
     createdAt: row.created_at,
   }
 }
@@ -159,12 +161,14 @@ export async function createRecord({ programStudentId, counselorId, content, typ
     counselor_id: counselorId,
     date: date ?? new Date().toISOString().slice(0, 10),
     content,
-    type: type ?? 'consultant',
+    type: type ?? 'etc',
     target_type: targetType ?? 'student',
     topic: fields?.topic ?? null,
-    detail: fields?.detail ?? null,
+    diagnosis: fields?.diagnosis ?? null,
+    advice: fields?.advice ?? null,
     follow_up: fields?.followUp ?? null,
     note: fields?.note ?? null,
+    next_appointment: fields?.nextAppointment ?? null,
   }
   const { error } = await withWriteRetry(
     () => supabase.from('program_counseling_records').insert(row),
@@ -181,9 +185,11 @@ export async function updateRecord(id, { content, type, targetType, fields }) {
   if (targetType !== undefined) patch.target_type = targetType
   if (fields !== undefined) {
     patch.topic = fields.topic ?? null
-    patch.detail = fields.detail ?? null
+    patch.diagnosis = fields.diagnosis ?? null
+    patch.advice = fields.advice ?? null
     patch.follow_up = fields.followUp ?? null
     patch.note = fields.note ?? null
+    patch.next_appointment = fields.nextAppointment ?? null
   }
   const { error } = await withWriteRetry(
     () => supabase.from('program_counseling_records').update(patch).eq('id', id),

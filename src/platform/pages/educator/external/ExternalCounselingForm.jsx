@@ -10,16 +10,18 @@ import { createRecord, updateRecord } from './externalData.js'
 
 // 외생 상담 기록 작성/수정 모달. CounselingFormModal 스타일 차용.
 // record가 있으면 수정 모드. 저장 성공 시 onSaved(record)로 로컬 state 갱신.
-// 구 기록(단일 content) 수정 시엔 content를 세부내용 칸에 프리필한다.
+// 구 기록(단일 content) 수정 시엔 content를 진단 칸에 프리필한다.
 export default function ExternalCounselingForm({ student, record, counselorId, onClose, onSaved }) {
   const isEdit = !!record
   const [type, setType] = useState(record?.type ?? COUNSELING_TYPES[0])
   const [targetType, setTargetType] = useState(record?.targetType ?? 'student')
   const [fields, setFields] = useState({
     topic: record?.topic ?? '',
-    detail: record ? (hasStructuredContent(record) ? record.detail : record.content ?? '') : '',
+    diagnosis: record ? (hasStructuredContent(record) ? record.diagnosis : record.content ?? '') : '',
+    advice: record?.advice ?? '',
     followUp: record?.followUp ?? '',
     note: record?.note ?? '',
+    nextAppointment: record?.nextAppointment ?? '',
   })
   const [saving, setSaving] = useState(false)
 

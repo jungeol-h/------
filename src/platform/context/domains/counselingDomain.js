@@ -14,7 +14,7 @@ import { makeId } from '../dataModel.js'
 import { withWriteRetry } from '../../lib/supabaseRetry.js'
 
 export function useCounselingDomain(setData) {
-  // fields: { topic, detail, followUp, note } — 보고서 양식 4단계.
+  // fields: { topic, diagnosis, advice, followUp, note, nextAppointment } — 보고서 양식 6단계.
   // content에는 합성 텍스트가 함께 들어온다(NOT NULL·PDF/레거시 소비처 호환).
   const addCounselingRecord = useCallback(
     async ({ studentId, authorId, content, type, targetType, fields }) => {
@@ -27,9 +27,11 @@ export function useCounselingDomain(setData) {
         type,
         target_type: targetType ?? 'student',
         topic: fields?.topic ?? null,
-        detail: fields?.detail ?? null,
+        diagnosis: fields?.diagnosis ?? null,
+        advice: fields?.advice ?? null,
         follow_up: fields?.followUp ?? null,
         note: fields?.note ?? null,
+        next_appointment: fields?.nextAppointment ?? null,
       }
       const { error } = await withWriteRetry(
         () => supabase.from('counseling_records').insert(row),
@@ -53,9 +55,11 @@ export function useCounselingDomain(setData) {
       if (targetType !== undefined) snake.target_type = targetType
       if (fields !== undefined) {
         snake.topic = fields.topic ?? null
-        snake.detail = fields.detail ?? null
+        snake.diagnosis = fields.diagnosis ?? null
+        snake.advice = fields.advice ?? null
         snake.follow_up = fields.followUp ?? null
         snake.note = fields.note ?? null
+        snake.next_appointment = fields.nextAppointment ?? null
       }
       if (Object.keys(snake).length === 0) return
       const { error } = await withWriteRetry(
@@ -75,9 +79,11 @@ export function useCounselingDomain(setData) {
                 ...(fields !== undefined
                   ? {
                       topic: fields.topic ?? '',
-                      detail: fields.detail ?? '',
+                      diagnosis: fields.diagnosis ?? '',
+                      advice: fields.advice ?? '',
                       followUp: fields.followUp ?? '',
                       note: fields.note ?? '',
+                      nextAppointment: fields.nextAppointment ?? '',
                     }
                   : {}),
               }
