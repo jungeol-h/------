@@ -111,6 +111,11 @@ export const toCounselingRecord = (row) => ({
   comment: row.content,
   type: row.type ?? 'study',
   targetType: row.target_type ?? 'student',
+  // 보고서 양식 4단계 — 구 기록은 null(단일 comment만 존재)
+  topic: row.topic ?? '',
+  detail: row.detail ?? '',
+  followUp: row.follow_up ?? '',
+  note: row.note ?? '',
 })
 
 export const toAlert = (row) => ({

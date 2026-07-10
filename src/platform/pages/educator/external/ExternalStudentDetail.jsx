@@ -6,6 +6,7 @@ import { COUNSELING_TYPE_LABELS, COUNSELING_TARGET_LABELS } from '../../../data/
 import DownloadPdfButton from '../../../pdf/components/DownloadPdfButton.jsx'
 import { buildFilename, nowDateTime } from '../../../pdf/utils/formatters.js'
 import { authorOf } from '../../../pdf/config/meta.js'
+import CounselingRecordBody from '../../../components/counseling/CounselingRecordBody.jsx'
 import ExternalCounselingForm from './ExternalCounselingForm.jsx'
 import { deleteRecord } from './externalData.js'
 
@@ -140,7 +141,7 @@ export default function ExternalStudentDetail({
                 )}
               </div>
             </div>
-            <p className="text-sm text-gray-600 whitespace-pre-wrap">{r.content}</p>
+            <CounselingRecordBody record={r} fallback={r.content} />
             <p className="text-xs text-gray-400 mt-2">작성: {authorName(r.counselorId)}</p>
           </div>
         ))

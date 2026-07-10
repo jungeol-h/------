@@ -3,16 +3,24 @@ import { X, CheckCheck } from 'lucide-react'
 import {
   COUNSELING_TYPES, COUNSELING_TYPE_LABELS,
   COUNSELING_TARGET_TYPES, COUNSELING_TARGET_LABELS,
+  composeCounselingContent, hasStructuredContent,
 } from '../../../data/counselingTypes.js'
+import CounselingContentFields from '../../../components/counseling/CounselingContentFields.jsx'
 import { createRecord, updateRecord } from './externalData.js'
 
 // 외생 상담 기록 작성/수정 모달. CounselingFormModal 스타일 차용.
 // record가 있으면 수정 모드. 저장 성공 시 onSaved(record)로 로컬 state 갱신.
+// 구 기록(단일 content) 수정 시엔 content를 세부내용 칸에 프리필한다.
 export default function ExternalCounselingForm({ student, record, counselorId, onClose, onSaved }) {
   const isEdit = !!record
-  const [type, setType] = useState(record?.type ?? 'career')
+  const [type, setType] = useState(record?.type ?? COUNSELING_TYPES[0])
   const [targetType, setTargetType] = useState(record?.targetType ?? 'student')
-  const [content, setContent] = useState(record?.content ?? '')
+  const [fields, setFields] = useState({
+    topic: record?.topic ?? '',
+    detail: record ? (hasStructuredContent(record) ? record.detail : record.content ?? '') : '',
+    followUp: record?.followUp ?? '',
+    note: record?.note ?? '',
+  })
   const [saving, setSaving] = useState(false)
 
   const fieldClass =
@@ -21,9 +29,10 @@ export default function ExternalCounselingForm({ student, record, counselorId, o
   const handleSave = async () => {
     setSaving(true)
     try {
+      const content = composeCounselingContent(fields)
       if (isEdit) {
-        await updateRecord(record.id, { content, type, targetType })
-        onSaved?.({ ...record, content, type, targetType })
+        await updateRecord(record.id, { content, type, targetType, fields })
+        onSaved?.({ ...record, content, type, targetType, ...fields })
       } else {
         const created = await createRecord({
           programStudentId: student.id,
@@ -31,6 +40,7 @@ export default function ExternalCounselingForm({ student, record, counselorId, o
           content,
           type,
           targetType,
+          fields,
         })
         onSaved?.(created)
       }
@@ -70,24 +80,22 @@ export default function ExternalCounselingForm({ student, record, counselorId, o
             </select>
           </div>
           <div>
-            <label className="text-xs text-gray-500 mb-1 block">상담 주제</label>
+            <label className="text-xs text-gray-500 mb-1 block">상담 유형</label>
             <select value={type} onChange={(e) => setType(e.target.value)} className={fieldClass}>
               {COUNSELING_TYPES.map((t) => (
                 <option key={t} value={t}>
                   {COUNSELING_TYPE_LABELS[t]}
                 </option>
               ))}
+              {/* 구 체계 값으로 저장된 기록 수정 시 값 유실 방지 */}
+              {isEdit && !COUNSELING_TYPES.includes(type) && (
+                <option value={type}>{COUNSELING_TYPE_LABELS[type] ?? type}</option>
+              )}
             </select>
           </div>
         </div>
 
-        <textarea
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder="상담 내용을 입력하세요..."
-          rows={4}
-          className="w-full border border-gray-200 rounded-xl p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-300"
-        />
+        <CounselingContentFields value={fields} onChange={setFields} fieldClass={fieldClass} />
 
         <div className="flex gap-2">
           <button
@@ -98,7 +106,7 @@ export default function ExternalCounselingForm({ student, record, counselorId, o
           </button>
           <button
             onClick={handleSave}
-            disabled={saving || !content.trim()}
+            disabled={saving || !fields.topic.trim()}
             className="flex-1 py-3 bg-emerald-500 text-white rounded-xl font-bold hover:bg-emerald-600 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <CheckCheck size={16} />

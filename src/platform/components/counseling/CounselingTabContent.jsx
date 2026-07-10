@@ -5,9 +5,14 @@ import { useAuth } from '../../context/AuthContext.jsx'
 import {
   COUNSELING_TYPES, COUNSELING_TYPE_LABELS,
   COUNSELING_TARGET_TYPES, COUNSELING_TARGET_LABELS,
+  composeCounselingContent,
 } from '../../data/counselingTypes.js'
 import StudentCombobox from './StudentCombobox.jsx'
 import CounselingFormModal from './CounselingFormModal.jsx'
+import CounselingContentFields from './CounselingContentFields.jsx'
+import CounselingRecordBody from './CounselingRecordBody.jsx'
+
+const EMPTY_FIELDS = { topic: '', detail: '', followUp: '', note: '' }
 
 // 매니저/관리자 상담 탭 공용 본문.
 // 상단에 인라인 작성 폼(버튼→모달 없이 바로 입력), 아래에 기존 상담 리스트.
@@ -17,9 +22,9 @@ export default function CounselingTabContent({ students, records, showAuthor = f
   const { addCounselingRecord, deleteCounselingRecord, data } = useData()
   const { currentUser } = useAuth()
   const [studentId, setStudentId] = useState('')
-  const [type, setType] = useState('study')
+  const [type, setType] = useState(COUNSELING_TYPES[0])
   const [targetType, setTargetType] = useState('student')
-  const [content, setContent] = useState('')
+  const [fields, setFields] = useState(EMPTY_FIELDS)
   const [saving, setSaving] = useState(false)
   const [editRecord, setEditRecord] = useState(null)
 
@@ -38,18 +43,19 @@ export default function CounselingTabContent({ students, records, showAuthor = f
   const fieldClass =
     'border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300'
 
-  const canSave = !saving && content.trim() && studentId
+  const canSave = !saving && fields.topic.trim() && studentId
 
   const handleSave = async () => {
     if (!canSave) return
     setSaving(true)
     try {
-      await addCounselingRecord({ studentId, authorId, content, type, targetType })
+      const content = composeCounselingContent(fields)
+      await addCounselingRecord({ studentId, authorId, content, type, targetType, fields })
       // 성공 시 폼 초기화(학생/유형은 연속 작성 편의를 위해 유지하지 않고 비움).
       setStudentId('')
-      setType('study')
+      setType(COUNSELING_TYPES[0])
       setTargetType('student')
-      setContent('')
+      setFields(EMPTY_FIELDS)
     } catch {
       // 저장 실패는 전역 Toast가 표면화한다.
     } finally {
@@ -87,7 +93,7 @@ export default function CounselingTabContent({ students, records, showAuthor = f
               </select>
             </div>
             <div>
-              <label className="text-xs text-gray-500 mb-1 block">상담 주제</label>
+              <label className="text-xs text-gray-500 mb-1 block">상담 유형</label>
               <select
                 value={type}
                 onChange={(e) => setType(e.target.value)}
@@ -103,13 +109,7 @@ export default function CounselingTabContent({ students, records, showAuthor = f
           </div>
         </div>
 
-        <textarea
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder="상담 내용을 입력하세요..."
-          rows={4}
-          className={`${fieldClass} w-full resize-y`}
-        />
+        <CounselingContentFields value={fields} onChange={setFields} fieldClass={fieldClass} />
 
         <div className="flex justify-end">
           <button
@@ -168,7 +168,7 @@ export default function CounselingTabContent({ students, records, showAuthor = f
                       )}
                     </div>
                   </div>
-                  <p className="text-sm text-gray-600 whitespace-pre-wrap">{r.comment}</p>
+                  <CounselingRecordBody record={r} fallback={r.comment} />
                   {showAuthor && author && (
                     <p className="text-xs text-gray-400 mt-2">작성: {author.name}</p>
                   )}

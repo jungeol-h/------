@@ -4,19 +4,27 @@ import { useData } from '../../context/DataContext.jsx'
 import {
   COUNSELING_TYPES, COUNSELING_TYPE_LABELS,
   COUNSELING_TARGET_TYPES, COUNSELING_TARGET_LABELS,
+  composeCounselingContent, hasStructuredContent,
 } from '../../data/counselingTypes.js'
+import CounselingContentFields from './CounselingContentFields.jsx'
 
 // 상담 작성 모달 — 매니저/관리자/학생상세에서 재사용. 코칭 모달(ManagerHomeTab) 패턴 차용.
 // fixedStudent가 있으면 해당 학생 고정, 없으면 students 목록에서 선택.
-// record가 있으면 수정 모드 — 학생 고정·content/type 프리필 후 updateCounselingRecord 호출.
+// record가 있으면 수정 모드 — 학생 고정·내용/type 프리필 후 updateCounselingRecord 호출.
+// 구 기록(단일 comment) 수정 시엔 comment를 세부내용 칸에 프리필한다.
 export default function CounselingFormModal({ students = [], fixedStudent, record, authorId, onClose, onSaved }) {
   const { addCounselingRecord, updateCounselingRecord, data } = useData()
   const isEdit = !!record
   const editStudent = isEdit ? data.students.find((s) => s.id === record.studentId) : null
   const [studentId, setStudentId] = useState(record?.studentId ?? fixedStudent?.id ?? '')
-  const [type, setType] = useState(record?.type ?? 'study')
+  const [type, setType] = useState(record?.type ?? COUNSELING_TYPES[0])
   const [targetType, setTargetType] = useState(record?.targetType ?? 'student')
-  const [content, setContent] = useState(record?.comment ?? '')
+  const [fields, setFields] = useState({
+    topic: record?.topic ?? '',
+    detail: record ? (hasStructuredContent(record) ? record.detail : record.comment ?? '') : '',
+    followUp: record?.followUp ?? '',
+    note: record?.note ?? '',
+  })
   const [saving, setSaving] = useState(false)
 
   const fieldClass = 'w-full border border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300'
@@ -24,10 +32,11 @@ export default function CounselingFormModal({ students = [], fixedStudent, recor
   const handleSave = async () => {
     setSaving(true)
     try {
+      const content = composeCounselingContent(fields)
       if (isEdit) {
-        await updateCounselingRecord(record.id, { content, type, targetType })
+        await updateCounselingRecord(record.id, { content, type, targetType, fields })
       } else {
-        await addCounselingRecord({ studentId, authorId, content, type, targetType })
+        await addCounselingRecord({ studentId, authorId, content, type, targetType, fields })
       }
       onSaved?.()
       onClose()
@@ -81,7 +90,7 @@ export default function CounselingFormModal({ students = [], fixedStudent, recor
             </select>
           </div>
           <div>
-            <label className="text-xs text-gray-500 mb-1 block">상담 주제</label>
+            <label className="text-xs text-gray-500 mb-1 block">상담 유형</label>
             <select
               value={type}
               onChange={e => setType(e.target.value)}
@@ -90,17 +99,15 @@ export default function CounselingFormModal({ students = [], fixedStudent, recor
               {COUNSELING_TYPES.map(t => (
                 <option key={t} value={t}>{COUNSELING_TYPE_LABELS[t]}</option>
               ))}
+              {/* 구 체계 값으로 저장된 기록 수정 시 값 유실 방지 */}
+              {isEdit && !COUNSELING_TYPES.includes(type) && (
+                <option value={type}>{COUNSELING_TYPE_LABELS[type] ?? type}</option>
+              )}
             </select>
           </div>
         </div>
 
-        <textarea
-          value={content}
-          onChange={e => setContent(e.target.value)}
-          placeholder="상담 내용을 입력하세요..."
-          rows={4}
-          className="w-full border border-gray-200 rounded-xl p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-300"
-        />
+        <CounselingContentFields value={fields} onChange={setFields} fieldClass={fieldClass} />
 
         <div className="flex gap-2">
           <button
@@ -111,7 +118,7 @@ export default function CounselingFormModal({ students = [], fixedStudent, recor
           </button>
           <button
             onClick={handleSave}
-            disabled={saving || !content.trim() || !studentId}
+            disabled={saving || !fields.topic.trim() || !studentId}
             className="flex-1 py-3 bg-emerald-500 text-white rounded-xl font-bold hover:bg-emerald-600 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <CheckCheck size={16} />

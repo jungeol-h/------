@@ -44,6 +44,11 @@ export function toProgramRecord(row) {
     content: row.content,
     type: row.type,
     targetType: row.target_type ?? 'student',
+    // 보고서 양식 4단계 — 구 기록은 단일 content만 존재
+    topic: row.topic ?? '',
+    detail: row.detail ?? '',
+    followUp: row.follow_up ?? '',
+    note: row.note ?? '',
     createdAt: row.created_at,
   }
 }
@@ -147,15 +152,19 @@ export async function bulkInsertStudents(programId, entries) {
   return rows.map((r) => toProgramStudent({ ...r, created_at: now }))
 }
 
-export async function createRecord({ programStudentId, counselorId, content, type, targetType, date }) {
+export async function createRecord({ programStudentId, counselorId, content, type, targetType, date, fields }) {
   const row = {
     id: makeId('pc'),
     program_student_id: programStudentId,
     counselor_id: counselorId,
     date: date ?? new Date().toISOString().slice(0, 10),
     content,
-    type: type ?? 'career',
+    type: type ?? 'consultant',
     target_type: targetType ?? 'student',
+    topic: fields?.topic ?? null,
+    detail: fields?.detail ?? null,
+    follow_up: fields?.followUp ?? null,
+    note: fields?.note ?? null,
   }
   const { error } = await withWriteRetry(
     () => supabase.from('program_counseling_records').insert(row),
@@ -165,11 +174,17 @@ export async function createRecord({ programStudentId, counselorId, content, typ
   return toProgramRecord({ ...row, created_at: new Date().toISOString() })
 }
 
-export async function updateRecord(id, { content, type, targetType }) {
+export async function updateRecord(id, { content, type, targetType, fields }) {
   const patch = {}
   if (content !== undefined) patch.content = content
   if (type !== undefined) patch.type = type
   if (targetType !== undefined) patch.target_type = targetType
+  if (fields !== undefined) {
+    patch.topic = fields.topic ?? null
+    patch.detail = fields.detail ?? null
+    patch.follow_up = fields.followUp ?? null
+    patch.note = fields.note ?? null
+  }
   const { error } = await withWriteRetry(
     () => supabase.from('program_counseling_records').update(patch).eq('id', id),
     { label: 'updateProgramRecord' },

@@ -13,6 +13,7 @@ import { buildReflectionData } from '../../context/selectors/reflectionReport.js
 import { getMindStatus } from '../../context/selectors/riskDetection.js'
 import { COUNSELING_TYPE_LABELS, COUNSELING_TARGET_LABELS } from '../../data/counselingTypes.js'
 import CounselingFormModal from '../../components/counseling/CounselingFormModal.jsx'
+import CounselingRecordBody from '../../components/counseling/CounselingRecordBody.jsx'
 import TaskFormModal from '../../components/tasks/TaskFormModal.jsx'
 import DownloadPdfButton from '../../pdf/components/DownloadPdfButton.jsx'
 import { buildFilename, nowDateTime } from '../../pdf/utils/formatters.js'
@@ -740,7 +741,7 @@ function CounselingSection({ studentId, data, currentUser, canWrite = true }) {
                   )}
                 </div>
               </div>
-              <p className="text-sm text-gray-600">{r.comment}</p>
+              <CounselingRecordBody record={r} fallback={r.comment} />
               {author && <p className="text-xs text-gray-400 mt-2">작성: {author.name}</p>}
             </div>
           )

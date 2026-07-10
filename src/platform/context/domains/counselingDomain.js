@@ -14,8 +14,10 @@ import { makeId } from '../dataModel.js'
 import { withWriteRetry } from '../../lib/supabaseRetry.js'
 
 export function useCounselingDomain(setData) {
+  // fields: { topic, detail, followUp, note } — 보고서 양식 4단계.
+  // content에는 합성 텍스트가 함께 들어온다(NOT NULL·PDF/레거시 소비처 호환).
   const addCounselingRecord = useCallback(
-    async ({ studentId, authorId, content, type, targetType }) => {
+    async ({ studentId, authorId, content, type, targetType, fields }) => {
       const row = {
         id: makeId('c'),
         student_id: studentId,
@@ -24,6 +26,10 @@ export function useCounselingDomain(setData) {
         content,
         type,
         target_type: targetType ?? 'student',
+        topic: fields?.topic ?? null,
+        detail: fields?.detail ?? null,
+        follow_up: fields?.followUp ?? null,
+        note: fields?.note ?? null,
       }
       const { error } = await withWriteRetry(
         () => supabase.from('counseling_records').insert(row),
@@ -40,11 +46,17 @@ export function useCounselingDomain(setData) {
 
   // 상담 기록 수정 — 앱 모델 content는 DB의 content 컬럼(변환기에서 comment로 매핑)이다.
   const updateCounselingRecord = useCallback(
-    async (id, { content, type, targetType }) => {
+    async (id, { content, type, targetType, fields }) => {
       const snake = {}
       if (content !== undefined) snake.content = content
       if (type !== undefined) snake.type = type
       if (targetType !== undefined) snake.target_type = targetType
+      if (fields !== undefined) {
+        snake.topic = fields.topic ?? null
+        snake.detail = fields.detail ?? null
+        snake.follow_up = fields.followUp ?? null
+        snake.note = fields.note ?? null
+      }
       if (Object.keys(snake).length === 0) return
       const { error } = await withWriteRetry(
         () => supabase.from('counseling_records').update(snake).eq('id', id),
@@ -60,6 +72,14 @@ export function useCounselingDomain(setData) {
                 ...(content !== undefined ? { comment: content } : {}),
                 ...(type !== undefined ? { type } : {}),
                 ...(targetType !== undefined ? { targetType } : {}),
+                ...(fields !== undefined
+                  ? {
+                      topic: fields.topic ?? '',
+                      detail: fields.detail ?? '',
+                      followUp: fields.followUp ?? '',
+                      note: fields.note ?? '',
+                    }
+                  : {}),
               }
             : r
         ),

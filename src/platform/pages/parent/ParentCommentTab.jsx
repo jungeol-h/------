@@ -1,8 +1,15 @@
 import { MessageSquare } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
 import { COUNSELING_TYPE_LABELS, COUNSELING_TARGET_LABELS } from '../../data/counselingTypes.js'
+import CounselingRecordBody from '../../components/counseling/CounselingRecordBody.jsx'
 
 const TYPE_COLORS = {
+  admin: 'text-blue-700 bg-blue-100',
+  consultant: 'text-violet-700 bg-violet-100',
+  subject_coaching: 'text-emerald-700 bg-emerald-100',
+  mentoring: 'text-amber-700 bg-amber-100',
+  extracurricular: 'text-cyan-700 bg-cyan-100',
+  // 구 체계 (기존 기록 표시용)
   mind: 'text-pink-700 bg-pink-100',
   career: 'text-violet-700 bg-violet-100',
   study: 'text-blue-700 bg-blue-100',
@@ -56,9 +63,11 @@ export default function ParentCommentTab({ child }) {
                   </div>
                   <span className="text-xs text-gray-400">{r.date}</span>
                 </div>
-                <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">
-                  {r.comment}
-                </p>
+                <CounselingRecordBody
+                  record={r}
+                  fallback={r.comment}
+                  className="text-sm text-gray-800 leading-relaxed"
+                />
               </div>
             )
           })}
