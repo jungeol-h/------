@@ -2,7 +2,10 @@ import { useState } from 'react'
 import { CheckCheck, Pencil, Trash2 } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
-import { COUNSELING_TYPES, COUNSELING_TYPE_LABELS } from '../../data/counselingTypes.js'
+import {
+  COUNSELING_TYPES, COUNSELING_TYPE_LABELS,
+  COUNSELING_TARGET_TYPES, COUNSELING_TARGET_LABELS,
+} from '../../data/counselingTypes.js'
 import StudentCombobox from './StudentCombobox.jsx'
 import CounselingFormModal from './CounselingFormModal.jsx'
 
@@ -14,7 +17,8 @@ export default function CounselingTabContent({ students, records, showAuthor = f
   const { addCounselingRecord, deleteCounselingRecord, data } = useData()
   const { currentUser } = useAuth()
   const [studentId, setStudentId] = useState('')
-  const [type, setType] = useState('mind')
+  const [type, setType] = useState('study')
+  const [targetType, setTargetType] = useState('student')
   const [content, setContent] = useState('')
   const [saving, setSaving] = useState(false)
   const [editRecord, setEditRecord] = useState(null)
@@ -40,10 +44,11 @@ export default function CounselingTabContent({ students, records, showAuthor = f
     if (!canSave) return
     setSaving(true)
     try {
-      await addCounselingRecord({ studentId, authorId, content, type })
+      await addCounselingRecord({ studentId, authorId, content, type, targetType })
       // 성공 시 폼 초기화(학생/유형은 연속 작성 편의를 위해 유지하지 않고 비움).
       setStudentId('')
-      setType('mind')
+      setType('study')
+      setTargetType('student')
       setContent('')
     } catch {
       // 저장 실패는 전역 Toast가 표면화한다.
@@ -66,17 +71,36 @@ export default function CounselingTabContent({ students, records, showAuthor = f
             onChange={setStudentId}
           />
 
-          <select
-            value={type}
-            onChange={(e) => setType(e.target.value)}
-            className={fieldClass}
-          >
-            {COUNSELING_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {COUNSELING_TYPE_LABELS[t]}
-              </option>
-            ))}
-          </select>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">상담 대상</label>
+              <select
+                value={targetType}
+                onChange={(e) => setTargetType(e.target.value)}
+                className={`${fieldClass} w-full`}
+              >
+                {COUNSELING_TARGET_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {COUNSELING_TARGET_LABELS[t]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">상담 주제</label>
+              <select
+                value={type}
+                onChange={(e) => setType(e.target.value)}
+                className={`${fieldClass} w-full`}
+              >
+                {COUNSELING_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {COUNSELING_TYPE_LABELS[t]}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
         </div>
 
         <textarea
@@ -118,6 +142,9 @@ export default function CounselingTabContent({ students, records, showAuthor = f
                       <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">
                         {COUNSELING_TYPE_LABELS[r.type] || r.type}
                       </span>
+                      <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                        {COUNSELING_TARGET_LABELS[r.targetType] ?? '학생'}
+                      </span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-gray-400">{r.date}</span>
@@ -141,7 +168,7 @@ export default function CounselingTabContent({ students, records, showAuthor = f
                       )}
                     </div>
                   </div>
-                  <p className="text-sm text-gray-600">{r.comment}</p>
+                  <p className="text-sm text-gray-600 whitespace-pre-wrap">{r.comment}</p>
                   {showAuthor && author && (
                     <p className="text-xs text-gray-400 mt-2">작성: {author.name}</p>
                   )}

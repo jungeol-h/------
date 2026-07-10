@@ -5,8 +5,9 @@
 -- 용도:
 --  1) quiz_questions.type — 문항 유형 'short'(단답) | 'essay'(서술).
 --     서술형은 accepted_answers를 빈 배열로 저장하고 교사가 수동 채점.
---  2) program_counseling_records.target_type — 피상담자 유형
---     'student'(학생) | 'mother'(학생 모) | 'father'(학생 부)
+--  2) program_counseling_records.target_type / counseling_records.target_type
+--     — 피상담자 유형 'student'(학생) | 'mother'(학생 모) | 'father'(학생 부)
+--     (외부 상담·내부 재원생 상담 양쪽 모두)
 --  3) tasks.method / tasks.content — 과제 수행방법·과제 내용
 --  4) users.enrolled_at — 입학일 (관리자 대시보드 '신입학' 집계용)
 -- ------------------------------------------------------------
@@ -17,8 +18,9 @@
 -- ── 1) 확인평가 문항 유형 ───────────────────────────────────
 alter table quiz_questions add column if not exists type text not null default 'short';
 
--- ── 2) 외부 상담 피상담자 유형 ──────────────────────────────
+-- ── 2) 피상담자 유형 (외부 + 내부 상담) ─────────────────────
 alter table program_counseling_records add column if not exists target_type text default 'student';
+alter table counseling_records add column if not exists target_type text default 'student';
 
 -- ── 3) 과제 수행방법 / 과제 내용 ────────────────────────────
 alter table tasks add column if not exists method text;

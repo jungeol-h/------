@@ -11,7 +11,7 @@ import { supabase } from '../../lib/supabase.js'
 import { toAttendanceRecord } from '../../lib/supabaseHelpers.js'
 import { buildReflectionData } from '../../context/selectors/reflectionReport.js'
 import { getMindStatus } from '../../context/selectors/riskDetection.js'
-import { COUNSELING_TYPE_LABELS } from '../../data/counselingTypes.js'
+import { COUNSELING_TYPE_LABELS, COUNSELING_TARGET_LABELS } from '../../data/counselingTypes.js'
 import CounselingFormModal from '../../components/counseling/CounselingFormModal.jsx'
 import TaskFormModal from '../../components/tasks/TaskFormModal.jsx'
 import DownloadPdfButton from '../../pdf/components/DownloadPdfButton.jsx'
@@ -631,6 +631,7 @@ function CounselingSection({ studentId, data, currentUser, canWrite = true }) {
         records={sorted.map((r) => ({
           date: r.date,
           typeLabel: COUNSELING_TYPE_LABELS[r.type] || r.type,
+          targetLabel: COUNSELING_TARGET_LABELS[r.targetType] ?? '학생',
           authorName: data.educators.find((e) => e.id === r.educatorId)?.name ?? '-',
           content: r.comment,
         }))}
@@ -709,9 +710,14 @@ function CounselingSection({ studentId, data, currentUser, canWrite = true }) {
           return (
             <div key={r.id} className="bg-white rounded-2xl p-4 shadow-sm">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">
-                  {COUNSELING_TYPE_LABELS[r.type] || r.type}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">
+                    {COUNSELING_TYPE_LABELS[r.type] || r.type}
+                  </span>
+                  <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                    {COUNSELING_TARGET_LABELS[r.targetType] ?? '학생'}
+                  </span>
+                </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-gray-400">{r.date}</span>
                   {canManage(r) && (

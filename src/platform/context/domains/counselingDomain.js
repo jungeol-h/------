@@ -15,7 +15,7 @@ import { withWriteRetry } from '../../lib/supabaseRetry.js'
 
 export function useCounselingDomain(setData) {
   const addCounselingRecord = useCallback(
-    async ({ studentId, authorId, content, type }) => {
+    async ({ studentId, authorId, content, type, targetType }) => {
       const row = {
         id: makeId('c'),
         student_id: studentId,
@@ -23,6 +23,7 @@ export function useCounselingDomain(setData) {
         date: new Date().toISOString().slice(0, 10),
         content,
         type,
+        target_type: targetType ?? 'student',
       }
       const { error } = await withWriteRetry(
         () => supabase.from('counseling_records').insert(row),
@@ -39,10 +40,11 @@ export function useCounselingDomain(setData) {
 
   // 상담 기록 수정 — 앱 모델 content는 DB의 content 컬럼(변환기에서 comment로 매핑)이다.
   const updateCounselingRecord = useCallback(
-    async (id, { content, type }) => {
+    async (id, { content, type, targetType }) => {
       const snake = {}
       if (content !== undefined) snake.content = content
       if (type !== undefined) snake.type = type
+      if (targetType !== undefined) snake.target_type = targetType
       if (Object.keys(snake).length === 0) return
       const { error } = await withWriteRetry(
         () => supabase.from('counseling_records').update(snake).eq('id', id),
@@ -53,7 +55,12 @@ export function useCounselingDomain(setData) {
         ...prev,
         counselingRecords: prev.counselingRecords.map((r) =>
           r.id === id
-            ? { ...r, ...(content !== undefined ? { comment: content } : {}), ...(type !== undefined ? { type } : {}) }
+            ? {
+                ...r,
+                ...(content !== undefined ? { comment: content } : {}),
+                ...(type !== undefined ? { type } : {}),
+                ...(targetType !== undefined ? { targetType } : {}),
+              }
             : r
         ),
       }))

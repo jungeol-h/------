@@ -110,6 +110,7 @@ export const toCounselingRecord = (row) => ({
   date: row.date,
   comment: row.content,
   type: row.type ?? 'study',
+  targetType: row.target_type ?? 'student',
 })
 
 export const toAlert = (row) => ({

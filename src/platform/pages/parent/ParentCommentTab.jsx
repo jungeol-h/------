@@ -1,6 +1,6 @@
 import { MessageSquare } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
-import { COUNSELING_TYPE_LABELS } from '../../data/counselingTypes.js'
+import { COUNSELING_TYPE_LABELS, COUNSELING_TARGET_LABELS } from '../../data/counselingTypes.js'
 
 const TYPE_COLORS = {
   mind: 'text-pink-700 bg-pink-100',
@@ -45,6 +45,11 @@ export default function ParentCommentTab({ child }) {
                     <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${typeColor}`}>
                       {COUNSELING_TYPE_LABELS[r.type] || r.type}
                     </span>
+                    {r.targetType && r.targetType !== 'student' && (
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                        {COUNSELING_TARGET_LABELS[r.targetType] ?? r.targetType} 상담
+                      </span>
+                    )}
                     <span className="text-xs font-semibold text-gray-500">
                       {educatorName(r.educatorId)}
                     </span>
