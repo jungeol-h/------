@@ -120,6 +120,7 @@ export const toCounselingRecord = (row) => ({
   followUp: row.follow_up ?? '',
   note: row.note ?? '',
   nextAppointment: row.next_appointment ?? '',
+  attachments: toArray(row.attachments), // [{ path, name, size }] — PDF 첨부 메타
 })
 
 export const toAlert = (row) => ({

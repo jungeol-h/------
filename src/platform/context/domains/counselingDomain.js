@@ -17,7 +17,7 @@ export function useCounselingDomain(setData) {
   // fields: { topic, diagnosis, advice, followUp, note, nextAppointment } — 보고서 양식 6단계.
   // content에는 합성 텍스트가 함께 들어온다(NOT NULL·PDF/레거시 소비처 호환).
   const addCounselingRecord = useCallback(
-    async ({ studentId, authorId, content, type, targetType, fields }) => {
+    async ({ studentId, authorId, content, type, targetType, fields, attachments }) => {
       const row = {
         id: makeId('c'),
         student_id: studentId,
@@ -32,6 +32,7 @@ export function useCounselingDomain(setData) {
         follow_up: fields?.followUp ?? null,
         note: fields?.note ?? null,
         next_appointment: fields?.nextAppointment ?? null,
+        attachments: attachments ?? [],
       }
       const { error } = await withWriteRetry(
         () => supabase.from('counseling_records').insert(row),
@@ -48,11 +49,12 @@ export function useCounselingDomain(setData) {
 
   // 상담 기록 수정 — 앱 모델 content는 DB의 content 컬럼(변환기에서 comment로 매핑)이다.
   const updateCounselingRecord = useCallback(
-    async (id, { content, type, targetType, fields }) => {
+    async (id, { content, type, targetType, fields, attachments }) => {
       const snake = {}
       if (content !== undefined) snake.content = content
       if (type !== undefined) snake.type = type
       if (targetType !== undefined) snake.target_type = targetType
+      if (attachments !== undefined) snake.attachments = attachments
       if (fields !== undefined) {
         snake.topic = fields.topic ?? null
         snake.diagnosis = fields.diagnosis ?? null
@@ -76,6 +78,7 @@ export function useCounselingDomain(setData) {
                 ...(content !== undefined ? { comment: content } : {}),
                 ...(type !== undefined ? { type } : {}),
                 ...(targetType !== undefined ? { targetType } : {}),
+                ...(attachments !== undefined ? { attachments } : {}),
                 ...(fields !== undefined
                   ? {
                       topic: fields.topic ?? '',

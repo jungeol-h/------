@@ -14,6 +14,8 @@ import { getMindStatus } from '../../context/selectors/riskDetection.js'
 import { COUNSELING_TYPE_LABELS, COUNSELING_TARGET_LABELS } from '../../data/counselingTypes.js'
 import CounselingFormModal from '../../components/counseling/CounselingFormModal.jsx'
 import CounselingRecordBody from '../../components/counseling/CounselingRecordBody.jsx'
+import { AttachmentChips } from '../../components/counseling/AttachmentField.jsx'
+import { removeCounselingFiles } from '../../lib/counselingFiles.js'
 import { educatorDisplayName } from '../../utils/educatorName.js'
 import TaskFormModal from '../../components/tasks/TaskFormModal.jsx'
 import DownloadPdfButton from '../../pdf/components/DownloadPdfButton.jsx'
@@ -612,10 +614,11 @@ function CounselingSection({ studentId, data, currentUser, canWrite = true }) {
   const canManage = (r) =>
     canWrite && (r.educatorId === currentUser?.id || currentUser?.role === 'admin')
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (record) => {
     if (!window.confirm('이 상담 기록을 삭제할까요?')) return
     try {
-      await deleteCounselingRecord(id)
+      await deleteCounselingRecord(record.id)
+      removeCounselingFiles(record.attachments?.map((a) => a.path)) // 실파일 정리 (best-effort)
     } catch {
       // 실패는 전역 Toast가 표면화한다.
     }
@@ -732,7 +735,7 @@ function CounselingSection({ studentId, data, currentUser, canWrite = true }) {
                         <Pencil size={14} />
                       </button>
                       <button
-                        onClick={() => handleDelete(r.id)}
+                        onClick={() => handleDelete(r)}
                         className="text-gray-400 hover:text-red-600 p-0.5"
                         aria-label="상담 삭제"
                       >
@@ -743,6 +746,7 @@ function CounselingSection({ studentId, data, currentUser, canWrite = true }) {
                 </div>
               </div>
               <CounselingRecordBody record={r} fallback={r.comment} />
+              <AttachmentChips attachments={r.attachments} />
               {author && <p className="text-xs text-gray-400 mt-2">작성: {educatorDisplayName(author)}</p>}
             </div>
           )

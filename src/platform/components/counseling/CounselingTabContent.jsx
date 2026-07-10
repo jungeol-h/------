@@ -13,6 +13,8 @@ import CounselingFormModal from './CounselingFormModal.jsx'
 import CounselingContentFields from './CounselingContentFields.jsx'
 import CounselingRecordBody from './CounselingRecordBody.jsx'
 import UrgentReportModal from './UrgentReportModal.jsx'
+import { AttachmentField, AttachmentChips } from './AttachmentField.jsx'
+import { uploadCounselingPdfs, removeCounselingFiles } from '../../lib/counselingFiles.js'
 
 const EMPTY_FIELDS = { topic: '', diagnosis: '', advice: '', followUp: '', note: '', nextAppointment: '' }
 
@@ -27,6 +29,7 @@ export default function CounselingTabContent({ students, records, showAuthor = f
   const [type, setType] = useState(COUNSELING_TYPES[0])
   const [targetType, setTargetType] = useState('student')
   const [fields, setFields] = useState(EMPTY_FIELDS)
+  const [attachFiles, setAttachFiles] = useState([]) // 업로드 대기 PDF File[]
   const [saving, setSaving] = useState(false)
   const [editRecord, setEditRecord] = useState(null)
   const [showUrgent, setShowUrgent] = useState(false)
@@ -37,10 +40,11 @@ export default function CounselingTabContent({ students, records, showAuthor = f
   const canManage = (r) =>
     !readOnly && (r.educatorId === currentUser?.id || currentUser?.role === 'admin')
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (record) => {
     if (!window.confirm('이 상담 기록을 삭제할까요?')) return
     try {
-      await deleteCounselingRecord(id)
+      await deleteCounselingRecord(record.id)
+      removeCounselingFiles(record.attachments?.map((a) => a.path)) // 실파일 정리 (best-effort)
     } catch {
       // 실패는 전역 Toast가 표면화한다.
     }
@@ -56,12 +60,14 @@ export default function CounselingTabContent({ students, records, showAuthor = f
     setSaving(true)
     try {
       const content = composeCounselingContent(fields)
-      await addCounselingRecord({ studentId, authorId, content, type, targetType, fields })
+      const attachments = attachFiles.length > 0 ? await uploadCounselingPdfs(attachFiles, authorId) : []
+      await addCounselingRecord({ studentId, authorId, content, type, targetType, fields, attachments })
       // 성공 시 폼 초기화(학생/유형은 연속 작성 편의를 위해 유지하지 않고 비움).
       setStudentId('')
       setType(COUNSELING_TYPES[0])
       setTargetType('student')
       setFields(EMPTY_FIELDS)
+      setAttachFiles([])
     } catch {
       // 저장 실패는 전역 Toast가 표면화한다.
     } finally {
@@ -128,6 +134,8 @@ export default function CounselingTabContent({ students, records, showAuthor = f
 
         <CounselingContentFields value={fields} onChange={setFields} fieldClass={fieldClass} />
 
+        <AttachmentField pending={attachFiles} onChangePending={setAttachFiles} />
+
         <div className="flex justify-end">
           <button
             onClick={handleSave}
@@ -175,7 +183,7 @@ export default function CounselingTabContent({ students, records, showAuthor = f
                             <Pencil size={14} />
                           </button>
                           <button
-                            onClick={() => handleDelete(r.id)}
+                            onClick={() => handleDelete(r)}
                             className="text-gray-400 hover:text-red-600 p-0.5"
                             aria-label="상담 삭제"
                           >
@@ -186,6 +194,7 @@ export default function CounselingTabContent({ students, records, showAuthor = f
                     </div>
                   </div>
                   <CounselingRecordBody record={r} fallback={r.comment} />
+                  <AttachmentChips attachments={r.attachments} />
                   {showAuthor && author && (
                     <p className="text-xs text-gray-400 mt-2">작성: {educatorDisplayName(author)}</p>
                   )}

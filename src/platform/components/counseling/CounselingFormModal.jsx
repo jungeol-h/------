@@ -7,6 +7,8 @@ import {
   composeCounselingContent, hasStructuredContent,
 } from '../../data/counselingTypes.js'
 import CounselingContentFields from './CounselingContentFields.jsx'
+import { AttachmentField } from './AttachmentField.jsx'
+import { uploadCounselingPdfs, removeCounselingFiles } from '../../lib/counselingFiles.js'
 
 // 상담 작성 모달 — 매니저/관리자/학생상세에서 재사용. 코칭 모달(ManagerHomeTab) 패턴 차용.
 // fixedStudent가 있으면 해당 학생 고정, 없으면 students 목록에서 선택.
@@ -28,6 +30,8 @@ export default function CounselingFormModal({ students = [], fixedStudent, recor
     nextAppointment: record?.nextAppointment ?? '',
   })
   const [saving, setSaving] = useState(false)
+  const [existingAttachments, setExistingAttachments] = useState(record?.attachments ?? [])
+  const [attachFiles, setAttachFiles] = useState([]) // 업로드 대기 PDF File[]
 
   const fieldClass = 'w-full border border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300'
 
@@ -35,10 +39,15 @@ export default function CounselingFormModal({ students = [], fixedStudent, recor
     setSaving(true)
     try {
       const content = composeCounselingContent(fields)
+      const uploaded = attachFiles.length > 0 ? await uploadCounselingPdfs(attachFiles, authorId) : []
+      const attachments = [...existingAttachments, ...uploaded]
       if (isEdit) {
-        await updateCounselingRecord(record.id, { content, type, targetType, fields })
+        await updateCounselingRecord(record.id, { content, type, targetType, fields, attachments })
+        // 수정에서 제거된 첨부의 실파일 정리 (best-effort)
+        const keptPaths = new Set(existingAttachments.map((a) => a.path))
+        removeCounselingFiles((record.attachments ?? []).filter((a) => !keptPaths.has(a.path)).map((a) => a.path))
       } else {
-        await addCounselingRecord({ studentId, authorId, content, type, targetType, fields })
+        await addCounselingRecord({ studentId, authorId, content, type, targetType, fields, attachments })
       }
       onSaved?.()
       onClose()
@@ -51,7 +60,7 @@ export default function CounselingFormModal({ students = [], fixedStudent, recor
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center px-4 pb-4">
-      <div className="bg-white rounded-3xl w-full max-w-lg p-5 space-y-4">
+      <div className="bg-white rounded-3xl w-full max-w-lg p-5 space-y-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between">
           <h3 className="font-bold text-gray-900 text-base">{isEdit ? '상담 수정' : '상담 작성'}</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1">
@@ -110,6 +119,13 @@ export default function CounselingFormModal({ students = [], fixedStudent, recor
         </div>
 
         <CounselingContentFields value={fields} onChange={setFields} fieldClass={fieldClass} />
+
+        <AttachmentField
+          existing={existingAttachments}
+          onRemoveExisting={(path) => setExistingAttachments((prev) => prev.filter((a) => a.path !== path))}
+          pending={attachFiles}
+          onChangePending={setAttachFiles}
+        />
 
         <div className="flex gap-2">
           <button
