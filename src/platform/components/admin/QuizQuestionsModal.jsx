@@ -78,7 +78,7 @@ export default function QuizQuestionsModal({
               <div key={q.id} className="bg-white rounded-xl border border-gray-100 p-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs text-gray-800 leading-relaxed">
+                    <p className="text-xs text-gray-800 leading-relaxed whitespace-pre-wrap">
                       <span className="text-[10px] font-bold text-gray-400 mr-1">Q{q.orderNo}.</span>
                       {q.question}
                     </p>

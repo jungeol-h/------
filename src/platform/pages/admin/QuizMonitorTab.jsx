@@ -4,6 +4,7 @@ import { useData } from '../../context/DataContext.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
 import QuizResultsTable from '../../components/admin/QuizResultsTable.jsx'
 import QuizSetManagement from '../../components/admin/QuizSetManagement.jsx'
+import RefreshButton from '../../components/RefreshButton.jsx'
 import DownloadPdfButton from '../../pdf/components/DownloadPdfButton.jsx'
 import { buildFilename, nowDateTime } from '../../pdf/utils/formatters.js'
 import { authorOf } from '../../pdf/config/meta.js'
@@ -55,11 +56,14 @@ export default function QuizMonitorTab() {
           <ClipboardCheck size={20} className="text-emerald-600" />
           <h2 className="text-base font-bold text-gray-800">확인평가 모니터링</h2>
         </div>
-        <DownloadPdfButton
-          onDownload={handleDownloadPdf}
-          label="확인평가 보고서"
-          disabled={summaries.length === 0}
-        />
+        <div className="flex items-center gap-2">
+          <RefreshButton />
+          <DownloadPdfButton
+            onDownload={handleDownloadPdf}
+            label="확인평가 보고서"
+            disabled={summaries.length === 0}
+          />
+        </div>
       </div>
 
       {summaries.length === 0 ? (

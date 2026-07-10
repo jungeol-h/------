@@ -46,7 +46,6 @@ snake_case DB ↔ camelCase 변환은 `lib/supabaseHelpers.js`.
 
 ## 개발 규칙
 
-- 토큰 절약을 위해 설계는 Fable 5가 직접 하되, 구현, 코드 작성은 Opus 서브 에이전트를 적극 활용해야 한다.
 - **z-index**: Header/TabBar `z-40`, 모달 `z-50`.
 - **PDF**: `@react-pdf/renderer` 기반 `src/platform/pdf/`. 서버 렌더링 금지.
   추가 패턴은 메모리 `reference_pdf_infra` 참고.

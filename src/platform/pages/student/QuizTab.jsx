@@ -346,7 +346,7 @@ export default function QuizTab() {
                     ? <CheckCircle2 size={18} className="text-emerald-500 flex-shrink-0 mt-0.5" />
                     : <XCircle    size={18} className="text-red-500     flex-shrink-0 mt-0.5" />
                   }
-                  <p className="text-sm text-gray-800 leading-relaxed flex-1">
+                  <p className="text-sm text-gray-800 leading-relaxed flex-1 whitespace-pre-wrap">
                     <span className="text-[11px] font-bold text-gray-400 mr-1">Q{idx + 1}.</span>
                     {q.question}
                   </p>
@@ -366,7 +366,7 @@ export default function QuizTab() {
                     )}
                   </p>
                   {q.explanation && (
-                    <p className="text-gray-500 leading-relaxed pt-1">
+                    <p className="text-gray-500 leading-relaxed pt-1 whitespace-pre-wrap">
                       <span className="text-gray-400">해설: </span>{q.explanation}
                     </p>
                   )}

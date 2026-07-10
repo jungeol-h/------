@@ -38,6 +38,19 @@ export function DataProvider({ children }) {
   const [loading, setLoading] = useState(false)
   const [dataReady, setDataReady] = useState(false)
 
+  const userId = currentUser?.id
+  const userRole = currentUser?.role
+
+  // 역할별 fetch 라우팅 — 초기 로드(useEffect)와 수동 refetch가 공유한다.
+  const fetchAll = useCallback(async () => {
+    if (userRole === 'student') return fetchForStudent(userId)
+    if (userRole === 'manager') return fetchForManager(userId)
+    if (userRole === 'admin') return fetchForAdmin()
+    if (userRole === 'parent') return fetchForParent(userId)
+    if (['instructor', 'consultant', 'viewer'].includes(userRole)) return fetchForAdmin()
+    return EMPTY
+  }, [userId, userRole])
+
   // currentUser 변경 시 역할별 fetch
   useEffect(() => {
     setSentryUser(currentUser ?? null)
@@ -53,20 +66,7 @@ export function DataProvider({ children }) {
 
     const load = async () => {
       try {
-        let fetched
-        if (currentUser.role === 'student') {
-          fetched = await fetchForStudent(currentUser.id)
-        } else if (currentUser.role === 'manager') {
-          fetched = await fetchForManager(currentUser.id)
-        } else if (currentUser.role === 'admin') {
-          fetched = await fetchForAdmin()
-        } else if (currentUser.role === 'parent') {
-          fetched = await fetchForParent(currentUser.id)
-        } else if (['instructor', 'consultant', 'viewer'].includes(currentUser.role)) {
-          fetched = await fetchForAdmin()
-        } else {
-          fetched = EMPTY
-        }
+        const fetched = await fetchAll()
         if (!cancelled) {
           setData(fetched)
           setDataReady(true)
@@ -88,7 +88,22 @@ export function DataProvider({ children }) {
 
     load()
     return () => { cancelled = true }
-  }, [currentUser?.id, currentUser?.role])
+  }, [currentUser?.id, currentUser?.role, fetchAll])
+
+  // 수동 새로고침 — dataReady는 유지해 화면을 로딩 상태로 갈아엎지 않는다.
+  // 실패 시 기존 데이터를 그대로 두고 Sentry에만 보고한다.
+  const refetch = useCallback(async () => {
+    if (!userId) return
+    setLoading(true)
+    try {
+      const fetched = await fetchAll()
+      setData(fetched)
+    } catch (err) {
+      reportError(err, { where: 'DataContext.refetch', role: userRole })
+    } finally {
+      setLoading(false)
+    }
+  }, [userId, userRole, fetchAll])
 
   // [Write] 도메인 훅 결합
   const mind = useMindDomain(setData)
@@ -131,8 +146,9 @@ export function DataProvider({ children }) {
       ...parent,
       getWeeklyLearning,
       resetData,
+      refetch,
     }),
-    [data, loading, dataReady, mind, diary, alert, task, learning, career, quiz, student, counseling, attendance, parent, getWeeklyLearning, resetData]
+    [data, loading, dataReady, mind, diary, alert, task, learning, career, quiz, student, counseling, attendance, parent, getWeeklyLearning, resetData, refetch]
   )
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>

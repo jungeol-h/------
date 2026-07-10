@@ -170,7 +170,7 @@ export default function QuizResultsTable({ attempts, students, quizSets, quizQue
                           ? <CheckCircle2 size={16} className="text-emerald-500 flex-shrink-0 mt-0.5" />
                           : <XCircle    size={16} className="text-red-500     flex-shrink-0 mt-0.5" />
                         }
-                        <p className="text-xs text-gray-800 leading-relaxed">
+                        <p className="text-xs text-gray-800 leading-relaxed whitespace-pre-wrap">
                           <span className="text-[10px] font-bold text-gray-400 mr-1">Q{idx + 1}.</span>
                           {q?.question ?? <span className="text-gray-400 italic">(삭제된 문제)</span>}
                         </p>
