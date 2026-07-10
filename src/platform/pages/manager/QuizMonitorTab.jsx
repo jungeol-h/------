@@ -4,7 +4,7 @@ import QuizResultsTable from '../../components/admin/QuizResultsTable.jsx'
 import RefreshButton from '../../components/RefreshButton.jsx'
 
 export default function QuizMonitorTab() {
-  const { data } = useData()
+  const { data, updateQuizAttemptGrading } = useData()
 
   // 매니저 fetch가 이미 담당 학생 응시만 가져와서 별도 필터 불필요
   return (
@@ -23,6 +23,7 @@ export default function QuizMonitorTab() {
         quizSets={data.quizSets}
         quizQuestions={data.quizQuestions}
         emptyMessage="담당 학생의 응시 이력이 아직 없습니다."
+        onUpdateGrading={updateQuizAttemptGrading}
       />
     </div>
   )

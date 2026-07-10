@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react'
 import { Plus, Pencil, Trash2, ChevronLeft } from 'lucide-react'
 import { useData } from '../../../context/DataContext.jsx'
 import { useAuth } from '../../../context/AuthContext.jsx'
-import { COUNSELING_TYPE_LABELS } from '../../../data/counselingTypes.js'
+import { COUNSELING_TYPE_LABELS, COUNSELING_TARGET_LABELS } from '../../../data/counselingTypes.js'
 import DownloadPdfButton from '../../../pdf/components/DownloadPdfButton.jsx'
 import { buildFilename, nowDateTime } from '../../../pdf/utils/formatters.js'
 import { authorOf } from '../../../pdf/config/meta.js'
@@ -62,6 +62,7 @@ export default function ExternalStudentDetail({
         records={asc.map((r) => ({
           date: r.date,
           typeLabel: COUNSELING_TYPE_LABELS[r.type] || r.type,
+          targetLabel: COUNSELING_TARGET_LABELS[r.targetType] ?? '학생',
           authorName: authorName(r.counselorId),
           content: r.content,
         }))}
@@ -109,9 +110,14 @@ export default function ExternalStudentDetail({
         sorted.map((r) => (
           <div key={r.id} className="bg-white rounded-2xl p-4 shadow-sm">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">
-                {COUNSELING_TYPE_LABELS[r.type] || r.type}
-              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">
+                  {COUNSELING_TYPE_LABELS[r.type] || r.type}
+                </span>
+                <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                  {COUNSELING_TARGET_LABELS[r.targetType] ?? '학생'}
+                </span>
+              </div>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-400">{r.date}</span>
                 {canManage(r) && (

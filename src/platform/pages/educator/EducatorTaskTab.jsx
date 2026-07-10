@@ -80,6 +80,12 @@ export default function EducatorTaskTab() {
                   </div>
                 </div>
                 <p className="text-sm text-gray-700 font-medium">{t.title}</p>
+                {t.content && (
+                  <p className="text-xs text-gray-600 mt-1 whitespace-pre-wrap leading-relaxed">{t.content}</p>
+                )}
+                {t.method && (
+                  <p className="text-xs text-gray-500 mt-1">수행방법: {t.method}</p>
+                )}
                 <p className="text-xs text-gray-400 mt-0.5">
                   {t.subject ? `${t.subject} · ` : ''}마감 {t.dueDate}
                   {t.dueTime && t.dueTime !== '23:59' ? ` ${t.dueTime}` : ''}

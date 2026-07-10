@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
-import { X, CheckCircle2, XCircle, FileText } from 'lucide-react'
+import { X, CheckCircle2, XCircle, FileText, Clock, Save } from 'lucide-react'
+import { hasPendingGrading } from '../../utils/quizGrading.js'
 
 // props:
 //   attempts: QuizAttempt[]   — 표시할 응시 이력
@@ -7,10 +8,41 @@ import { X, CheckCircle2, XCircle, FileText } from 'lucide-react'
 //   quizSets: QuizSet[]       — id로 회차 매핑 (회차 제목 표시)
 //   quizQuestions: QuizQuestion[] — 상세 모달용
 //   emptyMessage?: string
-export default function QuizResultsTable({ attempts, students, quizSets, quizQuestions, emptyMessage }) {
+//   onUpdateGrading?: (attemptId, isCorrectByQid) => Promise<updatedAttempt>
+//     — 있으면 상세 모달에서 문항별 정오 토글 + 채점 저장 가능 (서술형 채점·자동채점 정정)
+export default function QuizResultsTable({ attempts, students, quizSets, quizQuestions, emptyMessage, onUpdateGrading }) {
   const [filterGrade, setFilterGrade] = useState('all')
   const [filterSetId, setFilterSetId] = useState('all')
   const [openAttempt, setOpenAttempt] = useState(null)
+  const [gradingDraft, setGradingDraft] = useState({})
+  const [savingGrades, setSavingGrades] = useState(false)
+
+  const draftFrom = (attempt) =>
+    Object.fromEntries(attempt.answers.map((ans) => [ans.questionId, ans.isCorrect]))
+
+  const openDetail = (attempt) => {
+    setOpenAttempt(attempt)
+    setGradingDraft(draftFrom(attempt))
+  }
+
+  const gradingDirty = !!openAttempt &&
+    openAttempt.answers.some((ans) => gradingDraft[ans.questionId] !== ans.isCorrect)
+
+  const handleSaveGrading = async () => {
+    if (!onUpdateGrading || !openAttempt || !gradingDirty || savingGrades) return
+    setSavingGrades(true)
+    try {
+      const updated = await onUpdateGrading(openAttempt.id, gradingDraft)
+      if (updated) {
+        setOpenAttempt(updated)
+        setGradingDraft(draftFrom(updated))
+      }
+    } catch {
+      // 저장 실패는 전역 Toast가 표면화한다.
+    } finally {
+      setSavingGrades(false)
+    }
+  }
 
   const studentById = useMemo(() => Object.fromEntries(students.map((s) => [s.id, s])), [students])
   const setById     = useMemo(() => Object.fromEntries(quizSets.map((s) => [s.id, s])), [quizSets])
@@ -103,7 +135,7 @@ export default function QuizResultsTable({ attempts, students, quizSets, quizQue
               return (
                 <li key={a.id}>
                   <button
-                    onClick={() => setOpenAttempt(a)}
+                    onClick={() => openDetail(a)}
                     className="w-full text-left px-4 py-3 hover:bg-gray-50 active:bg-gray-100 transition-colors"
                   >
                     <div className="sm:grid sm:grid-cols-12 sm:gap-2 sm:items-center flex flex-col gap-1">
@@ -115,6 +147,9 @@ export default function QuizResultsTable({ attempts, students, quizSets, quizQue
                           {a.score} / {a.total}
                         </span>
                         <span className="text-[11px] text-gray-400 ml-1">({pct}%)</span>
+                        {hasPendingGrading(a) && (
+                          <span className="text-[10px] bg-amber-100 text-amber-700 font-bold px-1.5 py-0.5 rounded-full ml-1.5 align-middle">채점중</span>
+                        )}
                       </p>
                       <p className="sm:col-span-2 text-xs text-gray-400">{submitted}</p>
                     </div>
@@ -162,27 +197,41 @@ export default function QuizResultsTable({ attempts, students, quizSets, quizQue
               ) : (
                 openAttempt.answers.map((ans, idx) => {
                   const q = openQuestionMap[ans.questionId]
-                  const ok = ans.isCorrect
+                  const mark = onUpdateGrading ? gradingDraft[ans.questionId] : ans.isCorrect
+                  const pending = mark == null
+                  const ok = mark === true
                   return (
-                    <div key={ans.questionId} className={`rounded-xl p-3 border ${ok ? 'border-emerald-100 bg-emerald-50/40' : 'border-red-100 bg-red-50/40'}`}>
+                    <div
+                      key={ans.questionId}
+                      className={`rounded-xl p-3 border ${
+                        pending ? 'border-amber-100 bg-amber-50/40'
+                          : ok ? 'border-emerald-100 bg-emerald-50/40'
+                          : 'border-red-100 bg-red-50/40'
+                      }`}
+                    >
                       <div className="flex items-start gap-2 mb-1.5">
-                        {ok
-                          ? <CheckCircle2 size={16} className="text-emerald-500 flex-shrink-0 mt-0.5" />
-                          : <XCircle    size={16} className="text-red-500     flex-shrink-0 mt-0.5" />
+                        {pending
+                          ? <Clock size={16} className="text-amber-500 flex-shrink-0 mt-0.5" />
+                          : ok
+                            ? <CheckCircle2 size={16} className="text-emerald-500 flex-shrink-0 mt-0.5" />
+                            : <XCircle    size={16} className="text-red-500     flex-shrink-0 mt-0.5" />
                         }
-                        <p className="text-xs text-gray-800 leading-relaxed whitespace-pre-wrap">
+                        <p className="text-xs text-gray-800 leading-relaxed whitespace-pre-wrap flex-1">
                           <span className="text-[10px] font-bold text-gray-400 mr-1">Q{idx + 1}.</span>
                           {q?.question ?? <span className="text-gray-400 italic">(삭제된 문제)</span>}
                         </p>
+                        {q?.type === 'essay' && (
+                          <span className="text-[10px] bg-amber-100 text-amber-700 font-bold px-1.5 py-0.5 rounded-full flex-shrink-0">서술형</span>
+                        )}
                       </div>
                       <div className="ml-5 text-[11px] space-y-0.5">
                         <p>
                           <span className="text-gray-400">답: </span>
-                          <span className={ok ? 'text-emerald-700 font-semibold' : 'text-red-700 font-semibold'}>
+                          <span className={`whitespace-pre-wrap ${pending ? 'text-gray-700 font-semibold' : ok ? 'text-emerald-700 font-semibold' : 'text-red-700 font-semibold'}`}>
                             {ans.raw || '(미입력)'}
                           </span>
                         </p>
-                        {q && (
+                        {q && q.acceptedAnswers.length > 0 && (
                           <p>
                             <span className="text-gray-400">정답: </span>
                             <span className="text-gray-800 font-semibold">{q.acceptedAnswers[0]}</span>
@@ -191,6 +240,33 @@ export default function QuizResultsTable({ attempts, students, quizSets, quizQue
                             )}
                           </p>
                         )}
+                        {onUpdateGrading && (
+                          <div className="flex items-center gap-1.5 pt-1.5">
+                            <button
+                              type="button"
+                              onClick={() => setGradingDraft((d) => ({ ...d, [ans.questionId]: true }))}
+                              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition ${
+                                ok
+                                  ? 'bg-emerald-600 text-white border-emerald-600'
+                                  : 'bg-white text-emerald-700 border-emerald-200 hover:bg-emerald-50'
+                              }`}
+                            >
+                              정답
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setGradingDraft((d) => ({ ...d, [ans.questionId]: false }))}
+                              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition ${
+                                mark === false
+                                  ? 'bg-red-600 text-white border-red-600'
+                                  : 'bg-white text-red-700 border-red-200 hover:bg-red-50'
+                              }`}
+                            >
+                              오답
+                            </button>
+                            {pending && <span className="text-amber-600 font-semibold ml-1">채점 대기</span>}
+                          </div>
+                        )}
                       </div>
                     </div>
                   )
@@ -198,13 +274,23 @@ export default function QuizResultsTable({ attempts, students, quizSets, quizQue
               )}
             </div>
 
-            <div className="px-4 py-3 border-t border-gray-100">
+            <div className="px-4 py-3 border-t border-gray-100 flex gap-2">
               <button
                 onClick={() => setOpenAttempt(null)}
-                className="w-full py-2.5 rounded-xl bg-gray-100 text-sm font-semibold text-gray-700"
+                className="flex-1 py-2.5 rounded-xl bg-gray-100 text-sm font-semibold text-gray-700"
               >
                 닫기
               </button>
+              {onUpdateGrading && (
+                <button
+                  onClick={handleSaveGrading}
+                  disabled={!gradingDirty || savingGrades}
+                  className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-sm font-semibold text-white flex items-center justify-center gap-1.5 disabled:opacity-40"
+                >
+                  <Save size={15} />
+                  {savingGrades ? '저장 중…' : '채점 저장'}
+                </button>
+              )}
             </div>
           </div>
         </div>

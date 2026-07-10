@@ -4,6 +4,7 @@ import Section from '../components/Section'
 import Table from '../components/Table'
 import KpiGrid from '../components/KpiGrid'
 import { colors } from '../config/styles'
+import { hasPendingGrading } from '../../utils/quizGrading.js'
 
 const scoreColor = (pct) => {
   if (pct >= 80) return colors.accentGreen
@@ -89,7 +90,7 @@ export default function QuizReport({
       student: stu?.name ?? a.studentId,
       grade: stu?.grade ?? '-',
       set: set ? `${set.grade} ${set.round}회 · ${set.title}` : a.quizSetId,
-      score: `${a.score} / ${a.total}`,
+      score: `${a.score} / ${a.total}${hasPendingGrading(a) ? ' (채점중)' : ''}`,
       pct: (
         <Text style={{ color: scoreColor(pct), fontWeight: 600, textAlign: 'right' }}>
           {pct}%

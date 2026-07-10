@@ -311,6 +311,12 @@ function TaskSection({ studentId, data, currentUser, canWrite = false }) {
                 <div key={t.id} className="bg-white rounded-xl p-3 shadow-sm border-l-4 border-orange-400 flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-sm text-gray-800">{t.title}</p>
+                    {t.content && (
+                      <p className="text-xs text-gray-600 mt-1 whitespace-pre-wrap leading-relaxed">{t.content}</p>
+                    )}
+                    {t.method && (
+                      <p className="text-xs text-gray-500 mt-1">수행방법: {t.method}</p>
+                    )}
                     <p className="text-xs text-gray-400 mt-0.5">
                       {t.subject}{t.assignerName ? ` · 출제: ${t.assignerName}` : ''} · 마감 {t.dueDate}
                     </p>
@@ -668,7 +674,7 @@ function CounselingSection({ studentId, data, currentUser, canWrite = true }) {
         generatedAt={nowDateTime()}
         author={authorOf(currentUser)}
       />,
-      buildFilename('종합성찰리포트', student?.name),
+      buildFilename('종합성장리포트', student?.name),
     )
   }, [studentId, student, data, currentUser])
 
@@ -677,7 +683,7 @@ function CounselingSection({ studentId, data, currentUser, canWrite = true }) {
       <div className="flex justify-end gap-2">
         <DownloadPdfButton
           onDownload={handleDownloadReflection}
-          label="종합 성찰 리포트"
+          label="종합 성장 리포트"
           className="bg-blue-600 hover:bg-blue-700"
         />
         <DownloadPdfButton

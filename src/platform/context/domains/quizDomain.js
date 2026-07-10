@@ -63,6 +63,36 @@ export function useQuizDomain(data, setData) {
     [data.quizQuestions, setData]
   )
 
+  // 교사 수동 채점 — 문항별 정오(isCorrect)를 병합하고 score를 재계산해 UPDATE.
+  // 서술형 채점 대기(null) 해소 + 자동채점 정정 겸용. 갱신된 attempt를 반환한다.
+  const updateQuizAttemptGrading = useCallback(
+    async (attemptId, isCorrectByQid) => {
+      const attempt = data.quizAttempts.find((a) => a.id === attemptId)
+      if (!attempt) throw new Error('응시 기록을 찾지 못했습니다.')
+      const newAnswers = attempt.answers.map((a) =>
+        isCorrectByQid[a.questionId] !== undefined
+          ? { ...a, isCorrect: isCorrectByQid[a.questionId] }
+          : a
+      )
+      const newScore = newAnswers.filter((a) => a.isCorrect === true).length
+      const { error } = await withWriteRetry(
+        () => supabase
+          .from('quiz_attempts')
+          .update({ answers: newAnswers, score: newScore })
+          .eq('id', attemptId),
+        { label: 'updateQuizAttemptGrading' }
+      )
+      if (error) throw error
+      const updated = { ...attempt, answers: newAnswers, score: newScore }
+      setData((prev) => ({
+        ...prev,
+        quizAttempts: prev.quizAttempts.map((a) => (a.id === attemptId ? updated : a)),
+      }))
+      return updated
+    },
+    [data.quizAttempts, setData]
+  )
+
   // 회차 신규 생성
   const createQuizSet = useCallback(
     async ({ title, grade, round, source = '', description = '', isPublished = true }) => {
@@ -150,6 +180,7 @@ export function useQuizDomain(data, setData) {
         id: makeId('qq-'),
         quiz_set_id: newSetId,
         order_no: q.orderNo,
+        type: q.type ?? 'short',
         question: q.question,
         accepted_answers: q.acceptedAnswers,
         explanation: q.explanation ?? '',
@@ -207,11 +238,12 @@ export function useQuizDomain(data, setData) {
 
   // 문제 신규 생성
   const createQuizQuestion = useCallback(
-    async ({ quizSetId, orderNo, question, acceptedAnswers, explanation = '', hint = '' }) => {
+    async ({ quizSetId, orderNo, type = 'short', question, acceptedAnswers, explanation = '', hint = '' }) => {
       const row = {
         id: makeId('qq-'),
         quiz_set_id: quizSetId,
         order_no: orderNo,
+        type,
         question,
         accepted_answers: acceptedAnswers,
         explanation,
@@ -237,6 +269,7 @@ export function useQuizDomain(data, setData) {
     async (questionId, patch) => {
       const snake = {}
       if (patch.orderNo !== undefined) snake.order_no = patch.orderNo
+      if (patch.type !== undefined) snake.type = patch.type
       if (patch.question !== undefined) snake.question = patch.question
       if (patch.acceptedAnswers !== undefined) snake.accepted_answers = patch.acceptedAnswers
       if (patch.explanation !== undefined) snake.explanation = patch.explanation
@@ -275,6 +308,7 @@ export function useQuizDomain(data, setData) {
 
   return {
     submitQuizAttempt,
+    updateQuizAttemptGrading,
     createQuizSet,
     updateQuizSet,
     duplicateQuizSetShuffled,

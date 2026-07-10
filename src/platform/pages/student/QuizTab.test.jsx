@@ -16,6 +16,14 @@ const data = {
       description: '',
       isPublished: true,
     },
+    {
+      id: 'qs-2',
+      grade: '중1',
+      round: 2,
+      title: '중1 확인평가 2회',
+      description: '',
+      isPublished: true,
+    },
   ],
   quizQuestions: [
     {
@@ -31,6 +39,14 @@ const data = {
       orderNo: 2,
       question: '두 번째 문제',
       acceptedAnswers: ['정답2'],
+    },
+    {
+      id: 'q3',
+      quizSetId: 'qs-2',
+      orderNo: 1,
+      type: 'essay',
+      question: '서술형 문제',
+      acceptedAnswers: [],
     },
   ],
   quizAttempts: [],
@@ -110,5 +126,42 @@ describe('QuizTab draft protection', () => {
       expect(submitQuizAttempt).toHaveBeenCalledWith('s001', 'qs-1', { q1: '정답1', q2: '정답2' })
     })
     expect(localStorage.getItem('quiz_draft:s001:qs-1')).toBeNull()
+  })
+})
+
+describe('QuizTab 서술형 문항', () => {
+  it('서술형 문항은 textarea로 입력하고 수동 채점 안내를 보여준다', () => {
+    render(<QuizTab />)
+    fireEvent.click(screen.getByText('중1 확인평가 2회'))
+
+    expect(screen.getByPlaceholderText('답안을 작성하세요').tagName).toBe('TEXTAREA')
+    expect(screen.getByText('서술형 문항은 제출 후 선생님이 직접 채점합니다.')).toBeTruthy()
+  })
+})
+
+describe('QuizTab 채점 대기 표시', () => {
+  beforeEach(() => {
+    data.quizAttempts.push({
+      id: 'qa-1',
+      studentId: 's001',
+      quizSetId: 'qs-2',
+      score: 0,
+      total: 1,
+      submittedAt: '2026-07-01T00:00:00.000Z',
+      answers: [{ questionId: 'q3', raw: '서술 답안', isCorrect: null }],
+    })
+  })
+
+  afterEach(() => {
+    data.quizAttempts.length = 0
+  })
+
+  it('목록과 결과 화면에 채점 대기 상태를 보여준다', () => {
+    render(<QuizTab />)
+    expect(screen.getByText(/채점 대기 중/)).toBeTruthy()
+
+    fireEvent.click(screen.getByText('중1 확인평가 2회'))
+    expect(screen.getByText(/선생님 채점 후 점수가 갱신됩니다/)).toBeTruthy()
+    expect(screen.getByText('채점 대기 — 선생님이 확인 후 채점합니다')).toBeTruthy()
   })
 })

@@ -3,6 +3,7 @@ import {
   evaluateMindLevel,
   getMindStatus,
   getRiskStudents,
+  getMindCautionStudents,
 } from './riskDetection.js'
 
 // docs 기준: 합산 -6 이하 또는 단일 -4 이하 → 위험.
@@ -114,5 +115,47 @@ describe('getRiskStudents — 위험군 목록', () => {
     }
     const result = getRiskStudents(sortData)
     expect(result.map((r) => r.student.id)).toEqual(['b', 'a'])
+  })
+})
+
+describe('getMindCautionStudents — 마인드 주의 (세 지표 중 하나라도 -3 이하)', () => {
+  const students = [
+    { id: 's1', name: '가' },
+    { id: 's2', name: '나' },
+    { id: 's3', name: '다', status: 'inactive' },
+  ]
+
+  it('최근 기록의 단일 지표 -3 이하면 주의로 잡는다 (기존 위험 기준 -4보다 민감)', () => {
+    const data = {
+      students,
+      mindRecords: [
+        { studentId: 's1', date: '2026-07-09', mood: -3, motivation: 2, confidence: 1 },
+        { studentId: 's2', date: '2026-07-09', mood: -2, motivation: -2, confidence: -2 },
+      ],
+    }
+    const result = getMindCautionStudents(data)
+    expect(result.map((x) => x.student.id)).toEqual(['s1'])
+  })
+
+  it('과거 기록이 -3 이하여도 최근 기록이 정상이면 제외', () => {
+    const data = {
+      students,
+      mindRecords: [
+        { studentId: 's1', date: '2026-07-01', mood: -5, motivation: 0, confidence: 0 },
+        { studentId: 's1', date: '2026-07-09', mood: 2, motivation: 2, confidence: 2 },
+      ],
+    }
+    expect(getMindCautionStudents(data)).toEqual([])
+  })
+
+  it('inactive 학생·기록 없는 학생은 제외, 빈 데이터도 안전', () => {
+    const data = {
+      students,
+      mindRecords: [
+        { studentId: 's3', date: '2026-07-09', mood: -5, motivation: -5, confidence: -5 },
+      ],
+    }
+    expect(getMindCautionStudents(data)).toEqual([])
+    expect(getMindCautionStudents({})).toEqual([])
   })
 })

@@ -6,7 +6,8 @@ import { colors, fontSize } from '../config/styles'
 
 // 상담 누적 보고서 — 재원생/외생(외부 학생) 공용.
 // DataContext에 의존하지 않고 순수 props만 받는다.
-// props: { student: {name, school, grade}, records: [{date, typeLabel, authorName, content}], generatedAt, author }
+// props: { student: {name, school, grade}, records: [{date, typeLabel, targetLabel?, authorName, content}], generatedAt, author }
+// targetLabel(피상담자)은 외생 상담에만 있음 — 하나라도 있으면 '대상' 컬럼 표시.
 
 const infoStyles = StyleSheet.create({
   grid: {
@@ -48,17 +49,21 @@ export default function CounselingReport({ student = {}, records = [], generated
   const last = dates[dates.length - 1]
   const period = first ? (first === last ? first : `${first} ~ ${last}`) : '-'
 
+  const hasTarget = records.some((r) => r.targetLabel)
+
   const columns = [
     { key: 'date', header: '날짜', width: '12%' },
     { key: 'typeLabel', header: '구분', width: '12%', align: 'center' },
+    ...(hasTarget ? [{ key: 'targetLabel', header: '대상', width: '10%', align: 'center' }] : []),
     { key: 'authorName', header: '작성자', width: '14%', align: 'center' },
-    { key: 'content', header: '상담 내용', width: '62%' },
+    { key: 'content', header: '상담 내용', width: hasTarget ? '52%' : '62%' },
   ]
 
   const rows = records.map((r, idx) => ({
     key: idx,
     date: r.date || '-',
     typeLabel: r.typeLabel || '-',
+    ...(hasTarget ? { targetLabel: r.targetLabel || '-' } : {}),
     authorName: r.authorName || '-',
     content: r.content || '-',
   }))

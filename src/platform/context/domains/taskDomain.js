@@ -99,7 +99,7 @@ export function useTaskDomain(data, setData) {
 
   // 과제 부여 (교과강사/컨설턴트/매니저/관리자가 학생에게 과제 배정)
   const addTask = useCallback(
-    async ({ studentId, title, subject, dueDate, dueTime, assignerId, assignerName }) => {
+    async ({ studentId, title, subject, dueDate, dueTime, assignerId, assignerName, method, content }) => {
       const row = {
         id: makeId('t'),
         student_id: studentId,
@@ -110,6 +110,8 @@ export function useTaskDomain(data, setData) {
         status: 'pending',
         assigner_id: assignerId ?? null,
         assigner_name: assignerName ?? null,
+        method: method || null,
+        content: content || null,
       }
       const { error } = await withWriteRetry(
         () => supabase.from('tasks').insert(row),
@@ -124,7 +126,7 @@ export function useTaskDomain(data, setData) {
     [setData]
   )
 
-  // 과제 수정 (제목/과목/마감일/마감시간)
+  // 과제 수정 (제목/과목/마감일/마감시간/수행방법/과제 내용)
   const updateTask = useCallback(
     async (id, patch) => {
       const snake = {}
@@ -132,6 +134,8 @@ export function useTaskDomain(data, setData) {
       if (patch.subject !== undefined) snake.subject = patch.subject
       if (patch.dueDate !== undefined) snake.due_date = patch.dueDate
       if (patch.dueTime !== undefined) snake.due_time = patch.dueTime
+      if (patch.method !== undefined) snake.method = patch.method || null
+      if (patch.content !== undefined) snake.content = patch.content || null
       if (Object.keys(snake).length === 0) return
       const { error } = await withWriteRetry(
         () => supabase.from('tasks').update(snake).eq('id', id),

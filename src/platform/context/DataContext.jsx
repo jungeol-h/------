@@ -36,6 +36,7 @@ export function DataProvider({ children }) {
   const { currentUser } = useAuth()
   const [data, setData] = useState(EMPTY)
   const [loading, setLoading] = useState(false)
+  const [refreshing, setRefreshing] = useState(false) // 수동 refetch 전용 (loading과 분리 — 대시보드 전체 로더 방지)
   const [dataReady, setDataReady] = useState(false)
 
   const userId = currentUser?.id
@@ -90,18 +91,19 @@ export function DataProvider({ children }) {
     return () => { cancelled = true }
   }, [currentUser?.id, currentUser?.role, fetchAll])
 
-  // 수동 새로고침 — dataReady는 유지해 화면을 로딩 상태로 갈아엎지 않는다.
+  // 수동 새로고침 — loading/dataReady는 건드리지 않아 화면을 로딩 상태로 갈아엎지 않는다.
+  // (역할별 Dashboard가 loading=true면 전체 로더로 전환되므로 refreshing을 따로 쓴다.)
   // 실패 시 기존 데이터를 그대로 두고 Sentry에만 보고한다.
   const refetch = useCallback(async () => {
     if (!userId) return
-    setLoading(true)
+    setRefreshing(true)
     try {
       const fetched = await fetchAll()
       setData(fetched)
     } catch (err) {
       reportError(err, { where: 'DataContext.refetch', role: userRole })
     } finally {
-      setLoading(false)
+      setRefreshing(false)
     }
   }, [userId, userRole, fetchAll])
 
@@ -132,6 +134,7 @@ export function DataProvider({ children }) {
     () => ({
       data,
       loading,
+      refreshing,
       dataReady,
       ...mind,
       ...diary,
@@ -148,7 +151,7 @@ export function DataProvider({ children }) {
       resetData,
       refetch,
     }),
-    [data, loading, dataReady, mind, diary, alert, task, learning, career, quiz, student, counseling, attendance, parent, getWeeklyLearning, resetData, refetch]
+    [data, loading, refreshing, dataReady, mind, diary, alert, task, learning, career, quiz, student, counseling, attendance, parent, getWeeklyLearning, resetData, refetch]
   )
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>

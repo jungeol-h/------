@@ -43,6 +43,7 @@ export function toProgramRecord(row) {
     date: row.date,
     content: row.content,
     type: row.type,
+    targetType: row.target_type ?? 'student',
     createdAt: row.created_at,
   }
 }
@@ -146,7 +147,7 @@ export async function bulkInsertStudents(programId, entries) {
   return rows.map((r) => toProgramStudent({ ...r, created_at: now }))
 }
 
-export async function createRecord({ programStudentId, counselorId, content, type, date }) {
+export async function createRecord({ programStudentId, counselorId, content, type, targetType, date }) {
   const row = {
     id: makeId('pc'),
     program_student_id: programStudentId,
@@ -154,6 +155,7 @@ export async function createRecord({ programStudentId, counselorId, content, typ
     date: date ?? new Date().toISOString().slice(0, 10),
     content,
     type: type ?? 'career',
+    target_type: targetType ?? 'student',
   }
   const { error } = await withWriteRetry(
     () => supabase.from('program_counseling_records').insert(row),
@@ -163,10 +165,11 @@ export async function createRecord({ programStudentId, counselorId, content, typ
   return toProgramRecord({ ...row, created_at: new Date().toISOString() })
 }
 
-export async function updateRecord(id, { content, type }) {
+export async function updateRecord(id, { content, type, targetType }) {
   const patch = {}
   if (content !== undefined) patch.content = content
   if (type !== undefined) patch.type = type
+  if (targetType !== undefined) patch.target_type = targetType
   const { error } = await withWriteRetry(
     () => supabase.from('program_counseling_records').update(patch).eq('id', id),
     { label: 'updateProgramRecord' },

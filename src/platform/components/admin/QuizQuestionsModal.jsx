@@ -83,13 +83,20 @@ export default function QuizQuestionsModal({
                       {q.question}
                     </p>
                     <div className="mt-1 text-[11px] space-y-0.5">
-                      <p>
-                        <span className="text-gray-400">정답: </span>
-                        <span className="text-emerald-700 font-semibold">{q.acceptedAnswers[0]}</span>
-                        {q.acceptedAnswers.length > 1 && (
-                          <span className="text-gray-400"> · {q.acceptedAnswers.slice(1).join(', ')}</span>
-                        )}
-                      </p>
+                      {q.type === 'essay' ? (
+                        <p>
+                          <span className="inline-block px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-semibold">서술형</span>
+                          <span className="text-gray-400 ml-1">선생님이 직접 채점</span>
+                        </p>
+                      ) : (
+                        <p>
+                          <span className="text-gray-400">정답: </span>
+                          <span className="text-emerald-700 font-semibold">{q.acceptedAnswers[0]}</span>
+                          {q.acceptedAnswers.length > 1 && (
+                            <span className="text-gray-400"> · {q.acceptedAnswers.slice(1).join(', ')}</span>
+                          )}
+                        </p>
+                      )}
                       {q.explanation && (
                         <p className="text-gray-500 truncate">
                           <span className="text-gray-400">해설: </span>{q.explanation}

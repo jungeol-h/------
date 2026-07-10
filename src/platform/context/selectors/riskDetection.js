@@ -28,6 +28,28 @@ export function getMindStatus(mindRecords) {
   return evaluateMindLevel(latest)
 }
 
+// 마인드 주의 임계 — 세 지표(기분/동기/자신감) 중 하나라도 이 값 이하 (관리자 대시보드)
+// 기존 코칭용 위험탐지(evaluateMindLevel: 합산 -6 / 단일 -4)보다 민감한 별도 기준.
+export const MIND_CAUTION_THRESHOLD = -3
+
+// 마인드 주의 학생 목록 — 최근 마인드 기록의 세 지표 중 하나라도 임계 이하인 active 학생.
+// 반환: [{ student, latest }] (latest = 최근 마인드 기록)
+export function getMindCautionStudents(data) {
+  return (data?.students ?? [])
+    .filter((s) => (s.status ?? 'active') === 'active')
+    .map((s) => {
+      const records = (data?.mindRecords ?? []).filter((r) => r.studentId === s.id)
+      if (records.length === 0) return null
+      const latest = records.slice().sort((a, b) => (b.date > a.date ? 1 : -1))[0]
+      const caution =
+        latest.mood <= MIND_CAUTION_THRESHOLD ||
+        latest.motivation <= MIND_CAUTION_THRESHOLD ||
+        latest.confidence <= MIND_CAUTION_THRESHOLD
+      return caution ? { student: s, latest } : null
+    })
+    .filter(Boolean)
+}
+
 const LEVEL_RANK = { danger: 0, warning: 1 }
 
 // 위험군 학생 목록 — 마인드 위험 학생을 danger→warning 순 정렬.

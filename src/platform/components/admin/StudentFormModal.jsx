@@ -56,6 +56,7 @@ export default function StudentFormModal({
   const [password, setPassword] = useState(initial?.password ?? '')
   const [parentPassword, setParentPassword] = useState(initial?.parentPassword ?? '')
   const [managerId, setManagerId] = useState(initialManagerId ?? '')
+  const [enrolledAt, setEnrolledAt] = useState(initial?.enrolledAt ?? '')
   const [saving, setSaving] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
 
@@ -125,6 +126,7 @@ export default function StudentFormModal({
         password: pwClean,
         parentPassword: parentPwClean,
         managerId: managerId || null,
+        enrolledAt: enrolledAt || null,
       })
       onClose()
     } catch (err) {
@@ -213,15 +215,27 @@ export default function StudentFormModal({
             </div>
           </div>
 
-          <div>
-            <label className="block text-[11px] font-bold text-gray-500 mb-1">학교</label>
-            <input
-              type="text"
-              value={school}
-              onChange={(e) => setSchool(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
-              placeholder="예: 안동중학교"
-            />
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-[11px] font-bold text-gray-500 mb-1">학교</label>
+              <input
+                type="text"
+                value={school}
+                onChange={(e) => setSchool(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
+                placeholder="예: 안동중학교"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-gray-500 mb-1">입학일</label>
+              <input
+                type="date"
+                value={enrolledAt}
+                onChange={(e) => setEnrolledAt(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
+              />
+              <p className="mt-1 text-[10px] text-gray-400">인원 현황 '신입학' 집계 기준</p>
+            </div>
           </div>
 
           <div>

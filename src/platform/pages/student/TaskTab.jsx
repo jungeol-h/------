@@ -48,6 +48,12 @@ export default function TaskTab() {
                     </button>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-gray-800">{t.title}</p>
+                      {t.content && (
+                        <p className="text-xs text-gray-600 mt-1 whitespace-pre-wrap leading-relaxed">{t.content}</p>
+                      )}
+                      {t.method && (
+                        <p className="text-xs text-gray-500 mt-1">수행방법: {t.method}</p>
+                      )}
                       <div className="flex items-center gap-2 mt-1 flex-wrap">
                         <span className="text-xs text-gray-400">{t.subject}</span>
                         {t.assignerName && (

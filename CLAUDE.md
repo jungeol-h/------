@@ -21,7 +21,8 @@ JSX (not TypeScript). 배포: `gooooookee.com` (Vercel).
 ## 코드 구조 (`src/platform/`)
 
 - `context/` — 데이터 계층. 아래 "DataContext 구조" 참고.
-- `pages/` — 역할별 화면: `student/`(5탭) `manager/`(4탭) `admin/`(3탭) `shared/`
+- `pages/` — 역할별 화면: `student/` `manager/` `admin/`(5탭: 홈·사용자·상담·확인평가·외부상담)
+  `educator/` `parent/` `viewer/` `shared/`
 - `components/`, `mocks/`, `data/`, `pdf/`, `utils/`
 
 라우팅(`src/App.jsx`): `/` 로그인 → `/student/*` `/manager/*` `/admin/*`.

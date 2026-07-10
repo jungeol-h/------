@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { getAttendanceSummary } from './attendanceStats.js'
+import { getAttendanceSummary, getAttendanceCautionStudents } from './attendanceStats.js'
 
 describe('getAttendanceSummary — 출결 누적 통계', () => {
   it('빈 데이터면 0 카운트와 빈 배열', () => {
@@ -67,5 +67,45 @@ describe('getAttendanceSummary — 출결 누적 통계', () => {
     // 누락 필드는 null로 정규화
     expect(records[1].checkInAt).toBeNull()
     expect(records[1].checkOutAt).toBeNull()
+  })
+})
+
+describe('getAttendanceCautionStudents — 출결 주의 (최근 30일 결석 3회 이상)', () => {
+  const today = new Date('2026-07-10T00:00:00')
+  const students = [
+    { id: 's1', name: '가' },
+    { id: 's2', name: '나' },
+    { id: 's3', name: '다', status: 'inactive' },
+  ]
+  const absent = (studentId, date) => ({ studentId, date, status: 'absent' })
+
+  it('최근 30일 결석 3회 이상인 active 학생만 결석 많은 순으로 반환', () => {
+    const data = {
+      students,
+      attendanceRecords: [
+        absent('s1', '2026-07-01'), absent('s1', '2026-07-03'), absent('s1', '2026-07-05'),
+        absent('s2', '2026-07-01'), absent('s2', '2026-07-02'), absent('s2', '2026-07-03'), absent('s2', '2026-07-04'),
+        absent('s3', '2026-07-01'), absent('s3', '2026-07-02'), absent('s3', '2026-07-03'),
+      ],
+    }
+    const result = getAttendanceCautionStudents(data, { today })
+    expect(result.map((x) => x.student.id)).toEqual(['s2', 's1'])
+    expect(result[0].absentCount).toBe(4)
+  })
+
+  it('30일보다 오래된 결석과 결석 아닌 기록은 세지 않는다', () => {
+    const data = {
+      students,
+      attendanceRecords: [
+        absent('s1', '2026-05-01'), absent('s1', '2026-05-02'), absent('s1', '2026-05-03'),
+        { studentId: 's1', date: '2026-07-01', status: 'late' },
+        absent('s1', '2026-07-02'), absent('s1', '2026-07-03'),
+      ],
+    }
+    expect(getAttendanceCautionStudents(data, { today })).toEqual([])
+  })
+
+  it('빈 데이터도 안전', () => {
+    expect(getAttendanceCautionStudents({}, { today })).toEqual([])
   })
 })

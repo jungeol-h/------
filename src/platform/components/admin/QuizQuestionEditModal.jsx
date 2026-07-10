@@ -3,6 +3,7 @@ import { X, Save } from 'lucide-react'
 
 export default function QuizQuestionEditModal({ mode = 'create', initial, quizSetId, defaultOrderNo = 1, onSubmit, onClose }) {
   const [orderNo, setOrderNo] = useState(initial?.orderNo ?? defaultOrderNo)
+  const [type, setType] = useState(initial?.type ?? 'short')
   const [question, setQuestion] = useState(initial?.question ?? '')
   const [acceptedAnswersRaw, setAcceptedAnswersRaw] = useState(
     initial?.acceptedAnswers ? initial.acceptedAnswers.join(', ') : ''
@@ -19,9 +20,11 @@ export default function QuizQuestionEditModal({ mode = 'create', initial, quizSe
     .map((s) => s.trim())
     .filter(Boolean)
 
+  const isEssay = type === 'essay'
+
   const canSubmit =
     question.trim() &&
-    parsedAnswers.length > 0 &&
+    (isEssay || parsedAnswers.length > 0) &&
     Number.isFinite(Number(orderNo)) &&
     Number(orderNo) > 0
 
@@ -33,8 +36,9 @@ export default function QuizQuestionEditModal({ mode = 'create', initial, quizSe
       await onSubmit({
         quizSetId,
         orderNo: Number(orderNo),
+        type,
         question: question.trim(),
-        acceptedAnswers: parsedAnswers,
+        acceptedAnswers: isEssay ? [] : parsedAnswers,
         explanation: explanation.trim(),
         hint: hint.trim(),
       })
@@ -69,6 +73,29 @@ export default function QuizQuestionEditModal({ mode = 'create', initial, quizSe
           </div>
 
           <div>
+            <label className="block text-[11px] font-bold text-gray-500 mb-1">문제 유형 *</label>
+            <div className="flex rounded-lg border border-gray-200 overflow-hidden w-fit">
+              {[['short', '단답형'], ['essay', '서술형']].map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setType(value)}
+                  className={`px-4 py-2 text-sm font-semibold transition ${
+                    type === value ? 'bg-emerald-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {isEssay && (
+              <p className="text-[11px] text-amber-600 mt-1">
+                서술형은 제출 후 선생님이 직접 채점합니다 (자동채점 없음)
+              </p>
+            )}
+          </div>
+
+          <div>
             <label className="block text-[11px] font-bold text-gray-500 mb-1">문제 본문 *</label>
             <textarea
               value={question}
@@ -79,21 +106,23 @@ export default function QuizQuestionEditModal({ mode = 'create', initial, quizSe
             />
           </div>
 
-          <div>
-            <label className="block text-[11px] font-bold text-gray-500 mb-1">정답 *</label>
-            <textarea
-              value={acceptedAnswersRaw}
-              onChange={(e) => setAcceptedAnswersRaw(e.target.value)}
-              rows={2}
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm resize-none"
-              placeholder="여러 정답은 쉼표 또는 줄바꿈으로 구분 (예: 품사, 단어의 갈래)"
-            />
-            {parsedAnswers.length > 0 && (
-              <p className="text-[11px] text-gray-400 mt-1">
-                인식된 정답 {parsedAnswers.length}개: {parsedAnswers.join(' · ')}
-              </p>
-            )}
-          </div>
+          {!isEssay && (
+            <div>
+              <label className="block text-[11px] font-bold text-gray-500 mb-1">정답 *</label>
+              <textarea
+                value={acceptedAnswersRaw}
+                onChange={(e) => setAcceptedAnswersRaw(e.target.value)}
+                rows={2}
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm resize-none"
+                placeholder="여러 정답은 쉼표 또는 줄바꿈으로 구분 (예: 품사, 단어의 갈래)"
+              />
+              {parsedAnswers.length > 0 && (
+                <p className="text-[11px] text-gray-400 mt-1">
+                  인식된 정답 {parsedAnswers.length}개: {parsedAnswers.join(' · ')}
+                </p>
+              )}
+            </div>
+          )}
 
           <div>
             <label className="block text-[11px] font-bold text-gray-500 mb-1">해설 (선택)</label>

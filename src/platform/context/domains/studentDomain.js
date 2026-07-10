@@ -13,7 +13,7 @@ export function useStudentDomain(setData) {
   const createStudent = useCallback(
     async ({
       name, gender, grade, className, school,
-      loginId, password, parentPassword, managerId,
+      loginId, password, parentPassword, managerId, enrolledAt,
     }) => {
       const id = makeId('s')
       const row = {
@@ -30,6 +30,7 @@ export function useStudentDomain(setData) {
         self_index: 70,
         risk_level: 'normal',
         status: 'active',
+        enrolled_at: enrolledAt || null,
       }
       const { error } = await withWriteRetry(
         () => supabase.from('users').insert(row),
@@ -77,6 +78,7 @@ export function useStudentDomain(setData) {
       if (patch.className !== undefined) snake.class_name = patch.className
       if (patch.school !== undefined) snake.school = patch.school
       if (patch.parentPassword !== undefined) snake.parent_password = patch.parentPassword
+      if (patch.enrolledAt !== undefined) snake.enrolled_at = patch.enrolledAt || null
 
       if (Object.keys(snake).length > 0) {
         const { error } = await withWriteRetry(

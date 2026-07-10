@@ -5,7 +5,7 @@ import Table from '../components/Table'
 import KpiGrid from '../components/KpiGrid'
 import { colors, fontSize } from '../config/styles'
 
-// 종합 성찰 리포트 — 출결·자기주도 학습·마인드 종합.
+// 종합 성장 리포트 — 출결·자기주도 학습·마인드 종합.
 // DataContext에 의존하지 않고 순수 props만 받는다.
 // props: {
 //   student: { name, school, grade },
@@ -130,7 +130,7 @@ export default function ReflectionReport({
 
   return (
     <PageWrapper
-      reportTitle="종합 성찰 리포트"
+      reportTitle="종합 성장 리포트"
       period={period}
       generatedAt={generatedAt}
       author={author}

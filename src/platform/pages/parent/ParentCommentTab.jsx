@@ -6,6 +6,7 @@ const TYPE_COLORS = {
   mind: 'text-pink-700 bg-pink-100',
   career: 'text-violet-700 bg-violet-100',
   study: 'text-blue-700 bg-blue-100',
+  habit: 'text-amber-700 bg-amber-100',
   etc: 'text-gray-600 bg-gray-100',
 }
 

@@ -1,4 +1,4 @@
-// [Read] 종합 성찰 리포트용 props 조립 — data를 인자로 받는 순수함수.
+// [Read] 종합 성장 리포트용 props 조립 — data를 인자로 받는 순수함수.
 // 여러 selector 결과를 ReflectionReport 컴포넌트가 기대하는 형태로 합친다.
 
 import { actualMinutes, timeTrackedRecords } from './learningRecords.js'

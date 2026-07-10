@@ -18,6 +18,8 @@ export default function TaskFormModal({ students = [], fixedStudent, task, onClo
   const [subject, setSubject] = useState(task?.subject ?? '')
   const [dueDate, setDueDate] = useState(task?.dueDate ?? '')
   const [dueTime, setDueTime] = useState(task?.dueTime && task.dueTime !== '23:59' ? task.dueTime : '')
+  const [method, setMethod] = useState(task?.method ?? '')
+  const [content, setContent] = useState(task?.content ?? '')
   const [saving, setSaving] = useState(false)
 
   const fieldClass = 'w-full border border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300'
@@ -29,7 +31,7 @@ export default function TaskFormModal({ students = [], fixedStudent, task, onClo
     setSaving(true)
     try {
       if (isEdit) {
-        await updateTask(task.id, { title, subject, dueDate, dueTime: dueTime || '23:59' })
+        await updateTask(task.id, { title, subject, dueDate, dueTime: dueTime || '23:59', method, content })
       } else {
         await addTask({
           studentId,
@@ -39,6 +41,8 @@ export default function TaskFormModal({ students = [], fixedStudent, task, onClo
           dueTime: dueTime || '23:59',
           assignerId: currentUser?.id,
           assignerName: currentUser?.name,
+          method,
+          content,
         })
       }
       onSaved?.()
@@ -86,6 +90,22 @@ export default function TaskFormModal({ students = [], fixedStudent, task, onClo
           value={subject}
           onChange={(e) => setSubject(e.target.value)}
           placeholder="과목"
+          className={fieldClass}
+        />
+
+        <textarea
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          placeholder="과제 내용 (선택)"
+          rows={3}
+          className={`${fieldClass} resize-none`}
+        />
+
+        <input
+          type="text"
+          value={method}
+          onChange={(e) => setMethod(e.target.value)}
+          placeholder="수행방법 (선택) — 예: 노트에 풀고 사진 제출"
           className={fieldClass}
         />
 

@@ -1,13 +1,19 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Users, TrendingUp, AlertTriangle, Bell,
-  BarChart2, UserCog, ClipboardCheck, ChevronRight,
+  Users, AlertTriangle, Bell, CalendarX, TrendingDown,
+  UserCog, ClipboardCheck, ChevronRight,
   ShieldCheck, ShieldAlert,
 } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
-import { getRiskStudents } from '../../context/selectors/riskDetection.js'
+import { getRiskStudents, getMindCautionStudents } from '../../context/selectors/riskDetection.js'
+import { getAttendanceCautionStudents } from '../../context/selectors/attendanceStats.js'
+import { getLearningCautionStudents } from '../../context/selectors/weeklyLearning.js'
 import { getReconciliationIssues } from '../../context/selectors/reconciliation.js'
+import StatisticsSection from '../../components/admin/StatisticsSection.jsx'
+
+const GRADE_ORDER = { 중1: 1, 중2: 2, 중3: 3, 고1: 4, 고2: 5, 고3: 6 }
+const gradeWeight = (g) => GRADE_ORDER[g] ?? 99
 
 const RISK_COLOR = {
   danger: 'text-red-600 bg-red-100',
@@ -23,21 +29,38 @@ export default function AdminHomeTab() {
   const stats = useMemo(() => {
     const active = data.students.filter((s) => (s.status ?? 'active') === 'active')
     const withdrawn = data.students.filter((s) => s.status === 'inactive')
-    const risk = active.filter((s) => s.riskLevel === 'danger' || s.riskLevel === 'warning')
     // 마인드 위험군 — 전체 active 학생 중 마인드 점수 위험 (미배정 학생도 포함)
     const mindRiskStudents = getRiskStudents(data)
-    const avgSelfIndex = active.length > 0
-      ? Math.round(active.reduce((s, st) => s + st.selfIndex, 0) / active.length)
-      : 0
     return {
       active,
       withdrawn,
-      risk,
       mindRiskStudents,
       enrolled: active.length + withdrawn.length,
-      avgSelfIndex,
     }
   }, [data])
+
+  // 1단: 학년별 인원 현황 — 재적(전체) / 현인원(active) / 신입학(입학일이 이번 달) / 탈퇴
+  const gradeRows = useMemo(() => {
+    const now = new Date()
+    const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}` // 로컬 기준 YYYY-MM
+    const byGrade = {}
+    data.students.forEach((s) => {
+      const g = s.grade || '미지정'
+      if (!byGrade[g]) byGrade[g] = { grade: g, enrolled: 0, active: 0, newcomer: 0, withdrawn: 0 }
+      byGrade[g].enrolled += 1
+      if ((s.status ?? 'active') === 'active') byGrade[g].active += 1
+      else byGrade[g].withdrawn += 1
+      if (s.enrolledAt && String(s.enrolledAt).startsWith(thisMonth)) byGrade[g].newcomer += 1
+    })
+    return Object.values(byGrade).sort((a, b) => gradeWeight(a.grade) - gradeWeight(b.grade))
+  }, [data.students])
+
+  // 2단: 핵심지표 — 출결 주의(최근 30일 결석 3회+) / 학습 주의(7일 이행률 60% 미만) / 마인드 주의(단일 -3 이하)
+  const cautions = useMemo(() => ({
+    attendance: getAttendanceCautionStudents(data),
+    learning: getLearningCautionStudents(data),
+    mind: getMindCautionStudents(data),
+  }), [data])
 
   const reconciliation = useMemo(() => getReconciliationIssues(data), [data])
 
@@ -52,52 +75,65 @@ export default function AdminHomeTab() {
         <p className="text-xs text-gray-500 mt-0.5">현재 상황을 한눈에 확인합니다.</p>
       </div>
 
-      {/* ── 인원 요약 ────────────────────────────────────── */}
+      {/* ── 1단: 인원 현황 (학년별) ─────────────────────── */}
       <section className="bg-white rounded-2xl shadow-sm p-4">
         <div className="flex items-center gap-2 mb-3">
           <Users size={16} className="text-blue-600" />
           <h3 className="text-sm font-bold text-gray-800">인원 현황</h3>
         </div>
-        <div className="grid grid-cols-3 gap-2">
-          <div className="bg-gray-50 rounded-xl p-3 text-center">
-            <p className="text-[11px] text-gray-500">재적</p>
-            <p className="text-xl font-bold text-gray-800 mt-0.5">{stats.enrolled}<span className="text-xs font-normal text-gray-400 ml-0.5">명</span></p>
-          </div>
-          <div className="bg-blue-50 rounded-xl p-3 text-center">
-            <p className="text-[11px] text-blue-700">현 인원</p>
-            <p className="text-xl font-bold text-blue-700 mt-0.5">{stats.active.length}<span className="text-xs font-normal text-blue-400 ml-0.5">명</span></p>
-          </div>
-          <div className="bg-gray-50 rounded-xl p-3 text-center">
-            <p className="text-[11px] text-gray-500">탈퇴</p>
-            <p className="text-xl font-bold text-gray-500 mt-0.5">{stats.withdrawn.length}<span className="text-xs font-normal text-gray-400 ml-0.5">명</span></p>
-          </div>
+        <div className="grid grid-cols-5 gap-1 text-center text-[11px] font-bold text-gray-400 pb-1.5 border-b border-gray-100">
+          <span className="text-left pl-1">학년</span>
+          <span>재적</span>
+          <span className="text-blue-600">현 인원</span>
+          <span className="text-emerald-600">신입학</span>
+          <span>탈퇴</span>
         </div>
+        {gradeRows.map((row) => (
+          <div key={row.grade} className="grid grid-cols-5 gap-1 text-center text-sm py-1.5 border-b border-gray-50 last:border-0">
+            <span className="text-left pl-1 text-xs font-bold text-gray-600 self-center">{row.grade}</span>
+            <span className="font-semibold text-gray-800">{row.enrolled}</span>
+            <span className="font-semibold text-blue-700">{row.active}</span>
+            <span className={`font-semibold ${row.newcomer > 0 ? 'text-emerald-600' : 'text-gray-300'}`}>{row.newcomer}</span>
+            <span className={`font-semibold ${row.withdrawn > 0 ? 'text-gray-500' : 'text-gray-300'}`}>{row.withdrawn}</span>
+          </div>
+        ))}
+        <div className="grid grid-cols-5 gap-1 text-center text-sm pt-2 mt-0.5 border-t border-gray-100">
+          <span className="text-left pl-1 text-xs font-bold text-gray-800 self-center">전체</span>
+          <span className="font-bold text-gray-800">{stats.enrolled}</span>
+          <span className="font-bold text-blue-700">{stats.active.length}</span>
+          <span className="font-bold text-emerald-600">{gradeRows.reduce((s, r) => s + r.newcomer, 0)}</span>
+          <span className="font-bold text-gray-500">{stats.withdrawn.length}</span>
+        </div>
+        <p className="text-[10px] text-gray-400 mt-2">신입학 = 입학일이 이번 달인 학생 (사용자 관리에서 입학일 입력)</p>
       </section>
 
-      {/* ── 핵심 KPI ─────────────────────────────────────── */}
+      {/* ── 2단: 핵심 지표 (주의 학생) ─────────────────────── */}
       <section>
         <h3 className="text-sm font-bold text-gray-500 mb-2">핵심 지표</h3>
         <div className="grid grid-cols-3 gap-2">
           <div className="bg-white rounded-2xl shadow-sm p-3">
             <div className="flex items-center gap-1.5 mb-1">
-              <TrendingUp size={13} className="text-blue-500" />
-              <p className="text-[11px] text-gray-500">평균 자기주도지수</p>
+              <CalendarX size={13} className="text-red-500" />
+              <p className="text-[11px] text-gray-500">출결 주의</p>
             </div>
-            <p className="text-xl font-bold text-blue-600">{stats.avgSelfIndex}<span className="text-xs font-normal text-gray-400 ml-0.5">점</span></p>
+            <p className="text-xl font-bold text-red-600">{cautions.attendance.length}<span className="text-xs font-normal text-gray-400 ml-0.5">명</span></p>
+            <p className="text-[10px] text-gray-400 mt-0.5">30일 결석 3회↑</p>
           </div>
           <div className="bg-white rounded-2xl shadow-sm p-3">
             <div className="flex items-center gap-1.5 mb-1">
-              <AlertTriangle size={13} className="text-red-500" />
-              <p className="text-[11px] text-gray-500">위험·주의</p>
+              <TrendingDown size={13} className="text-orange-500" />
+              <p className="text-[11px] text-gray-500">학습 주의</p>
             </div>
-            <p className="text-xl font-bold text-red-600">{stats.risk.length}<span className="text-xs font-normal text-gray-400 ml-0.5">명</span></p>
+            <p className="text-xl font-bold text-orange-600">{cautions.learning.length}<span className="text-xs font-normal text-gray-400 ml-0.5">명</span></p>
+            <p className="text-[10px] text-gray-400 mt-0.5">계획 이행 60% 미만</p>
           </div>
           <div className="bg-white rounded-2xl shadow-sm p-3">
             <div className="flex items-center gap-1.5 mb-1">
               <Bell size={13} className="text-amber-500" />
-              <p className="text-[11px] text-gray-500">마인드 위험</p>
+              <p className="text-[11px] text-gray-500">마인드 주의</p>
             </div>
-            <p className="text-xl font-bold text-amber-600">{stats.mindRiskStudents.length}<span className="text-xs font-normal text-gray-400 ml-0.5">명</span></p>
+            <p className="text-xl font-bold text-amber-600">{cautions.mind.length}<span className="text-xs font-normal text-gray-400 ml-0.5">명</span></p>
+            <p className="text-[10px] text-gray-400 mt-0.5">지표 -3점 이하</p>
           </div>
         </div>
       </section>
@@ -143,16 +179,7 @@ export default function AdminHomeTab() {
       {/* ── 탭 진입 카드 ─────────────────────────────────── */}
       <section>
         <h3 className="text-sm font-bold text-gray-500 mb-2">상세 메뉴</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-          <NavCard
-            icon={BarChart2}
-            iconColor="text-blue-600"
-            bgColor="bg-blue-50"
-            title="통계 & 분석"
-            description="월간 추이 · 보고서 출력"
-            meta={`${data.monthlyStats.length}개월 누적`}
-            onClick={() => navigate('/admin/statistics')}
-          />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <NavCard
             icon={UserCog}
             iconColor="text-emerald-600"
@@ -173,6 +200,9 @@ export default function AdminHomeTab() {
           />
         </div>
       </section>
+
+      {/* ── 5단: 통계 (구 통계 탭 → 홈 하단) ────────────────── */}
+      <StatisticsSection />
     </div>
   )
 }

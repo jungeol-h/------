@@ -1215,7 +1215,7 @@ function AttendanceSection({ data, studentId, currentUser, hasLearning }) {
         generatedAt={nowDateTime()}
         author={authorOf(currentUser)}
       />,
-      buildFilename('종합성찰리포트', student?.name),
+      buildFilename('종합성장리포트', student?.name),
     )
   }, [data, studentId, currentUser])
 
@@ -1225,7 +1225,7 @@ function AttendanceSection({ data, studentId, currentUser, hasLearning }) {
         <h3 className="text-sm font-bold text-gray-700">출결 기록</h3>
         <DownloadPdfButton
           onDownload={handleDownloadPdf}
-          label="종합 성찰 리포트"
+          label="종합 성장 리포트"
           disabled={!hasAttendance && !hasLearning}
         />
       </div>

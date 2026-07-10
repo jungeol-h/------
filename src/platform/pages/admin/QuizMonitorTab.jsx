@@ -8,9 +8,10 @@ import RefreshButton from '../../components/RefreshButton.jsx'
 import DownloadPdfButton from '../../pdf/components/DownloadPdfButton.jsx'
 import { buildFilename, nowDateTime } from '../../pdf/utils/formatters.js'
 import { authorOf } from '../../pdf/config/meta.js'
+import { hasPendingGrading } from '../../utils/quizGrading.js'
 
 export default function QuizMonitorTab() {
-  const { data } = useData()
+  const { data, updateQuizAttemptGrading } = useData()
   const { currentUser } = useAuth()
 
   // 회차별 응시자 수 / 미응시자 수 / 평균 — 간단 요약 카드
@@ -22,10 +23,11 @@ export default function QuizMonitorTab() {
       const submittedCount = attempts.length
       const eligibleCount = eligible.length
       const missingCount = eligible.filter((s) => !submittedIds.has(s.id)).length
+      const pendingCount = attempts.filter(hasPendingGrading).length
       const avgPct = attempts.length > 0
         ? Math.round(attempts.reduce((sum, a) => sum + (a.total > 0 ? a.score / a.total : 0), 0) / attempts.length * 100)
         : 0
-      return { set, eligibleCount, submittedCount, missingCount, avgPct }
+      return { set, eligibleCount, submittedCount, missingCount, pendingCount, avgPct }
     })
   }, [data.quizSets, data.students, data.quizAttempts])
 
@@ -72,7 +74,7 @@ export default function QuizMonitorTab() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-          {summaries.map(({ set, eligibleCount, submittedCount, missingCount, avgPct }) => (
+          {summaries.map(({ set, eligibleCount, submittedCount, missingCount, pendingCount, avgPct }) => (
             <div key={set.id} className="bg-white rounded-2xl p-4 border border-gray-100">
               <p className="text-[11px] font-bold text-emerald-600">{set.grade} · {set.round}회</p>
               <p className="text-sm font-semibold text-gray-800 leading-snug mt-0.5">{set.title}</p>
@@ -84,6 +86,9 @@ export default function QuizMonitorTab() {
                 <span>미응시 {missingCount}</span>
                 <span>평균 {avgPct}%</span>
               </div>
+              {pendingCount > 0 && (
+                <p className="text-[11px] text-amber-600 font-semibold mt-1">미채점 {pendingCount}건</p>
+              )}
             </div>
           ))}
         </div>
@@ -96,6 +101,7 @@ export default function QuizMonitorTab() {
         students={data.students}
         quizSets={data.quizSets}
         quizQuestions={data.quizQuestions}
+        onUpdateGrading={updateQuizAttemptGrading}
       />
     </div>
   )

@@ -16,6 +16,7 @@ export const toUser = (row) => ({
   selfIndex: row.self_index ?? 70,
   riskLevel: row.risk_level ?? 'normal',
   status: row.status ?? 'active',
+  enrolledAt: row.enrolled_at ?? null,
 })
 
 export const toMindRecord = (row) => ({
@@ -98,6 +99,8 @@ export const toTask = (row) => ({
   status: row.status ?? 'pending',
   assignerId: row.assigner_id ?? null,
   assignerName: row.assigner_name ?? '',
+  method: row.method ?? '',
+  content: row.content ?? '',
 })
 
 export const toCounselingRecord = (row) => ({
@@ -184,6 +187,7 @@ export const toQuizQuestion = (row) => ({
   id: row.id,
   quizSetId: row.quiz_set_id,
   orderNo: row.order_no,
+  type: row.type ?? 'short',
   question: row.question,
   acceptedAnswers: row.accepted_answers ?? [],
   explanation: row.explanation ?? '',

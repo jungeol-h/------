@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { X, CheckCheck } from 'lucide-react'
-import { COUNSELING_TYPES, COUNSELING_TYPE_LABELS } from '../../../data/counselingTypes.js'
+import {
+  COUNSELING_TYPES, COUNSELING_TYPE_LABELS,
+  COUNSELING_TARGET_TYPES, COUNSELING_TARGET_LABELS,
+} from '../../../data/counselingTypes.js'
 import { createRecord, updateRecord } from './externalData.js'
 
 // 외생 상담 기록 작성/수정 모달. CounselingFormModal 스타일 차용.
@@ -8,6 +11,7 @@ import { createRecord, updateRecord } from './externalData.js'
 export default function ExternalCounselingForm({ student, record, counselorId, onClose, onSaved }) {
   const isEdit = !!record
   const [type, setType] = useState(record?.type ?? 'career')
+  const [targetType, setTargetType] = useState(record?.targetType ?? 'student')
   const [content, setContent] = useState(record?.content ?? '')
   const [saving, setSaving] = useState(false)
 
@@ -18,14 +22,15 @@ export default function ExternalCounselingForm({ student, record, counselorId, o
     setSaving(true)
     try {
       if (isEdit) {
-        await updateRecord(record.id, { content, type })
-        onSaved?.({ ...record, content, type })
+        await updateRecord(record.id, { content, type, targetType })
+        onSaved?.({ ...record, content, type, targetType })
       } else {
         const created = await createRecord({
           programStudentId: student.id,
           counselorId,
           content,
           type,
+          targetType,
         })
         onSaved?.(created)
       }
@@ -53,13 +58,28 @@ export default function ExternalCounselingForm({ student, record, counselorId, o
           {student?.name ?? '학생'} 학생
         </div>
 
-        <select value={type} onChange={(e) => setType(e.target.value)} className={fieldClass}>
-          {COUNSELING_TYPES.map((t) => (
-            <option key={t} value={t}>
-              {COUNSELING_TYPE_LABELS[t]}
-            </option>
-          ))}
-        </select>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">상담 대상</label>
+            <select value={targetType} onChange={(e) => setTargetType(e.target.value)} className={fieldClass}>
+              {COUNSELING_TARGET_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {COUNSELING_TARGET_LABELS[t]}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">상담 주제</label>
+            <select value={type} onChange={(e) => setType(e.target.value)} className={fieldClass}>
+              {COUNSELING_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {COUNSELING_TYPE_LABELS[t]}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
 
         <textarea
           value={content}

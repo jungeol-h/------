@@ -11,7 +11,7 @@ export default function CounselingFormModal({ students = [], fixedStudent, recor
   const isEdit = !!record
   const editStudent = isEdit ? data.students.find((s) => s.id === record.studentId) : null
   const [studentId, setStudentId] = useState(record?.studentId ?? fixedStudent?.id ?? '')
-  const [type, setType] = useState(record?.type ?? 'mind')
+  const [type, setType] = useState(record?.type ?? 'study')
   const [content, setContent] = useState(record?.comment ?? '')
   const [saving, setSaving] = useState(false)
 

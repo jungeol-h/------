@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight, ClipboardCheck, CheckCircle2, XCircle, RotateCcw, Loader } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ClipboardCheck, CheckCircle2, XCircle, RotateCcw, Loader, Clock } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
+import { hasPendingGrading } from '../../utils/quizGrading.js'
 
 const DRAFT_PREFIX = 'quiz_draft'
 
@@ -172,7 +173,7 @@ export default function QuizTab() {
             </div>
           </div>
           <p className="text-xs opacity-80 leading-relaxed">
-            교재 개념을 단답형으로 점검합니다. 회차당 1회만 응시할 수 있습니다.
+            교재 개념을 점검합니다. 회차당 1회만 응시할 수 있습니다.
           </p>
         </div>
 
@@ -206,7 +207,11 @@ export default function QuizTab() {
                   {s.description && <p className="text-xs text-gray-500 leading-relaxed">{s.description}</p>}
                   {done && (
                     <p className="text-xs text-emerald-600 font-semibold mt-2">
-                      {attempt.score} / {attempt.total} 점 · 결과 보기
+                      {attempt.score} / {attempt.total} 점
+                      {hasPendingGrading(attempt) && (
+                        <span className="text-amber-600"> · 채점 대기 중</span>
+                      )}
+                      {' '}· 결과 보기
                     </p>
                   )}
                 </button>
@@ -258,16 +263,29 @@ export default function QuizTab() {
         </div>
 
         <div>
-          <input
-            type="text"
-            value={currentValue}
-            onChange={(e) => setRaw(q.id, e.target.value)}
-            placeholder="정답을 입력하세요"
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-emerald-400 bg-white"
-            autoFocus
-          />
+          {q.type === 'essay' ? (
+            <textarea
+              value={currentValue}
+              onChange={(e) => setRaw(q.id, e.target.value)}
+              placeholder="답안을 작성하세요"
+              rows={5}
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-emerald-400 bg-white resize-none"
+              autoFocus
+            />
+          ) : (
+            <input
+              type="text"
+              value={currentValue}
+              onChange={(e) => setRaw(q.id, e.target.value)}
+              placeholder="정답을 입력하세요"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-emerald-400 bg-white"
+              autoFocus
+            />
+          )}
           <p className="text-[11px] text-gray-400 mt-1.5 px-1">
-            공백과 대소문자는 채점 시 무시됩니다.
+            {q.type === 'essay'
+              ? '서술형 문항은 제출 후 선생님이 직접 채점합니다.'
+              : '공백과 대소문자는 채점 시 무시됩니다.'}
           </p>
         </div>
 
@@ -329,22 +347,30 @@ export default function QuizTab() {
             <p className="text-sm opacity-80 pb-1">/ {resultAttempt.total} 정답</p>
             <span className="ml-auto text-sm font-bold bg-white/20 rounded-full px-2.5 py-0.5">{pct}%</span>
           </div>
+          {hasPendingGrading(resultAttempt) && (
+            <p className="text-xs mt-2 bg-white/20 rounded-lg px-2.5 py-1.5 leading-relaxed">
+              서술형 채점 대기 문항이 있습니다. 선생님 채점 후 점수가 갱신됩니다.
+            </p>
+          )}
         </div>
 
         <div className="space-y-2">
           {resultAttempt.answers.map((a, idx) => {
             const q = activeQuestionsById[a.questionId]
             if (!q) return null
-            const ok = a.isCorrect
+            const pending = a.isCorrect === null
+            const ok = a.isCorrect === true
             return (
               <div
                 key={a.questionId}
-                className={`bg-white rounded-2xl p-4 border ${ok ? 'border-emerald-100' : 'border-red-100'}`}
+                className={`bg-white rounded-2xl p-4 border ${pending ? 'border-amber-100' : ok ? 'border-emerald-100' : 'border-red-100'}`}
               >
                 <div className="flex items-start gap-2 mb-2">
-                  {ok
-                    ? <CheckCircle2 size={18} className="text-emerald-500 flex-shrink-0 mt-0.5" />
-                    : <XCircle    size={18} className="text-red-500     flex-shrink-0 mt-0.5" />
+                  {pending
+                    ? <Clock size={18} className="text-amber-500 flex-shrink-0 mt-0.5" />
+                    : ok
+                      ? <CheckCircle2 size={18} className="text-emerald-500 flex-shrink-0 mt-0.5" />
+                      : <XCircle    size={18} className="text-red-500     flex-shrink-0 mt-0.5" />
                   }
                   <p className="text-sm text-gray-800 leading-relaxed flex-1 whitespace-pre-wrap">
                     <span className="text-[11px] font-bold text-gray-400 mr-1">Q{idx + 1}.</span>
@@ -352,19 +378,24 @@ export default function QuizTab() {
                   </p>
                 </div>
                 <div className="space-y-1 text-xs ml-6">
+                  {pending && (
+                    <p className="text-amber-600 font-semibold">채점 대기 — 선생님이 확인 후 채점합니다</p>
+                  )}
                   <p>
                     <span className="text-gray-400">내 답: </span>
-                    <span className={ok ? 'text-emerald-700 font-semibold' : 'text-red-700 font-semibold'}>
+                    <span className={`whitespace-pre-wrap ${pending ? 'text-gray-700 font-semibold' : ok ? 'text-emerald-700 font-semibold' : 'text-red-700 font-semibold'}`}>
                       {a?.raw || '(미입력)'}
                     </span>
                   </p>
-                  <p>
-                    <span className="text-gray-400">정답: </span>
-                    <span className="text-gray-800 font-semibold">{q.acceptedAnswers[0]}</span>
-                    {q.acceptedAnswers.length > 1 && (
-                      <span className="text-gray-400"> (또는 {q.acceptedAnswers.slice(1).join(', ')})</span>
-                    )}
-                  </p>
+                  {q.acceptedAnswers.length > 0 && (
+                    <p>
+                      <span className="text-gray-400">정답: </span>
+                      <span className="text-gray-800 font-semibold">{q.acceptedAnswers[0]}</span>
+                      {q.acceptedAnswers.length > 1 && (
+                        <span className="text-gray-400"> (또는 {q.acceptedAnswers.slice(1).join(', ')})</span>
+                      )}
+                    </p>
+                  )}
                   {q.explanation && (
                     <p className="text-gray-500 leading-relaxed pt-1 whitespace-pre-wrap">
                       <span className="text-gray-400">해설: </span>{q.explanation}
