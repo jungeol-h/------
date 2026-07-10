@@ -13,10 +13,10 @@ const scoreColor = (pct) => {
 }
 
 export default function QuizReport({
-  summaries,
-  attempts,
-  students,
-  quizSets,
+  summaries = [],
+  attempts = [],
+  students = [],
+  quizSets = [],
   period,
   generatedAt,
   author,
@@ -46,17 +46,19 @@ export default function QuizReport({
   ]
 
   const summaryColumns = [
-    { key: 'grade', header: '학년', width: '10%', align: 'center' },
-    { key: 'round', header: '회차', width: '10%', align: 'center' },
-    { key: 'title', header: '제목', width: '34%' },
-    { key: 'eligible', header: '대상', width: '10%', align: 'right' },
-    { key: 'submitted', header: '응시', width: '10%', align: 'right' },
+    { key: 'subject', header: '과목', width: '9%', align: 'center' },
+    { key: 'grade', header: '학년', width: '9%', align: 'center' },
+    { key: 'round', header: '회차', width: '8%', align: 'center' },
+    { key: 'title', header: '제목', width: '30%' },
+    { key: 'eligible', header: '대상', width: '9%', align: 'right' },
+    { key: 'submitted', header: '응시', width: '9%', align: 'right' },
     { key: 'missing', header: '미응시', width: '10%', align: 'right' },
     { key: 'avgPct', header: '평균 정답률', width: '16%', align: 'right' },
   ]
 
   const summaryRows = summaries.map(({ set, eligibleCount, submittedCount, missingCount, avgPct }) => ({
     key: set.id,
+    subject: set.subject ?? '국어',
     grade: set.grade,
     round: `${set.round}회`,
     title: set.title,
@@ -89,7 +91,7 @@ export default function QuizReport({
       idx: idx + 1,
       student: stu?.name ?? a.studentId,
       grade: stu?.grade ?? '-',
-      set: set ? `${set.grade} ${set.round}회 · ${set.title}` : a.quizSetId,
+      set: set ? `${set.subject ?? '국어'} ${set.grade} ${set.round}회 · ${set.title}` : a.quizSetId,
       score: `${a.score} / ${a.total}${hasPendingGrading(a) ? ' (채점중)' : ''}`,
       pct: (
         <Text style={{ color: scoreColor(pct), fontWeight: 600, textAlign: 'right' }}>

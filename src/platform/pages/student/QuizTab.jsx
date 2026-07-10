@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, ClipboardCheck, CheckCircle2, XCircle, Rotat
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
 import { hasPendingGrading } from '../../utils/quizGrading.js'
+import { QUIZ_SUBJECTS, DEFAULT_QUIZ_SUBJECT } from '../../utils/quizSubjects.js'
 
 const DRAFT_PREFIX = 'quiz_draft'
 
@@ -41,12 +42,14 @@ export default function QuizTab() {
   const studentId = currentUser?.id
   const myGrade = currentUser?.grade ?? data.students.find((s) => s.id === studentId)?.grade ?? ''
 
-  // 학생 본인 학년 회차만
+  const [activeSubject, setActiveSubject] = useState(DEFAULT_QUIZ_SUBJECT)
+
+  // 학생 본인 학년 + 선택 과목 회차만
   const mySets = useMemo(
     () => data.quizSets
-      .filter((s) => s.grade === myGrade && s.isPublished)
+      .filter((s) => s.grade === myGrade && s.isPublished && (s.subject ?? '국어') === activeSubject)
       .sort((a, b) => a.round - b.round),
-    [data.quizSets, myGrade]
+    [data.quizSets, myGrade, activeSubject]
   )
 
   const myAttempts = useMemo(
@@ -177,9 +180,26 @@ export default function QuizTab() {
           </p>
         </div>
 
+        {/* 과목 탭 */}
+        <div className="grid grid-cols-4 gap-1.5">
+          {QUIZ_SUBJECTS.map((subj) => (
+            <button
+              key={subj}
+              onClick={() => setActiveSubject(subj)}
+              className={`py-2 rounded-xl text-sm font-bold transition ${
+                activeSubject === subj
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'bg-white text-gray-500 border border-gray-200'
+              }`}
+            >
+              {subj}
+            </button>
+          ))}
+        </div>
+
         {mySets.length === 0 ? (
           <div className="bg-white rounded-2xl p-6 border border-gray-100 text-center text-sm text-gray-400">
-            아직 배포된 회차가 없습니다.
+            아직 배포된 {activeSubject} 회차가 없습니다.
           </div>
         ) : (
           <div className="space-y-3">

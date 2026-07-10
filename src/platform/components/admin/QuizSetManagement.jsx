@@ -4,6 +4,10 @@ import {
   ToggleLeft, ToggleRight, AlertTriangle, Shuffle,
 } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
+import { useAuth } from '../../context/AuthContext.jsx'
+import {
+  QUIZ_SUBJECTS, DEFAULT_QUIZ_SUBJECT, SUBJECT_BADGE, instructorQuizSubject,
+} from '../../utils/quizSubjects.js'
 import QuizSetEditModal from './QuizSetEditModal.jsx'
 import QuizQuestionsModal from './QuizQuestionsModal.jsx'
 
@@ -41,6 +45,13 @@ export default function QuizSetManagement() {
     deleteQuizQuestion,
   } = useData()
 
+  const { currentUser } = useAuth()
+  // 강사는 자기 과목 회차만 (각자 출제 페이지) — 관리자는 전체 + 과목 필터
+  const mySubject = instructorQuizSubject(currentUser)
+  const [subjectFilter, setSubjectFilter] = useState('전체')
+  const defaultSubject = mySubject
+    ?? (QUIZ_SUBJECTS.includes(currentUser?.subject) ? currentUser.subject : DEFAULT_QUIZ_SUBJECT)
+
   const [creatingSet, setCreatingSet] = useState(false)
   const [editingSet, setEditingSet] = useState(null)
   const [viewingSetId, setViewingSetId] = useState(null)
@@ -67,12 +78,21 @@ export default function QuizSetManagement() {
     return map
   }, [data.quizAttempts])
 
+  // 강사: 자기 과목만 / 관리자: 과목 필터 적용
+  const scopedSets = useMemo(() => {
+    if (mySubject) return data.quizSets.filter((s) => s.subject === mySubject)
+    if (subjectFilter !== '전체') return data.quizSets.filter((s) => s.subject === subjectFilter)
+    return data.quizSets
+  }, [data.quizSets, mySubject, subjectFilter])
+
   // 일자(내림차순) → 학년 → 회차 정렬 후 일자별 그룹으로 묶기
   const dateGroups = useMemo(() => {
-    const sorted = [...data.quizSets].sort((a, b) => {
+    const sorted = [...scopedSets].sort((a, b) => {
       const dateA = formatDateKey(a.createdAt)
       const dateB = formatDateKey(b.createdAt)
       if (dateA !== dateB) return dateB.localeCompare(dateA) // 최신 일자가 위로
+      const subjectCmp = (a.subject ?? '').localeCompare(b.subject ?? '')
+      if (subjectCmp !== 0) return subjectCmp
       const gradeCmp = (a.grade ?? '').localeCompare(b.grade ?? '')
       if (gradeCmp !== 0) return gradeCmp
       return (a.round ?? 0) - (b.round ?? 0)
@@ -88,7 +108,7 @@ export default function QuizSetManagement() {
       }
     })
     return groups
-  }, [data.quizSets])
+  }, [scopedSets])
 
   const allSets = useMemo(() => dateGroups.flatMap((g) => g.sets), [dateGroups])
   const viewingSet = viewingSetId ? allSets.find((s) => s.id === viewingSetId) : null
@@ -143,7 +163,9 @@ export default function QuizSetManagement() {
       <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
         <div className="flex items-center gap-2">
           <Settings size={18} className="text-emerald-600" />
-          <h2 className="text-sm font-bold text-gray-800">회차/문제 관리</h2>
+          <h2 className="text-sm font-bold text-gray-800">
+            {mySubject ? `${mySubject} 회차/문제 관리` : '회차/문제 관리'}
+          </h2>
           <span className="text-[11px] text-gray-400 ml-1">총 {allSets.length}개 회차</span>
         </div>
         <button
@@ -155,6 +177,25 @@ export default function QuizSetManagement() {
         </button>
       </div>
 
+      {/* 관리자 전용 과목 필터 — 강사는 자기 과목으로 자동 스코핑 */}
+      {!mySubject && (
+        <div className="flex items-center gap-1.5 px-5 py-2.5 border-b border-gray-50 overflow-x-auto">
+          {['전체', ...QUIZ_SUBJECTS].map((s) => (
+            <button
+              key={s}
+              onClick={() => setSubjectFilter(s)}
+              className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border transition flex-shrink-0 ${
+                subjectFilter === s
+                  ? 'bg-emerald-600 text-white border-emerald-600'
+                  : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
+              }`}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
+
       {allSets.length === 0 ? (
         <div className="px-5 py-12 text-center text-sm text-gray-400">
           아직 등록된 회차가 없습니다.
@@ -165,6 +206,7 @@ export default function QuizSetManagement() {
             <thead className="bg-gray-50 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
               <tr>
                 <th className="text-left px-4 py-2.5 w-28">생성일</th>
+                <th className="text-left px-3 py-2.5 w-16">과목</th>
                 <th className="text-left px-3 py-2.5 w-16">학년</th>
                 <th className="text-left px-3 py-2.5 w-14">회차</th>
                 <th className="text-left px-3 py-2.5">제목</th>
@@ -197,6 +239,11 @@ export default function QuizSetManagement() {
                         ) : (
                           <span className="text-[10px] text-gray-300">↑ 동일</span>
                         )}
+                      </td>
+                      <td className="px-3 py-3 align-top">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md border text-[11px] font-bold ${SUBJECT_BADGE[set.subject] ?? 'bg-gray-50 text-gray-700 border-gray-200'}`}>
+                          {set.subject ?? '국어'}
+                        </span>
                       </td>
                       <td className="px-3 py-3 align-top">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-md border text-[11px] font-bold ${gradeClass}`}>
@@ -285,6 +332,8 @@ export default function QuizSetManagement() {
       {creatingSet && (
         <QuizSetEditModal
           mode="create"
+          defaultSubject={defaultSubject}
+          lockSubject={!!mySubject}
           onSubmit={createQuizSet}
           onClose={() => setCreatingSet(false)}
         />
@@ -294,6 +343,7 @@ export default function QuizSetManagement() {
         <QuizSetEditModal
           mode="edit"
           initial={editingSet}
+          lockSubject={!!mySubject}
           onSubmit={(payload) => updateQuizSet(editingSet.id, payload)}
           onClose={() => setEditingSet(null)}
         />

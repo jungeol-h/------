@@ -1,11 +1,21 @@
 import { useState } from 'react'
 import { X, Save } from 'lucide-react'
+import { QUIZ_SUBJECTS, DEFAULT_QUIZ_SUBJECT } from '../../utils/quizSubjects.js'
 
 const GRADE_OPTIONS = ['중1', '중2', '중3']
 
-export default function QuizSetEditModal({ mode = 'create', initial, onSubmit, onClose }) {
+// lockSubject: 강사는 자기 과목만 출제 — select를 본인 과목으로 고정
+export default function QuizSetEditModal({
+  mode = 'create',
+  initial,
+  defaultSubject = DEFAULT_QUIZ_SUBJECT,
+  lockSubject = false,
+  onSubmit,
+  onClose,
+}) {
   const [title, setTitle] = useState(initial?.title ?? '')
   const [grade, setGrade] = useState(initial?.grade ?? '중1')
+  const [subject, setSubject] = useState(initial?.subject ?? defaultSubject)
   const [round, setRound] = useState(initial?.round ?? 1)
   const [source, setSource] = useState(initial?.source ?? '')
   const [description, setDescription] = useState(initial?.description ?? '')
@@ -24,6 +34,7 @@ export default function QuizSetEditModal({ mode = 'create', initial, onSubmit, o
       await onSubmit({
         title: title.trim(),
         grade,
+        subject,
         round: Number(round),
         source: source.trim(),
         description: description.trim(),
@@ -59,7 +70,20 @@ export default function QuizSetEditModal({ mode = 'create', initial, onSubmit, o
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <label className="block text-[11px] font-bold text-gray-500 mb-1">과목 *</label>
+              <select
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                disabled={lockSubject}
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white disabled:bg-gray-50 disabled:text-gray-500"
+              >
+                {QUIZ_SUBJECTS.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
             <div>
               <label className="block text-[11px] font-bold text-gray-500 mb-1">학년 *</label>
               <select

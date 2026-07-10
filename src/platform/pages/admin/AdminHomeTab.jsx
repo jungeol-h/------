@@ -156,14 +156,20 @@ export default function AdminHomeTab() {
           </div>
           <ul className="space-y-1.5">
             {stats.mindRiskStudents.slice(0, 3).map(({ student, level }) => (
-              <li key={student.id} className="flex items-center justify-between bg-white rounded-lg px-3 py-2">
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-gray-800 truncate">{student.name}</p>
-                  <p className="text-xs text-gray-500 truncate">{student.school} · {student.grade}</p>
-                </div>
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 ml-2 ${RISK_COLOR[level]}`}>
-                  {RISK_LABEL[level]}
-                </span>
+              <li key={student.id}>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/admin/student/${student.id}`)}
+                  className="w-full flex items-center justify-between bg-white rounded-lg px-3 py-2 text-left hover:bg-red-100/40 transition"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-gray-800 truncate">{student.name}</p>
+                    <p className="text-xs text-gray-500 truncate">{student.school} · {student.grade}</p>
+                  </div>
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 ml-2 ${RISK_COLOR[level]}`}>
+                    {RISK_LABEL[level]}
+                  </span>
+                </button>
               </li>
             ))}
             {stats.mindRiskStudents.length > 3 && (

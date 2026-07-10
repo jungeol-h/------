@@ -185,6 +185,7 @@ export const toQuizSet = (row) => ({
   id: row.id,
   title: row.title,
   grade: row.grade,
+  subject: row.subject ?? '국어',
   round: row.round ?? 1,
   source: row.source ?? '',
   description: row.description ?? '',

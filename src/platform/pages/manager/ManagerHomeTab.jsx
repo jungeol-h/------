@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { AlertTriangle, X, CheckCheck, Clock, ClipboardList, MessageCircle, User } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
@@ -6,6 +7,7 @@ import { getRiskStudents } from '../../context/selectors/riskDetection.js'
 import { actualMinutes } from '../../context/selectors/learningRecords.js'
 
 export default function ManagerHomeTab() {
+  const navigate = useNavigate()
   const { currentUser } = useAuth()
   const { data, recordCoaching } = useData()
 
@@ -64,7 +66,7 @@ export default function ManagerHomeTab() {
             return (
               <div
                 key={student.id}
-                onClick={() => { setModal({ student, level }); setComment('') }}
+                onClick={() => navigate(`/manager/student/${student.id}`)}
                 className={`rounded-2xl p-4 cursor-pointer border-2 transition-all hover:shadow-md ${
                   level === 'danger' ? 'bg-red-50 border-red-300' : 'bg-yellow-50 border-yellow-300'
                 }`}
@@ -81,13 +83,17 @@ export default function ManagerHomeTab() {
                       마인드 점수 {level === 'danger' ? '위험' : '주의'} 단계입니다
                     </p>
                   </div>
-                  {coached ? (
-                    <span className="flex items-center gap-1 text-xs text-green-600 font-semibold flex-shrink-0">
-                      <CheckCheck size={14} /> 코칭 완료
-                    </span>
-                  ) : (
-                    <span className="text-xs text-blue-500 font-semibold flex-shrink-0">코칭하기</span>
-                  )}
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setModal({ student, level }); setComment('') }}
+                    className={`flex items-center gap-1 text-xs font-semibold flex-shrink-0 px-2.5 py-1.5 rounded-lg border transition ${
+                      coached
+                        ? 'text-green-600 border-green-200 bg-white hover:bg-green-50'
+                        : 'text-blue-500 border-blue-200 bg-white hover:bg-blue-50'
+                    }`}
+                  >
+                    {coached ? (<><CheckCheck size={14} /> 코칭 완료</>) : '코칭하기'}
+                  </button>
                 </div>
               </div>
             )

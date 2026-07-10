@@ -186,6 +186,8 @@
   },
   "active": "fad6998be5931b1a",
   "lastOpenFiles": [
+    "src/platform/utils/quizSubjects.js",
+    "scripts/add-quiz-subject.sql",
     "dist/workbox-9c191d2f.js",
     "dist/workbox-9c191d2f.js.map",
     "dist/sw.js",
@@ -195,8 +197,6 @@
     "dist/assets/index-CB1dQB0d.css",
     "dist/assets/workbox-window.prod.es5-moKUNATN.js.map",
     "dist/assets/react-pdf.browser-BTsnz88I.js.map",
-    "dist/assets/react-Bx3jIGia.js.map",
-    "dist/assets/index-DcmARXL0.js.map",
     "node_modules/dayjs/README.md",
     "node_modules/dayjs/CHANGELOG.md",
     "node_modules/@fast-csv/format/node_modules/@types/node/README.md",

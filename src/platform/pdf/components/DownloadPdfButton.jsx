@@ -17,7 +17,9 @@ export default function DownloadPdfButton({
       await onDownload()
     } catch (e) {
       reportError(e, { where: 'DownloadPdfButton' })
-      alert('PDF 생성에 실패했습니다. 다시 시도해 주세요.')
+      // 에러 메시지를 노출해 사용자 제보만으로 원인을 좁힐 수 있게 한다
+      const detail = e?.message ? ` (${e.message})` : ''
+      alert(`PDF 생성에 실패했습니다. 다시 시도해 주세요.${detail}`)
     } finally {
       setBusy(false)
     }

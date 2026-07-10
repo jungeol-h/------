@@ -9,16 +9,29 @@ import DownloadPdfButton from '../../pdf/components/DownloadPdfButton.jsx'
 import { buildFilename, nowDateTime } from '../../pdf/utils/formatters.js'
 import { authorOf } from '../../pdf/config/meta.js'
 import { hasPendingGrading } from '../../utils/quizGrading.js'
+import { instructorQuizSubject } from '../../utils/quizSubjects.js'
 
 export default function QuizMonitorTab() {
   const { data, updateQuizAttemptGrading } = useData()
   const { currentUser } = useAuth()
 
+  // 강사는 자기 과목 회차·응시만 (관리자는 전체)
+  const mySubject = instructorQuizSubject(currentUser)
+  const scopedSets = useMemo(
+    () => (mySubject ? data.quizSets.filter((s) => s.subject === mySubject) : data.quizSets),
+    [data.quizSets, mySubject]
+  )
+  const scopedAttempts = useMemo(() => {
+    if (!mySubject) return data.quizAttempts
+    const setIds = new Set(scopedSets.map((s) => s.id))
+    return data.quizAttempts.filter((a) => setIds.has(a.quizSetId))
+  }, [data.quizAttempts, scopedSets, mySubject])
+
   // 회차별 응시자 수 / 미응시자 수 / 평균 — 간단 요약 카드
   const summaries = useMemo(() => {
-    return data.quizSets.map((set) => {
+    return scopedSets.map((set) => {
       const eligible = data.students.filter((s) => s.grade === set.grade)
-      const attempts = data.quizAttempts.filter((a) => a.quizSetId === set.id)
+      const attempts = scopedAttempts.filter((a) => a.quizSetId === set.id)
       const submittedIds = new Set(attempts.map((a) => a.studentId))
       const submittedCount = attempts.length
       const eligibleCount = eligible.length
@@ -29,10 +42,10 @@ export default function QuizMonitorTab() {
         : 0
       return { set, eligibleCount, submittedCount, missingCount, pendingCount, avgPct }
     })
-  }, [data.quizSets, data.students, data.quizAttempts])
+  }, [scopedSets, data.students, scopedAttempts])
 
   const handleDownloadPdf = useCallback(async () => {
-    const filename = buildFilename('확인평가보고서', '전체')
+    const filename = buildFilename('확인평가보고서', mySubject ?? '전체')
     const [{ downloadPdf }, { default: QuizReport }] = await Promise.all([
       import('../../pdf/utils/downloadPdf.js'),
       import('../../pdf/reports/QuizReport.jsx'),
@@ -40,23 +53,25 @@ export default function QuizMonitorTab() {
     await downloadPdf(
       <QuizReport
         summaries={summaries}
-        attempts={data.quizAttempts}
+        attempts={scopedAttempts}
         students={data.students}
-        quizSets={data.quizSets}
+        quizSets={scopedSets}
         period={`조회일 ${nowDateTime().slice(0, 10)}`}
         generatedAt={nowDateTime()}
         author={authorOf(currentUser)}
       />,
       filename,
     )
-  }, [summaries, data.quizAttempts, data.students, data.quizSets, currentUser])
+  }, [summaries, scopedAttempts, data.students, scopedSets, currentUser, mySubject])
 
   return (
     <div className="py-4 space-y-4">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <ClipboardCheck size={20} className="text-emerald-600" />
-          <h2 className="text-base font-bold text-gray-800">확인평가 모니터링</h2>
+          <h2 className="text-base font-bold text-gray-800">
+            {mySubject ? `${mySubject} 확인평가 모니터링` : '확인평가 모니터링'}
+          </h2>
         </div>
         <div className="flex items-center gap-2">
           <RefreshButton />
@@ -76,7 +91,7 @@ export default function QuizMonitorTab() {
         <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-2">
           {summaries.map(({ set, eligibleCount, submittedCount, missingCount, pendingCount, avgPct }) => (
             <div key={set.id} className="bg-white rounded-2xl p-4 border border-gray-100">
-              <p className="text-[11px] font-bold text-emerald-600">{set.grade} · {set.round}회</p>
+              <p className="text-[11px] font-bold text-emerald-600">{set.subject} · {set.grade} · {set.round}회</p>
               <p className="text-sm font-semibold text-gray-800 leading-snug mt-0.5">{set.title}</p>
               <div className="flex items-end gap-2 mt-3">
                 <span className="text-2xl font-bold text-gray-800">{submittedCount}</span>
@@ -97,9 +112,9 @@ export default function QuizMonitorTab() {
       <QuizSetManagement />
 
       <QuizResultsTable
-        attempts={data.quizAttempts}
+        attempts={scopedAttempts}
         students={data.students}
-        quizSets={data.quizSets}
+        quizSets={scopedSets}
         quizQuestions={data.quizQuestions}
         onUpdateGrading={updateQuizAttemptGrading}
       />

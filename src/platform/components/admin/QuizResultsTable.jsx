@@ -106,7 +106,7 @@ export default function QuizResultsTable({ attempts, students, quizSets, quizQue
         >
           <option value="all">전체 회차</option>
           {setOptions.map((s) => (
-            <option key={s.id} value={s.id}>{s.title}</option>
+            <option key={s.id} value={s.id}>{s.subject ? `${s.subject} · ` : ''}{s.title}</option>
           ))}
         </select>
       </div>
@@ -141,7 +141,9 @@ export default function QuizResultsTable({ attempts, students, quizSets, quizQue
                     <div className="sm:grid sm:grid-cols-12 sm:gap-2 sm:items-center flex flex-col gap-1">
                       <p className="sm:col-span-3 text-sm font-semibold text-gray-800">{stu?.name ?? a.studentId}</p>
                       <p className="sm:col-span-1 text-xs text-gray-500">{stu?.grade ?? '—'}</p>
-                      <p className="sm:col-span-4 text-xs text-gray-600 truncate">{set?.title ?? a.quizSetId}</p>
+                      <p className="sm:col-span-4 text-xs text-gray-600 truncate">
+                        {set ? `${set.subject ? `${set.subject} · ` : ''}${set.title}` : a.quizSetId}
+                      </p>
                       <p className="sm:col-span-2 text-sm font-bold">
                         <span className={pct >= 80 ? 'text-emerald-600' : pct >= 60 ? 'text-amber-600' : 'text-red-600'}>
                           {a.score} / {a.total}

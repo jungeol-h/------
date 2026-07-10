@@ -10,7 +10,9 @@ import { makeId } from '../dataModel.js'
 import { withWriteRetry } from '../../lib/supabaseRetry.js'
 
 const sortSets = (a, b) =>
-  (a.grade ?? '').localeCompare(b.grade ?? '') || (a.round ?? 0) - (b.round ?? 0)
+  (a.grade ?? '').localeCompare(b.grade ?? '') ||
+  (a.subject ?? '').localeCompare(b.subject ?? '') ||
+  (a.round ?? 0) - (b.round ?? 0)
 
 const sortQuestions = (a, b) => {
   if (a.quizSetId !== b.quizSetId)
@@ -95,11 +97,12 @@ export function useQuizDomain(data, setData) {
 
   // 회차 신규 생성
   const createQuizSet = useCallback(
-    async ({ title, grade, round, source = '', description = '', isPublished = true }) => {
+    async ({ title, grade, subject = '국어', round, source = '', description = '', isPublished = true }) => {
       const row = {
         id: makeId('qs-'),
         title,
         grade,
+        subject,
         round,
         source,
         description,
@@ -127,6 +130,7 @@ export function useQuizDomain(data, setData) {
       const snake = {}
       if (patch.title !== undefined) snake.title = patch.title
       if (patch.grade !== undefined) snake.grade = patch.grade
+      if (patch.subject !== undefined) snake.subject = patch.subject
       if (patch.round !== undefined) snake.round = patch.round
       if (patch.source !== undefined) snake.source = patch.source
       if (patch.description !== undefined) snake.description = patch.description
@@ -158,15 +162,17 @@ export function useQuizDomain(data, setData) {
         throw new Error('소속 문제가 없는 회차는 복제할 수 없습니다.')
       }
 
-      const sameGradeMaxRound = data.quizSets
-        .filter((s) => s.grade === source.grade)
+      // 회차 번호는 (학년, 과목) 안에서만 이어진다 — 과목별 독립 출제
+      const sameGroupMaxRound = data.quizSets
+        .filter((s) => s.grade === source.grade && s.subject === source.subject)
         .reduce((max, s) => Math.max(max, s.round ?? 0), 0)
-      const newRound = sameGradeMaxRound + 1
+      const newRound = sameGroupMaxRound + 1
       const newSetId = makeId('qs-')
       const newSetRow = {
         id: newSetId,
         title: `${source.title} (순서 셔플)`,
         grade: source.grade,
+        subject: source.subject ?? '국어',
         round: newRound,
         source: source.source ?? '',
         description: source.description ?? '',

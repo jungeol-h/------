@@ -47,7 +47,7 @@ export default function QuizQuestionsModal({
           <div>
             <p className="text-sm font-bold text-gray-800">{quizSet.title}</p>
             <p className="text-[11px] text-gray-500">
-              {quizSet.grade} · {quizSet.round}회 · 문제 {sorted.length}개
+              {quizSet.subject ?? '국어'} · {quizSet.grade} · {quizSet.round}회 · 문제 {sorted.length}개
               {attemptCount > 0 && (
                 <span className="ml-1 text-amber-600">· 응시 {attemptCount}명</span>
               )}
