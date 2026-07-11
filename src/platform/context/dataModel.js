@@ -26,6 +26,9 @@ export const EMPTY = {
   dailySelfScores: [],
   workPlans: [],
   urgentReports: [],
+  managementReports: [],
+  financeRecords: [],
+  lessonReports: [],
   loginCount: null, // 학생 본인 로그인 누적 횟수 (count 쿼리, 학생 fetch만 채움)
   // 침묵 실패 방지용 메타. fetch 시점에 채워진다.
   _fetchErrors: [], // [{ table, message }] — 로드 실패한 쿼리

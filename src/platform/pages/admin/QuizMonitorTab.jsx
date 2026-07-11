@@ -44,24 +44,23 @@ export default function QuizMonitorTab() {
     })
   }, [scopedSets, data.students, scopedAttempts])
 
-  const handleDownloadPdf = useCallback(async () => {
+  const buildPdf = useCallback(async () => {
     const filename = buildFilename('확인평가보고서', mySubject ?? '전체')
-    const [{ downloadPdf }, { default: QuizReport }] = await Promise.all([
-      import('../../pdf/utils/downloadPdf.js'),
-      import('../../pdf/reports/QuizReport.jsx'),
-    ])
-    await downloadPdf(
-      <QuizReport
-        summaries={summaries}
-        attempts={scopedAttempts}
-        students={data.students}
-        quizSets={scopedSets}
-        period={`조회일 ${nowDateTime().slice(0, 10)}`}
-        generatedAt={nowDateTime()}
-        author={authorOf(currentUser)}
-      />,
+    const { default: QuizReport } = await import('../../pdf/reports/QuizReport.jsx')
+    return {
+      element: (
+        <QuizReport
+          summaries={summaries}
+          attempts={scopedAttempts}
+          students={data.students}
+          quizSets={scopedSets}
+          period={`조회일 ${nowDateTime().slice(0, 10)}`}
+          generatedAt={nowDateTime()}
+          author={authorOf(currentUser)}
+        />
+      ),
       filename,
-    )
+    }
   }, [summaries, scopedAttempts, data.students, scopedSets, currentUser, mySubject])
 
   return (
@@ -76,7 +75,7 @@ export default function QuizMonitorTab() {
         <div className="flex items-center gap-2">
           <RefreshButton />
           <DownloadPdfButton
-            onDownload={handleDownloadPdf}
+            buildDocument={buildPdf}
             label="확인평가 보고서"
             disabled={summaries.length === 0}
           />

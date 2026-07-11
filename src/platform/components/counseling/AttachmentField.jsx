@@ -8,11 +8,19 @@ function sizeLabel(bytes) {
   return mb >= 1 ? `${mb.toFixed(1)}MB` : `${Math.ceil(bytes / 1024)}KB`
 }
 
-// 업무보고 PDF 첨부 입력 — 작성/수정 폼 공용.
+// 파일 첨부 입력 — 작성/수정 폼 공용.
 // existing: 저장된 첨부 메타 [{ path, name, size }] (수정 모드), onRemoveExisting(path)
 // pending: 업로드 대기 File[], onChangePending(File[])
 // 업로드는 저장 시점에 폼이 수행한다(여기선 선택·검증만).
-export function AttachmentField({ existing = [], onRemoveExisting, pending = [], onChangePending }) {
+// 기본값은 상담 PDF 첨부 동작 — 재정 영수증 등은 accept/validate/kindLabel을 넘겨 재사용한다.
+export function AttachmentField({
+  existing = [], onRemoveExisting, pending = [], onChangePending,
+  accept = 'application/pdf,.pdf',
+  validate = validatePdf,
+  kindLabel = 'PDF',
+  maxCount = MAX_ATTACHMENTS,
+  maxMb = MAX_ATTACHMENT_MB,
+}) {
   const inputRef = useRef(null)
   const total = existing.length + pending.length
 
@@ -22,11 +30,11 @@ export function AttachmentField({ existing = [], onRemoveExisting, pending = [],
     if (picked.length === 0) return
     const next = [...pending]
     for (const file of picked) {
-      if (existing.length + next.length >= MAX_ATTACHMENTS) {
-        alert(`첨부는 최대 ${MAX_ATTACHMENTS}개까지 가능해요.`)
+      if (existing.length + next.length >= maxCount) {
+        alert(`첨부는 최대 ${maxCount}개까지 가능해요.`)
         break
       }
-      const problem = validatePdf(file)
+      const problem = validate(file)
       if (problem) {
         alert(`${file.name}: ${problem}`)
         continue
@@ -39,20 +47,20 @@ export function AttachmentField({ existing = [], onRemoveExisting, pending = [],
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
-        <span className="text-xs text-gray-500">파일 첨부 (PDF, 최대 {MAX_ATTACHMENTS}개 · 개당 {MAX_ATTACHMENT_MB}MB)</span>
+        <span className="text-xs text-gray-500">파일 첨부 ({kindLabel}, 최대 {maxCount}개 · 개당 {maxMb}MB)</span>
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
-          disabled={total >= MAX_ATTACHMENTS}
+          disabled={total >= maxCount}
           className="flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-700 disabled:text-gray-300"
         >
           <Paperclip size={13} />
-          PDF 추가
+          {kindLabel} 추가
         </button>
         <input
           ref={inputRef}
           type="file"
-          accept="application/pdf,.pdf"
+          accept={accept}
           multiple
           onChange={handlePick}
           className="hidden"
@@ -93,15 +101,15 @@ export function AttachmentField({ existing = [], onRemoveExisting, pending = [],
   )
 }
 
-// 저장된 기록 카드의 첨부 칩 — 클릭 시 새 탭에서 PDF 열람.
-export function AttachmentChips({ attachments }) {
+// 저장된 기록 카드의 첨부 칩 — 클릭 시 새 탭에서 열람.
+export function AttachmentChips({ attachments, fileUrl = counselingFileUrl }) {
   if (!attachments?.length) return null
   return (
     <div className="flex flex-wrap gap-1.5 mt-2">
       {attachments.map((a) => (
         <a
           key={a.path}
-          href={counselingFileUrl(a.path)}
+          href={fileUrl(a.path)}
           target="_blank"
           rel="noreferrer"
           onClick={(e) => e.stopPropagation()}

@@ -8,7 +8,8 @@ import {
   toCounselingRecord, toAlert, toCareerDesignResult,
   toLearningDiagnosisResult, toAssignment, toQuizSet, toQuizQuestion,
   toQuizAttempt, toParentChild, toAttendanceRecord, toWorkPlan,
-  toUrgentReport, collectRows,
+  toUrgentReport, toManagementReport, toFinanceRecord, toLessonReport,
+  collectRows,
 } from '../../lib/supabaseHelpers.js'
 import { EMPTY } from '../dataModel.js'
 
@@ -16,7 +17,7 @@ export async function fetchForAdmin() {
   const errors = []
   const meta = {}
 
-  const [usersRes, assnRes, alertsRes, counselingRes, statsRes, setsRes, parentChildrenRes, workPlansRes, urgentReportsRes] = await Promise.all([
+  const [usersRes, assnRes, alertsRes, counselingRes, statsRes, setsRes, parentChildrenRes, workPlansRes, urgentReportsRes, managementReportsRes, financeRecordsRes, lessonReportsRes] = await Promise.all([
     supabase.from('users').select('*').order('grade').order('login_id'),
     supabase.from('assignments').select('*'),
     supabase.from('alerts').select('*').order('created_at', { ascending: false }),
@@ -26,6 +27,9 @@ export async function fetchForAdmin() {
     supabase.from('parent_children').select('*'),
     supabase.from('work_plans').select('*').order('plan_date', { ascending: false }).limit(1000),
     supabase.from('urgent_reports').select('*').order('created_at', { ascending: false }),
+    supabase.from('management_reports').select('*').order('date', { ascending: false }).limit(1000),
+    supabase.from('finance_records').select('*').order('date', { ascending: false }).limit(2000),
+    supabase.from('lesson_reports').select('*').order('date', { ascending: false }).limit(1000),
   ])
 
   const allUsers = collectRows(usersRes, 'users', errors)
@@ -91,6 +95,9 @@ export async function fetchForAdmin() {
     attendanceRecords: collectRows(attendanceRes, 'attendance_records', errors).map(toAttendanceRecord),
     workPlans: collectRows(workPlansRes, 'work_plans', errors).map(toWorkPlan),
     urgentReports: collectRows(urgentReportsRes, 'urgent_reports', errors).map(toUrgentReport),
+    managementReports: collectRows(managementReportsRes, 'management_reports', errors).map(toManagementReport),
+    financeRecords: collectRows(financeRecordsRes, 'finance_records', errors).map(toFinanceRecord),
+    lessonReports: collectRows(lessonReportsRes, 'lesson_reports', errors).map(toLessonReport),
     _fetchErrors: errors,
     _fetchMeta: meta,
   }

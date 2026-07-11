@@ -50,29 +50,28 @@ export default function ExternalStudentDetail({
     }
   }
 
-  const handleDownloadPdf = useCallback(async () => {
+  const buildPdf = useCallback(async () => {
     const asc = records
       .slice()
       .sort((a, b) => (a.date > b.date ? 1 : a.date < b.date ? -1 : a.id > b.id ? 1 : -1))
-    const [{ downloadPdf }, { default: CounselingReport }] = await Promise.all([
-      import('../../../pdf/utils/downloadPdf.js'),
-      import('../../../pdf/reports/CounselingReport.jsx'),
-    ])
-    await downloadPdf(
-      <CounselingReport
-        student={{ name: student?.name, school: student?.school, grade: student?.grade }}
-        records={asc.map((r) => ({
-          date: r.date,
-          typeLabel: COUNSELING_TYPE_LABELS[r.type] || r.type,
-          targetLabel: COUNSELING_TARGET_LABELS[r.targetType] ?? '학생',
-          authorName: authorName(r.counselorId),
-          content: r.content,
-        }))}
-        generatedAt={nowDateTime()}
-        author={authorOf(currentUser)}
-      />,
-      buildFilename('상담보고서', student?.name),
-    )
+    const { default: CounselingReport } = await import('../../../pdf/reports/CounselingReport.jsx')
+    return {
+      element: (
+        <CounselingReport
+          student={{ name: student?.name, school: student?.school, grade: student?.grade }}
+          records={asc.map((r) => ({
+            date: r.date,
+            typeLabel: COUNSELING_TYPE_LABELS[r.type] || r.type,
+            targetLabel: COUNSELING_TARGET_LABELS[r.targetType] ?? '학생',
+            authorName: authorName(r.counselorId),
+            content: r.content,
+          }))}
+          generatedAt={nowDateTime()}
+          author={authorOf(currentUser)}
+        />
+      ),
+      filename: buildFilename('상담보고서', student?.name),
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [records, student, currentUser])
 
@@ -94,7 +93,7 @@ export default function ExternalStudentDetail({
 
       <div className="flex justify-end gap-2">
         <DownloadPdfButton
-          onDownload={handleDownloadPdf}
+          buildDocument={buildPdf}
           label="상담 보고서"
           disabled={records.length === 0}
         />

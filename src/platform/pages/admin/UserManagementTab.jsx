@@ -122,24 +122,23 @@ export default function UserManagementTab({ readOnly = false }) {
     await updateStudent(modal.student.id, form)
   }
 
-  const handleDownloadPdf = useCallback(async () => {
+  const buildPdf = useCallback(async () => {
     const identifier = `${showInactive ? '전체' : '활성'}_${sortKey}${sortDir === 'desc' ? '내림' : '오름'}`
     const filename = buildFilename('학생목록', identifier)
-    const [{ downloadPdf }, { default: UserListReport }] = await Promise.all([
-      import('../../pdf/utils/downloadPdf.js'),
-      import('../../pdf/reports/UserListReport.jsx'),
-    ])
-    await downloadPdf(
-      <UserListReport
-        students={visibleStudents}
-        managerNameOf={managerNameOf}
-        filters={{ showInactive, query, sortKey, sortDir }}
-        period={`조회일 ${nowDateTime().slice(0, 10)}`}
-        generatedAt={nowDateTime()}
-        author={authorOf(currentUser)}
-      />,
+    const { default: UserListReport } = await import('../../pdf/reports/UserListReport.jsx')
+    return {
+      element: (
+        <UserListReport
+          students={visibleStudents}
+          managerNameOf={managerNameOf}
+          filters={{ showInactive, query, sortKey, sortDir }}
+          period={`조회일 ${nowDateTime().slice(0, 10)}`}
+          generatedAt={nowDateTime()}
+          author={authorOf(currentUser)}
+        />
+      ),
       filename,
-    )
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visibleStudents, showInactive, query, sortKey, sortDir, currentUser])
 
@@ -172,7 +171,7 @@ export default function UserManagementTab({ readOnly = false }) {
             </button>
           )}
           <DownloadPdfButton
-            onDownload={handleDownloadPdf}
+            buildDocument={buildPdf}
             label="학생 목록 보고서"
             disabled={visibleStudents.length === 0}
           />

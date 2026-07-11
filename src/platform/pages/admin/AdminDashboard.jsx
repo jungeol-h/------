@@ -1,21 +1,19 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { Home, UserCog, MessageSquare, ClipboardCheck, Globe, CalendarDays, Loader } from 'lucide-react'
+import { Home, UserCog, MessageSquare, ClipboardCheck, Globe, Loader } from 'lucide-react'
 import PageLayout from '../../components/layout/PageLayout.jsx'
 import { useData } from '../../context/DataContext.jsx'
 import AdminHomeTab from './AdminHomeTab.jsx'
 import UserManagementTab from './UserManagementTab.jsx'
-import CounselingTab from './CounselingTab.jsx'
-import WorkPlanTab from './WorkPlanTab.jsx'
+import WorkRecordsTab from '../shared/WorkRecordsTab.jsx'
 import QuizMonitorTab from './QuizMonitorTab.jsx'
 import ExternalCounselingTab from '../educator/external/ExternalCounselingTab.jsx'
 import StudentDetailPage from '../shared/StudentDetailPage.jsx'
 
-// '통계' 탭은 홈 하단 StatisticsSection으로 이동, 그 자리에 '업무계획' 탭 (2026-07 클라이언트 요청)
+// '업무계획'+'업무보고' 탭은 '업무기록' 통합 탭(5메뉴)으로 합쳐짐 (2026-07 클라이언트 요청)
 const TABS = [
   { path: '/admin/home', label: '홈', icon: Home },
-  { path: '/admin/plans', label: '업무계획', icon: CalendarDays },
   { path: '/admin/users', label: '학생', icon: UserCog },
-  { path: '/admin/counseling', label: '업무보고', icon: MessageSquare },
+  { path: '/admin/counseling', label: '업무기록', icon: MessageSquare },
   { path: '/admin/quiz', label: '확인평가', icon: ClipboardCheck },
   { path: '/admin/external', label: '외부상담', icon: Globe },
 ]
@@ -58,9 +56,9 @@ export default function AdminDashboard() {
             <Route index element={<Navigate to="home" replace />} />
             <Route path="home" element={<AdminHomeTab />} />
             <Route path="statistics" element={<Navigate to="/admin/home" replace />} />
-            <Route path="plans" element={<WorkPlanTab />} />
+            <Route path="plans" element={<Navigate to="/admin/counseling?menu=plans" replace />} />
             <Route path="users" element={<UserManagementTab />} />
-            <Route path="counseling" element={<CounselingTab />} />
+            <Route path="counseling" element={<WorkRecordsTab />} />
             <Route path="external" element={<ExternalCounselingTab />} />
           </Routes>
         </PageLayout>

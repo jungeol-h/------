@@ -1204,24 +1204,25 @@ function AttendanceSection({ data, studentId, currentUser, hasLearning }) {
   const visible = showAll ? attRecords : attRecords.slice(0, 30)
   const hasAttendance = attRecords.length > 0
 
-  const handleDownloadPdf = useCallback(async () => {
+  const buildPdf = useCallback(async () => {
     const student = data.students.find((s) => s.id === studentId)
-    const { attendance, learning, mind } = buildReflectionData(data, studentId)
-    const [{ downloadPdf }, { default: ReflectionReport }] = await Promise.all([
-      import('../../pdf/utils/downloadPdf.js'),
-      import('../../pdf/reports/ReflectionReport.jsx'),
-    ])
-    await downloadPdf(
-      <ReflectionReport
-        student={{ name: student?.name, school: student?.school, grade: student?.grade }}
-        attendance={attendance}
-        learning={learning}
-        mind={mind}
-        generatedAt={nowDateTime()}
-        author={authorOf(currentUser)}
-      />,
-      buildFilename('종합성장리포트', student?.name),
-    )
+    const { attendance, learning, tasks, quiz, mind } = buildReflectionData(data, studentId)
+    const { default: ReflectionReport } = await import('../../pdf/reports/ReflectionReport.jsx')
+    return {
+      element: (
+        <ReflectionReport
+          student={{ name: student?.name, school: student?.school, grade: student?.grade }}
+          attendance={attendance}
+          learning={learning}
+          tasks={tasks}
+          quiz={quiz}
+          mind={mind}
+          generatedAt={nowDateTime()}
+          author={authorOf(currentUser)}
+        />
+      ),
+      filename: buildFilename('종합성장리포트', student?.name),
+    }
   }, [data, studentId, currentUser])
 
   return (
@@ -1229,7 +1230,7 @@ function AttendanceSection({ data, studentId, currentUser, hasLearning }) {
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-bold text-gray-700">출결 기록</h3>
         <DownloadPdfButton
-          onDownload={handleDownloadPdf}
+          buildDocument={buildPdf}
           label="종합 성장 리포트"
           disabled={!hasAttendance && !hasLearning}
         />

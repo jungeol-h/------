@@ -6,7 +6,7 @@ import { useData } from '../../context/DataContext.jsx'
 import { getRiskStudents } from '../../context/selectors/riskDetection.js'
 import ManagerHomeTab from './ManagerHomeTab.jsx'
 import StudentListTab from './StudentListTab.jsx'
-import CounselingTab from './CounselingTab.jsx'
+import WorkRecordsTab from '../shared/WorkRecordsTab.jsx'
 import QuizMonitorTab from './QuizMonitorTab.jsx'
 import AttendanceTab from './AttendanceTab.jsx'
 import KioskPage from './KioskPage.jsx'
@@ -16,7 +16,7 @@ const TABS = [
   { path: '/manager/home', label: '홈', icon: Home },
   { path: '/manager/attendance', label: '출결', icon: CalendarCheck },
   { path: '/manager/students', label: '학생', icon: Users },
-  { path: '/manager/counseling', label: '업무보고', icon: MessageSquare },
+  { path: '/manager/counseling', label: '업무기록', icon: MessageSquare },
   { path: '/manager/quiz', label: '확인평가', icon: ClipboardCheck },
 ]
 
@@ -59,7 +59,7 @@ export default function ManagerDashboard() {
             <Route path="home" element={<ManagerHomeTab />} />
             <Route path="attendance" element={<AttendanceTab />} />
             <Route path="students" element={<StudentListTab />} />
-            <Route path="counseling" element={<CounselingTab />} />
+            <Route path="counseling" element={<WorkRecordsTab />} />
             <Route path="quiz" element={<QuizMonitorTab />} />
           </Routes>
         </PageLayout>

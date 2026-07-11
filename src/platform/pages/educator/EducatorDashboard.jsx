@@ -4,7 +4,7 @@ import PageLayout from '../../components/layout/PageLayout.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
 import EducatorStudentListTab from './EducatorStudentListTab.jsx'
-import EducatorCounselingTab from './EducatorCounselingTab.jsx'
+import WorkRecordsTab from '../shared/WorkRecordsTab.jsx'
 import EducatorTaskTab from './EducatorTaskTab.jsx'
 import ExternalCounselingTab from './external/ExternalCounselingTab.jsx'
 import QuizMonitorTab from '../admin/QuizMonitorTab.jsx'
@@ -32,7 +32,7 @@ export default function EducatorDashboard() {
   // 공통 탭 + instructor 전용 확인평가 탭 + consultant 전용 외부상담 탭.
   const tabs = [
     { path: `${basePath}/students`, label: '학생', icon: Users },
-    { path: `${basePath}/counseling`, label: '업무보고', icon: MessageSquare },
+    { path: `${basePath}/counseling`, label: '업무기록', icon: MessageSquare },
     { path: `${basePath}/tasks`, label: '과제', icon: ClipboardList },
     ...(isInstructor
       ? [{ path: `${basePath}/quiz`, label: '확인평가', icon: ClipboardCheck }]
@@ -70,7 +70,7 @@ export default function EducatorDashboard() {
           <Routes>
             <Route index element={<Navigate to="students" replace />} />
             <Route path="students" element={<EducatorStudentListTab />} />
-            <Route path="counseling" element={<EducatorCounselingTab />} />
+            <Route path="counseling" element={<WorkRecordsTab />} />
             <Route path="tasks" element={<EducatorTaskTab />} />
             {isConsultant && (
               <Route path="external" element={<ExternalCounselingTab />} />

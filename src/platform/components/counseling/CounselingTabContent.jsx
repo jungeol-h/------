@@ -28,6 +28,8 @@ export default function CounselingTabContent({ students, records, showAuthor = f
   const [studentId, setStudentId] = useState('')
   const [type, setType] = useState(COUNSELING_TYPES[0])
   const [targetType, setTargetType] = useState('student')
+  const [startTime, setStartTime] = useState('')
+  const [endTime, setEndTime] = useState('')
   const [fields, setFields] = useState(EMPTY_FIELDS)
   const [attachFiles, setAttachFiles] = useState([]) // 업로드 대기 PDF File[]
   const [saving, setSaving] = useState(false)
@@ -61,11 +63,13 @@ export default function CounselingTabContent({ students, records, showAuthor = f
     try {
       const content = composeCounselingContent(fields)
       const attachments = attachFiles.length > 0 ? await uploadCounselingPdfs(attachFiles, authorId) : []
-      await addCounselingRecord({ studentId, authorId, content, type, targetType, fields, attachments })
+      await addCounselingRecord({ studentId, authorId, content, type, targetType, fields, attachments, startTime, endTime })
       // 성공 시 폼 초기화(학생/유형은 연속 작성 편의를 위해 유지하지 않고 비움).
       setStudentId('')
       setType(COUNSELING_TYPES[0])
       setTargetType('student')
+      setStartTime('')
+      setEndTime('')
       setFields(EMPTY_FIELDS)
       setAttachFiles([])
     } catch {
@@ -132,6 +136,27 @@ export default function CounselingTabContent({ students, records, showAuthor = f
           </div>
         </div>
 
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">시작시간</label>
+            <input
+              type="time"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              className={`${fieldClass} w-full`}
+            />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">종료시간</label>
+            <input
+              type="time"
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+              className={`${fieldClass} w-full`}
+            />
+          </div>
+        </div>
+
         <CounselingContentFields value={fields} onChange={setFields} fieldClass={fieldClass} />
 
         <AttachmentField pending={attachFiles} onChangePending={setAttachFiles} />
@@ -172,7 +197,10 @@ export default function CounselingTabContent({ students, records, showAuthor = f
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-400">{r.date}</span>
+                      <span className="text-xs text-gray-400">
+                        {r.date}
+                        {r.startTime && ` ${r.startTime}~${r.endTime || ''}`}
+                      </span>
                       {canManage(r) && (
                         <>
                           <button

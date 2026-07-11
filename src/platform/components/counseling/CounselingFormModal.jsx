@@ -21,6 +21,8 @@ export default function CounselingFormModal({ students = [], fixedStudent, recor
   const [studentId, setStudentId] = useState(record?.studentId ?? fixedStudent?.id ?? '')
   const [type, setType] = useState(record?.type ?? COUNSELING_TYPES[0])
   const [targetType, setTargetType] = useState(record?.targetType ?? 'student')
+  const [startTime, setStartTime] = useState(record?.startTime ?? '')
+  const [endTime, setEndTime] = useState(record?.endTime ?? '')
   const [fields, setFields] = useState({
     topic: record?.topic ?? '',
     diagnosis: record ? (hasStructuredContent(record) ? record.diagnosis : record.comment ?? '') : '',
@@ -42,12 +44,12 @@ export default function CounselingFormModal({ students = [], fixedStudent, recor
       const uploaded = attachFiles.length > 0 ? await uploadCounselingPdfs(attachFiles, authorId) : []
       const attachments = [...existingAttachments, ...uploaded]
       if (isEdit) {
-        await updateCounselingRecord(record.id, { content, type, targetType, fields, attachments })
+        await updateCounselingRecord(record.id, { content, type, targetType, fields, attachments, startTime, endTime })
         // 수정에서 제거된 첨부의 실파일 정리 (best-effort)
         const keptPaths = new Set(existingAttachments.map((a) => a.path))
         removeCounselingFiles((record.attachments ?? []).filter((a) => !keptPaths.has(a.path)).map((a) => a.path))
       } else {
-        await addCounselingRecord({ studentId, authorId, content, type, targetType, fields, attachments })
+        await addCounselingRecord({ studentId, authorId, content, type, targetType, fields, attachments, startTime, endTime })
       }
       onSaved?.()
       onClose()
@@ -115,6 +117,27 @@ export default function CounselingFormModal({ students = [], fixedStudent, recor
                 <option value={type}>{COUNSELING_TYPE_LABELS[type] ?? type}</option>
               )}
             </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">시작시간</label>
+            <input
+              type="time"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              className={fieldClass}
+            />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">종료시간</label>
+            <input
+              type="time"
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+              className={fieldClass}
+            />
           </div>
         </div>
 

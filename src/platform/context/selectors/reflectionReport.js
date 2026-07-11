@@ -53,7 +53,57 @@ export function getMindSummary(data, studentId) {
   }
 }
 
-// ReflectionReport props의 데이터 부분(attendance/learning/mind)을 조립.
+// 과제수행 요약 — 전체/완료/이행률 + 최근 과제 목록(마감일 내림차순 15건).
+export function getTaskSummary(data, studentId) {
+  const tasks = (data?.tasks ?? []).filter((t) => t.studentId === studentId)
+  const done = tasks.filter((t) => t.status === 'done').length
+  const recent = tasks
+    .slice()
+    .sort((a, b) => String(b.dueDate ?? '').localeCompare(String(a.dueDate ?? '')))
+    .slice(0, 15)
+    .map((t) => ({
+      id: t.id,
+      title: t.title,
+      subject: t.subject ?? '',
+      dueDate: t.dueDate ?? '',
+      status: t.status ?? 'pending',
+    }))
+  return {
+    total: tasks.length,
+    done,
+    rate: tasks.length > 0 ? done / tasks.length : null,
+    recent,
+  }
+}
+
+// 확인평가 결과 요약 — 응시별 점수·정답률(응시일 내림차순) + 평균 정답률.
+export function getQuizSummary(data, studentId) {
+  const sets = data?.quizSets ?? []
+  const rows = (data?.quizAttempts ?? [])
+    .filter((a) => a.studentId === studentId)
+    .slice()
+    .sort((a, b) => String(b.submittedAt ?? '').localeCompare(String(a.submittedAt ?? '')))
+    .map((a) => {
+      const set = sets.find((s) => s.id === a.quizSetId)
+      const pct = a.total > 0 ? Math.round((a.score / a.total) * 100) : null
+      return {
+        id: a.id,
+        label: set ? `${set.subject} ${set.round}회` : '-',
+        title: set?.title ?? '-',
+        score: a.score ?? 0,
+        total: a.total ?? 0,
+        pct,
+        submittedAt: a.submittedAt ? String(a.submittedAt).slice(0, 10) : '-',
+      }
+    })
+  const scored = rows.filter((r) => r.pct != null)
+  const avgPct = scored.length > 0
+    ? Math.round(scored.reduce((s, r) => s + r.pct, 0) / scored.length)
+    : null
+  return { rows, avgPct }
+}
+
+// ReflectionReport props의 데이터 부분(attendance/learning/tasks/quiz/mind)을 조립.
 // student/generatedAt/author 는 호출부에서 붙인다.
 export function buildReflectionData(data, studentId, today = new Date()) {
   const attendance = getAttendanceSummary(data, studentId)
@@ -68,7 +118,9 @@ export function buildReflectionData(data, studentId, today = new Date()) {
     weekly: getLast4WeeksLearning(data?.learningRecords ?? [], studentId, today),
   }
 
+  const tasks = getTaskSummary(data, studentId)
+  const quiz = getQuizSummary(data, studentId)
   const mind = getMindSummary(data, studentId)
 
-  return { attendance, learning, mind }
+  return { attendance, learning, tasks, quiz, mind }
 }

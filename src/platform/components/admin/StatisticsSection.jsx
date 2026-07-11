@@ -25,7 +25,7 @@ export default function StatisticsSection() {
   const typeCounts = useMemo(() => getCounselingTypeCounts(data), [data])
   const hasAttendance = attendanceTotals.present + attendanceTotals.late + attendanceTotals.absent > 0
 
-  const handleDownloadPdf = useCallback(async () => {
+  const buildPdf = useCallback(async () => {
     const periodLabel = hasStats
       ? `${data.monthlyStats[0].month} ~ ${data.monthlyStats[data.monthlyStats.length - 1].month}`
       : '-'
@@ -35,11 +35,9 @@ export default function StatisticsSection() {
     const filename = buildFilename('월간보고서', identifier)
 
     const [
-      { downloadPdf },
       { default: StatisticsReport },
       { captureChart },
     ] = await Promise.all([
-      import('../../pdf/utils/downloadPdf.js'),
       import('../../pdf/reports/StatisticsReport.jsx'),
       import('../../pdf/utils/captureChart.js'),
     ])
@@ -49,16 +47,18 @@ export default function StatisticsSection() {
       captureChart(lineRef.current),
     ])
 
-    await downloadPdf(
-      <StatisticsReport
-        monthlyStats={data.monthlyStats}
-        chartImages={{ centerHours: centerHoursImg, selfIndex: selfIndexImg }}
-        period={periodLabel}
-        generatedAt={nowDateTime()}
-        author={authorOf(currentUser)}
-      />,
+    return {
+      element: (
+        <StatisticsReport
+          monthlyStats={data.monthlyStats}
+          chartImages={{ centerHours: centerHoursImg, selfIndex: selfIndexImg }}
+          period={periodLabel}
+          generatedAt={nowDateTime()}
+          author={authorOf(currentUser)}
+        />
+      ),
       filename,
-    )
+    }
   }, [hasStats, data.monthlyStats, currentUser])
 
   return (
@@ -77,7 +77,7 @@ export default function StatisticsSection() {
             출결 엑셀
           </button>
           <DownloadPdfButton
-            onDownload={handleDownloadPdf}
+            buildDocument={buildPdf}
             label="월간 보고서"
             disabled={!hasStats}
           />

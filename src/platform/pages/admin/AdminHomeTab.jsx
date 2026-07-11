@@ -14,6 +14,7 @@ import { getWorkPlansForDate } from '../../context/selectors/workPlans.js'
 import { COUNSELING_TYPE_LABELS } from '../../data/counselingTypes.js'
 import StatisticsSection from '../../components/admin/StatisticsSection.jsx'
 import UrgentReportListModal from '../../components/admin/UrgentReportListModal.jsx'
+import CautionStudentsModal from '../../components/admin/CautionStudentsModal.jsx'
 
 const GRADE_ORDER = { 중1: 1, 중2: 2, 중3: 3, 고1: 4, 고2: 5, 고3: 6 }
 const gradeWeight = (g) => GRADE_ORDER[g] ?? 99
@@ -29,6 +30,7 @@ export default function AdminHomeTab() {
   const { data } = useData()
   const navigate = useNavigate()
   const [showUrgentList, setShowUrgentList] = useState(false)
+  const [cautionModal, setCautionModal] = useState(null) // 'attendance' | 'learning' | 'mind'
   const unconfirmedUrgent = data.urgentReports.filter((r) => !r.confirmed).length
 
   const stats = useMemo(() => {
@@ -75,6 +77,43 @@ export default function AdminHomeTab() {
   const managerCount = data.educators.filter((e) => e.role === 'manager').length
   const quizSetCount = data.quizSets.length
   const attemptCount = data.quizAttempts.length
+
+  // 핵심지표 상세 모달 구성 — selector가 이미 학생 배열을 반환하므로 표시 텍스트만 조립.
+  const CAUTION_MODALS = {
+    attendance: {
+      title: '출결 주의 학생',
+      icon: CalendarX,
+      iconClass: 'text-red-500',
+      description: '최근 30일 결석 3회 이상인 학생입니다. 누르면 학생 상세로 이동합니다.',
+      emptyText: '출결 주의 학생이 없습니다.',
+      rows: cautions.attendance.map(({ student, absentCount }) => ({
+        student,
+        valueText: `결석 ${absentCount}회`,
+      })),
+    },
+    learning: {
+      title: '학습 주의 학생',
+      icon: TrendingDown,
+      iconClass: 'text-orange-500',
+      description: '최근 7일 계획 이행률이 60% 미만인 학생입니다. 누르면 학생 상세로 이동합니다.',
+      emptyText: '학습 주의 학생이 없습니다.',
+      rows: cautions.learning.map(({ student, rate }) => ({
+        student,
+        valueText: `이행 ${Math.round(rate * 100)}%`,
+      })),
+    },
+    mind: {
+      title: '마인드 주의 학생',
+      icon: Bell,
+      iconClass: 'text-amber-500',
+      description: '최근 기록의 기분·동기·자신감 중 -3점 이하가 있는 학생입니다. 누르면 학생 상세로 이동합니다.',
+      emptyText: '마인드 주의 학생이 없습니다.',
+      rows: cautions.mind.map(({ student, latest }) => ({
+        student,
+        valueText: `기분 ${latest.mood} · 동기 ${latest.motivation} · 자신감 ${latest.confidence}`,
+      })),
+    },
+  }
 
   return (
     <div className="py-6 space-y-6">
@@ -133,30 +172,42 @@ export default function AdminHomeTab() {
             <p className="text-xl font-bold text-red-700">{unconfirmedUrgent}<span className="text-xs font-normal text-gray-400 ml-0.5">건</span></p>
             <p className="text-[10px] text-gray-400 mt-0.5">미확인 보고·건의</p>
           </button>
-          <div className="bg-white rounded-2xl shadow-sm p-3">
+          <button
+            type="button"
+            onClick={() => setCautionModal('attendance')}
+            className="bg-white rounded-2xl shadow-sm p-3 text-left hover:bg-gray-50 transition active:scale-[0.98]"
+          >
             <div className="flex items-center gap-1.5 mb-1">
               <CalendarX size={13} className="text-red-500" />
               <p className="text-[11px] text-gray-500">출결 주의</p>
             </div>
             <p className="text-xl font-bold text-red-600">{cautions.attendance.length}<span className="text-xs font-normal text-gray-400 ml-0.5">명</span></p>
             <p className="text-[10px] text-gray-400 mt-0.5">30일 결석 3회↑</p>
-          </div>
-          <div className="bg-white rounded-2xl shadow-sm p-3">
+          </button>
+          <button
+            type="button"
+            onClick={() => setCautionModal('learning')}
+            className="bg-white rounded-2xl shadow-sm p-3 text-left hover:bg-gray-50 transition active:scale-[0.98]"
+          >
             <div className="flex items-center gap-1.5 mb-1">
               <TrendingDown size={13} className="text-orange-500" />
               <p className="text-[11px] text-gray-500">학습 주의</p>
             </div>
             <p className="text-xl font-bold text-orange-600">{cautions.learning.length}<span className="text-xs font-normal text-gray-400 ml-0.5">명</span></p>
             <p className="text-[10px] text-gray-400 mt-0.5">계획 이행 60% 미만</p>
-          </div>
-          <div className="bg-white rounded-2xl shadow-sm p-3">
+          </button>
+          <button
+            type="button"
+            onClick={() => setCautionModal('mind')}
+            className="bg-white rounded-2xl shadow-sm p-3 text-left hover:bg-gray-50 transition active:scale-[0.98]"
+          >
             <div className="flex items-center gap-1.5 mb-1">
               <Bell size={13} className="text-amber-500" />
               <p className="text-[11px] text-gray-500">마인드 주의</p>
             </div>
             <p className="text-xl font-bold text-amber-600">{cautions.mind.length}<span className="text-xs font-normal text-gray-400 ml-0.5">명</span></p>
             <p className="text-[10px] text-gray-400 mt-0.5">지표 -3점 이하</p>
-          </div>
+          </button>
         </div>
       </section>
 
@@ -213,7 +264,7 @@ export default function AdminHomeTab() {
           </div>
           <button
             type="button"
-            onClick={() => navigate('/admin/plans')}
+            onClick={() => navigate('/admin/counseling?menu=plans')}
             className="text-[11px] font-semibold text-blue-600 hover:text-blue-700"
           >
             업무계획 →
@@ -227,7 +278,7 @@ export default function AdminHomeTab() {
               <li key={plan.id}>
                 <button
                   type="button"
-                  onClick={() => navigate('/admin/plans')}
+                  onClick={() => navigate('/admin/counseling?menu=plans')}
                   className="w-full flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2 text-left hover:bg-blue-50 transition"
                 >
                   <span className="text-xs font-bold text-gray-700 flex-shrink-0 w-11">
@@ -282,6 +333,16 @@ export default function AdminHomeTab() {
       <StatisticsSection />
 
       {showUrgentList && <UrgentReportListModal onClose={() => setShowUrgentList(false)} />}
+      {cautionModal && (
+        <CautionStudentsModal
+          {...CAUTION_MODALS[cautionModal]}
+          onClose={() => setCautionModal(null)}
+          onSelect={(id) => {
+            setCautionModal(null)
+            navigate(`/admin/student/${id}`)
+          }}
+        />
+      )}
     </div>
   )
 }

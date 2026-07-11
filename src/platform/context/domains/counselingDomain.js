@@ -17,7 +17,7 @@ export function useCounselingDomain(setData) {
   // fields: { topic, diagnosis, advice, followUp, note, nextAppointment } — 보고서 양식 6단계.
   // content에는 합성 텍스트가 함께 들어온다(NOT NULL·PDF/레거시 소비처 호환).
   const addCounselingRecord = useCallback(
-    async ({ studentId, authorId, content, type, targetType, fields, attachments }) => {
+    async ({ studentId, authorId, content, type, targetType, fields, attachments, startTime, endTime }) => {
       const row = {
         id: makeId('c'),
         student_id: studentId,
@@ -26,6 +26,8 @@ export function useCounselingDomain(setData) {
         content,
         type,
         target_type: targetType ?? 'student',
+        start_time: startTime ?? '',
+        end_time: endTime ?? '',
         topic: fields?.topic ?? null,
         diagnosis: fields?.diagnosis ?? null,
         advice: fields?.advice ?? null,
@@ -49,12 +51,14 @@ export function useCounselingDomain(setData) {
 
   // 상담 기록 수정 — 앱 모델 content는 DB의 content 컬럼(변환기에서 comment로 매핑)이다.
   const updateCounselingRecord = useCallback(
-    async (id, { content, type, targetType, fields, attachments }) => {
+    async (id, { content, type, targetType, fields, attachments, startTime, endTime }) => {
       const snake = {}
       if (content !== undefined) snake.content = content
       if (type !== undefined) snake.type = type
       if (targetType !== undefined) snake.target_type = targetType
       if (attachments !== undefined) snake.attachments = attachments
+      if (startTime !== undefined) snake.start_time = startTime
+      if (endTime !== undefined) snake.end_time = endTime
       if (fields !== undefined) {
         snake.topic = fields.topic ?? null
         snake.diagnosis = fields.diagnosis ?? null
@@ -79,6 +83,8 @@ export function useCounselingDomain(setData) {
                 ...(type !== undefined ? { type } : {}),
                 ...(targetType !== undefined ? { targetType } : {}),
                 ...(attachments !== undefined ? { attachments } : {}),
+                ...(startTime !== undefined ? { startTime } : {}),
+                ...(endTime !== undefined ? { endTime } : {}),
                 ...(fields !== undefined
                   ? {
                       topic: fields.topic ?? '',

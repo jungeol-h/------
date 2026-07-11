@@ -4,13 +4,13 @@ import PageLayout from '../../components/layout/PageLayout.jsx'
 import { useData } from '../../context/DataContext.jsx'
 import StatisticsTab from '../admin/StatisticsTab.jsx'
 import UserManagementTab from '../admin/UserManagementTab.jsx'
-import ViewerCounselingTab from './ViewerCounselingTab.jsx'
+import WorkRecordsTab from '../shared/WorkRecordsTab.jsx'
 import StudentDetailPage from '../shared/StudentDetailPage.jsx'
 
 const TABS = [
   { path: '/viewer/stats', label: '통계', icon: BarChart2 },
   { path: '/viewer/students', label: '학생', icon: Users },
-  { path: '/viewer/counseling', label: '상담', icon: MessageSquare },
+  { path: '/viewer/counseling', label: '업무기록', icon: MessageSquare },
 ]
 
 function StudentDetailWrapper({ tabs, back }) {
@@ -46,7 +46,7 @@ export default function ViewerDashboard() {
             <Route index element={<Navigate to="stats" replace />} />
             <Route path="stats" element={<StatisticsTab />} />
             <Route path="students" element={<UserManagementTab readOnly />} />
-            <Route path="counseling" element={<ViewerCounselingTab />} />
+            <Route path="counseling" element={<WorkRecordsTab />} />
           </Routes>
         </PageLayout>
       } />

@@ -4,6 +4,7 @@ import { useData } from '../../context/DataContext.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
 import StudentCombobox from '../counseling/StudentCombobox.jsx'
 import { COUNSELING_TYPES, COUNSELING_TYPE_LABELS } from '../../data/counselingTypes.js'
+import { WORK_PLAN_STATUSES, WORK_PLAN_STATUS_LABELS } from '../../data/workRecordTypes.js'
 
 // 업무계획 추가/수정 모달 — 일시/업무내용(유형 중복 체크)/대상 학생(복수)/메모.
 // plan이 있으면 수정 모드.
@@ -17,6 +18,7 @@ export default function WorkPlanFormModal({ students = [], plan, onClose }) {
   const [types, setTypes] = useState(plan?.types ?? [])
   const [studentIds, setStudentIds] = useState(plan?.studentIds ?? [])
   const [memo, setMemo] = useState(plan?.memo ?? '')
+  const [status, setStatus] = useState(plan?.status ?? 'planned')
   const [saving, setSaving] = useState(false)
 
   const fieldClass = 'w-full border border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300'
@@ -40,7 +42,7 @@ export default function WorkPlanFormModal({ students = [], plan, onClose }) {
     setSaving(true)
     try {
       if (isEdit) {
-        await updateWorkPlan(plan.id, { planDate, planTime, types, studentIds, memo })
+        await updateWorkPlan(plan.id, { planDate, planTime, types, studentIds, memo, status })
       } else {
         await addWorkPlan({ authorId: currentUser?.id, planDate, planTime, types, studentIds, memo })
       }
@@ -116,6 +118,17 @@ export default function WorkPlanFormModal({ students = [], plan, onClose }) {
             </div>
           )}
         </div>
+
+        {isEdit && (
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">진행 상황</label>
+            <select value={status} onChange={(e) => setStatus(e.target.value)} className={fieldClass}>
+              {WORK_PLAN_STATUSES.map((s) => (
+                <option key={s} value={s}>{WORK_PLAN_STATUS_LABELS[s]}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <textarea
           value={memo}

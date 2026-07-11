@@ -5,12 +5,14 @@ import Table from '../components/Table'
 import KpiGrid from '../components/KpiGrid'
 import { colors, fontSize } from '../config/styles'
 
-// 종합 성장 리포트 — 출결·자기주도 학습·마인드 종합.
+// 종합 성장 리포트 — 출결·자기주도 학습·과제수행·확인평가·마인드 종합.
 // DataContext에 의존하지 않고 순수 props만 받는다.
 // props: {
 //   student: { name, school, grade },
 //   attendance: { counts: { present, late, earlyLeave, absent }, records: [{ date, status, checkoutStatus, checkInAt, checkOutAt }] },
 //   learning: { totalMinutes, selfIndex, weekly: [{ label, minutes }] },
+//   tasks: { total, done, rate, recent: [{ id, title, subject, dueDate, status }] },
+//   quiz: { rows: [{ id, label, title, score, total, pct, submittedAt }], avgPct },
 //   mind: { avgMood, avgMotivation, avgConfidence, stability, recentCount },
 //   generatedAt, author,
 // }
@@ -78,6 +80,8 @@ export default function ReflectionReport({
   student = {},
   attendance = { counts: {}, records: [] },
   learning = {},
+  tasks = {},
+  quiz = {},
   mind = {},
   generatedAt,
   author,
@@ -128,6 +132,44 @@ export default function ReflectionReport({
   const fmtScore = (v) => (v == null ? '-' : String(v))
   const fmtAvg = (v) => (v == null ? '-' : Number(v).toFixed(1))
 
+  // 과제수행 — 요약 KPI + 최근 과제 목록
+  const taskRecent = tasks.recent || []
+  const taskColumns = [
+    { key: 'title', header: '과제명', width: '40%' },
+    { key: 'subject', header: '과목', width: '20%', align: 'center' },
+    { key: 'dueDate', header: '기한', width: '22%', align: 'center' },
+    { key: 'status', header: '상태', width: '18%', align: 'center' },
+  ]
+  const taskRows = taskRecent.map((t) => ({
+    key: t.id,
+    title: t.title || '-',
+    subject: t.subject || '-',
+    dueDate: t.dueDate || '-',
+    status: t.status === 'done' ? '완료' : '미완료',
+  }))
+  const taskKpis = [
+    { label: '부여 과제', value: tasks.total ?? 0, unit: '건' },
+    { label: '완료', value: tasks.done ?? 0, unit: '건' },
+    { label: '이행률', value: tasks.rate == null ? '-' : Math.round(tasks.rate * 100), unit: tasks.rate == null ? '' : '%' },
+  ]
+
+  // 확인평가 결과 — 응시별 점수·정답률
+  const quizRows = (quiz.rows || []).map((r) => ({
+    key: r.id,
+    label: r.label,
+    title: r.title,
+    score: `${r.score}/${r.total}`,
+    pct: r.pct == null ? '-' : `${r.pct}%`,
+    submittedAt: r.submittedAt,
+  }))
+  const quizColumns = [
+    { key: 'label', header: '회차', width: '20%' },
+    { key: 'title', header: '평가명', width: '30%' },
+    { key: 'score', header: '점수', width: '16%', align: 'center' },
+    { key: 'pct', header: '정답률', width: '16%', align: 'center' },
+    { key: 'submittedAt', header: '응시일', width: '18%', align: 'center' },
+  ]
+
   return (
     <PageWrapper
       reportTitle="종합 성장 리포트"
@@ -156,6 +198,21 @@ export default function ReflectionReport({
         </View>
         <View style={{ height: 8 }} />
         <Table columns={weeklyColumns} rows={weeklyRows} emptyText="주별 학습 기록이 없습니다." />
+      </Section>
+
+      <Section title="과제 수행">
+        <KpiGrid items={taskKpis} columns={3} />
+        <View style={{ height: 8 }} />
+        <Table columns={taskColumns} rows={taskRows} emptyText="부여된 과제가 없습니다." />
+      </Section>
+
+      <Section title="확인평가 결과">
+        <View style={infoStyles.grid}>
+          <InfoRow label="평균 정답률" value={quiz.avgPct == null ? '-' : `${quiz.avgPct}%`} />
+          <InfoRow label="응시 횟수" value={`${quizRows.length}회`} />
+        </View>
+        <View style={{ height: 8 }} />
+        <Table columns={quizColumns} rows={quizRows} emptyText="확인평가 응시 기록이 없습니다." />
       </Section>
 
       <Section title="마인드">

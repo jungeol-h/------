@@ -624,30 +624,29 @@ function CounselingSection({ studentId, data, currentUser, canWrite = true }) {
     }
   }
 
-  const handleDownloadPdf = useCallback(async () => {
+  const buildCounselingPdf = useCallback(async () => {
     const sorted = records.slice().sort((a, b) => (a.date > b.date ? 1 : -1))
-    const [{ downloadPdf }, { default: CounselingReport }] = await Promise.all([
-      import('../../pdf/utils/downloadPdf.js'),
-      import('../../pdf/reports/CounselingReport.jsx'),
-    ])
-    await downloadPdf(
-      <CounselingReport
-        student={{ name: student?.name, school: student?.school, grade: student?.grade }}
-        records={sorted.map((r) => ({
-          date: r.date,
-          typeLabel: COUNSELING_TYPE_LABELS[r.type] || r.type,
-          targetLabel: COUNSELING_TARGET_LABELS[r.targetType] ?? '학생',
-          authorName: educatorDisplayName(data.educators.find((e) => e.id === r.educatorId)) ?? '-',
-          content: r.comment,
-        }))}
-        generatedAt={nowDateTime()}
-        author={authorOf(currentUser)}
-      />,
-      buildFilename('상담보고서', student?.name),
-    )
+    const { default: CounselingReport } = await import('../../pdf/reports/CounselingReport.jsx')
+    return {
+      element: (
+        <CounselingReport
+          student={{ name: student?.name, school: student?.school, grade: student?.grade }}
+          records={sorted.map((r) => ({
+            date: r.date,
+            typeLabel: COUNSELING_TYPE_LABELS[r.type] || r.type,
+            targetLabel: COUNSELING_TARGET_LABELS[r.targetType] ?? '학생',
+            authorName: educatorDisplayName(data.educators.find((e) => e.id === r.educatorId)) ?? '-',
+            content: r.comment,
+          }))}
+          generatedAt={nowDateTime()}
+          author={authorOf(currentUser)}
+        />
+      ),
+      filename: buildFilename('상담보고서', student?.name),
+    }
   }, [records, student, data.educators, currentUser])
 
-  const handleDownloadReflection = useCallback(async () => {
+  const buildReflectionPdf = useCallback(async () => {
     // admin/manager fetch에는 이 학생의 출결이 없다 → 여기서만 lazy fetch.
     let attendanceRecords = []
     try {
@@ -663,37 +662,38 @@ function CounselingSection({ studentId, data, currentUser, canWrite = true }) {
       attendanceRecords = []
     }
 
-    // learning/mind는 page data에 이미 있음. 출결만 주입해 selector 재사용.
+    // learning/tasks/quiz/mind는 page data에 이미 있음. 출결만 주입해 selector 재사용.
     const merged = { ...data, attendanceRecords }
-    const { attendance, learning, mind } = buildReflectionData(merged, studentId)
+    const { attendance, learning, tasks, quiz, mind } = buildReflectionData(merged, studentId)
 
-    const [{ downloadPdf }, { default: ReflectionReport }] = await Promise.all([
-      import('../../pdf/utils/downloadPdf.js'),
-      import('../../pdf/reports/ReflectionReport.jsx'),
-    ])
-    await downloadPdf(
-      <ReflectionReport
-        student={{ name: student?.name, school: student?.school, grade: student?.grade }}
-        attendance={attendance}
-        learning={learning}
-        mind={mind}
-        generatedAt={nowDateTime()}
-        author={authorOf(currentUser)}
-      />,
-      buildFilename('종합성장리포트', student?.name),
-    )
+    const { default: ReflectionReport } = await import('../../pdf/reports/ReflectionReport.jsx')
+    return {
+      element: (
+        <ReflectionReport
+          student={{ name: student?.name, school: student?.school, grade: student?.grade }}
+          attendance={attendance}
+          learning={learning}
+          tasks={tasks}
+          quiz={quiz}
+          mind={mind}
+          generatedAt={nowDateTime()}
+          author={authorOf(currentUser)}
+        />
+      ),
+      filename: buildFilename('종합성장리포트', student?.name),
+    }
   }, [studentId, student, data, currentUser])
 
   return (
     <div className="space-y-3">
       <div className="flex justify-end gap-2">
         <DownloadPdfButton
-          onDownload={handleDownloadReflection}
+          buildDocument={buildReflectionPdf}
           label="종합 성장 리포트"
           className="bg-blue-600 hover:bg-blue-700"
         />
         <DownloadPdfButton
-          onDownload={handleDownloadPdf}
+          buildDocument={buildCounselingPdf}
           label="상담 보고서"
           disabled={records.length === 0}
         />

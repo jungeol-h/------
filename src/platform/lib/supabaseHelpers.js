@@ -120,6 +120,8 @@ export const toCounselingRecord = (row) => ({
   followUp: row.follow_up ?? '',
   note: row.note ?? '',
   nextAppointment: row.next_appointment ?? '',
+  startTime: row.start_time ?? '',
+  endTime: row.end_time ?? '',
   attachments: toArray(row.attachments), // [{ path, name, size }] — PDF 첨부 메타
 })
 
@@ -202,6 +204,49 @@ export const toWorkPlan = (row) => ({
   types: toArray(row.types),
   studentIds: toArray(row.student_ids),
   memo: row.memo ?? '',
+  status: row.status ?? 'planned',
+  createdAt: row.created_at,
+})
+
+export const toManagementReport = (row) => ({
+  id: row.id,
+  authorId: row.author_id,
+  date: row.date,
+  workType: row.work_type ?? 'etc',
+  startTime: row.start_time ?? '',
+  endTime: row.end_time ?? '',
+  content: row.content ?? '',
+  note: row.note ?? '',
+  createdAt: row.created_at,
+})
+
+export const toFinanceRecord = (row) => ({
+  id: row.id,
+  authorId: row.author_id,
+  date: row.date,
+  category: row.category ?? 'etc',
+  itemName: row.item_name ?? '',
+  unitPrice: row.unit_price ?? 0,
+  quantity: row.quantity ?? 1,
+  amount: row.amount ?? 0,
+  vendor: row.vendor ?? '',
+  paymentMethod: row.payment_method ?? 'personal_card',
+  attachments: toArray(row.attachments), // [{ path, name, size }] — 영수증·사진 메타
+  createdAt: row.created_at,
+})
+
+export const toLessonReport = (row) => ({
+  id: row.id,
+  authorId: row.author_id,
+  date: row.date,
+  studentIds: toArray(row.student_ids),
+  startTime: row.start_time ?? '',
+  endTime: row.end_time ?? '',
+  topic: row.topic ?? '',
+  textbook: row.textbook ?? '',
+  content: row.content ?? '',
+  homework: row.homework ?? '',
+  note: row.note ?? '',
   createdAt: row.created_at,
 })
 

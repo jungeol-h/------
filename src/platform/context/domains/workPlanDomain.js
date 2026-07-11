@@ -18,6 +18,7 @@ export function useWorkPlanDomain(setData) {
         types,
         student_ids: studentIds,
         memo,
+        status: 'planned',
       }
       const { error } = await withWriteRetry(
         () => supabase.from('work_plans').insert(row),
@@ -40,6 +41,7 @@ export function useWorkPlanDomain(setData) {
       if (patch.types !== undefined) snake.types = patch.types
       if (patch.studentIds !== undefined) snake.student_ids = patch.studentIds
       if (patch.memo !== undefined) snake.memo = patch.memo
+      if (patch.status !== undefined) snake.status = patch.status
       if (Object.keys(snake).length === 0) return
       const { error } = await withWriteRetry(
         () => supabase.from('work_plans').update(snake).eq('id', id),
