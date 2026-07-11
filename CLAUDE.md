@@ -1,62 +1,48 @@
 # CLAUDE.md
 
 안동형 자기주도학습·진로성장 관리 시스템(LMS) '나매크'. React 웹앱.
-산청 우정학사 중등부 50~60명 베타테스트 운영 중 (2026-05-11~).
+**산청 우정학사 중등부 50~60명이 실사용 중인 라이브 베타** (2026-05-11~, `gooooookee.com`/Vercel).
+
+프로젝트 전반·운영 특성·백로그는 **루트 `README.md`부터 읽을 것.**
+각 코드 폴더에 상세 README가 있다 (context/, selectors/, pages/, pdf/, lib/, external/, scripts/).
 
 ## 명령어
 
 ```bash
 npm run dev      # 개발 서버 (Vite + HMR)
-npm run build    # 프로덕션 빌드
-npm run lint     # ESLint
-npm run test     # Vitest (selector/이벤트 로직 단위테스트)
+npm run build    # 프로덕션 빌드 — 배포 전 필수 (lint/test가 못 잡는 import 오류를 잡는다)
+npm run lint     # ESLint — 기준선 0건. 유지할 것
+npm run test     # Vitest 166개 (selector/유틸 순수함수)
 ```
 
 ## 기술 스택
 
-React 19 · Vite 8 · react-router-dom v7 (BrowserRouter SPA) ·
-Tailwind CSS v4 · Recharts · lucide-react · Supabase · @react-pdf/renderer.
-JSX (not TypeScript). 배포: `gooooookee.com` (Vercel).
+React 19 · Vite 8 · react-router-dom v7 (BrowserRouter SPA) · Tailwind CSS v4 ·
+Recharts · lucide-react · Supabase · @react-pdf/renderer. **JSX (TypeScript 아님).**
 
 ## 코드 구조 (`src/platform/`)
 
-- `context/` — 데이터 계층. 아래 "DataContext 구조" 참고.
-- `pages/` — 역할별 화면: `student/` `manager/` `admin/`(5탭: 홈·사용자·상담·확인평가·외부상담)
-  `educator/` `parent/` `viewer/` `shared/`
-- `components/`, `mocks/`, `data/`, `pdf/`, `utils/`
-
-라우팅(`src/App.jsx`): `/` 로그인 → `/student/*` `/manager/*` `/admin/*`.
-
-### DataContext 구조 (3계층)
-
-`context/DataContext.jsx`는 Provider 조립만. CRUD/조회/이벤트는 계층 분리:
-
-- `domains/` [Write] — 도메인별 CRUD 훅
-- `selectors/` [Read] — cross-domain 종합·지표 (순수함수)
-- `events/` — 얇은 이벤트 버스 (현재 미사용, 푸시알림용 슬롯)
-- `fetchers/` — 역할별 초기 fetch
-
-새 기능 추가 패턴은 메모리 `reference_datacontext_layers` 참고.
-알림은 위험 탐지(계산형)/코칭 기록(레코드형) 분리 — `project_alert_redesign` 참고.
-
-## 데이터
-
-Supabase 기반 (`src/platform/lib/supabase.js`). 스키마: `supabase_platform_schema.sql`.
-snake_case DB ↔ camelCase 변환은 `lib/supabaseHelpers.js`.
-**미해결 보안 부채**(평문 비밀번호·RLS·정답 노출)는 메모리 `project_security_debt` 참고.
+- `context/` — 데이터 계층 4계층: DataContext(조립만) + fetchers[역할별 fetch] +
+  domains[Write CRUD] + selectors[Read 순수함수] → `context/README.md`
+- `pages/` — 역할별 화면: `student/` `manager/` `admin/`(5탭: 홈·학생·업무기록·확인평가·외부상담)
+  `educator/`(강사·컨설턴트 공용) `parent/` `viewer/` `shared/` → `pages/README.md`
+- `components/`(공용 UI) `pdf/`(리포트) `lib/`(supabase·sentry) `utils/` `data/`(상수)
 
 ## 개발 규칙
 
-- **z-index**: Header/TabBar `z-40`, 모달 `z-50`.
-- **PDF**: `@react-pdf/renderer` 기반 `src/platform/pdf/`. 서버 렌더링 금지.
-  추가 패턴은 메모리 `reference_pdf_infra` 참고.
-- **작업 흐름**: 비-자명한 작업은 plan mode로 의사결정 정렬 후 구현 (`feedback_workflow_preferences`).
-  기존 코드·docs는 더미 흔적/클라이언트 목소리일 수 있어 근거 삼기 전 검증 (`feedback_question_assumptions`).
+- **날짜 문자열('YYYY-MM-DD')은 반드시 `utils/dateUtils.js`** (toDateStr/todayStr/daysAgoStr).
+  `toISOString().slice(0,10)` 금지 — UTC라 KST 00~09시에 전날로 기록되는 실버그가 있었다.
+- **도메인 CRUD는 `context/domains/crudKit.js` 팩토리** 우선 (모범: workRecordsDomain).
+  규약: withWriteRetry → throw → setData 로컬 동기화.
+- **모달은 `components/common/ModalShell.jsx`** (하단 시트형). z-index: Header/TabBar `z-40`, 모달 `z-50`.
+- **PDF**: `pdf/README.md`의 금기 필독 — 특히 페이지번호 `render` 콜백 금지(크래시 이력).
+- **DB 변경**: `scripts/add-*.sql` 멱등 작성 → Studio 수동 적용(신코드 배포 전) →
+  `scripts/README.md` 대장 갱신.
+- **보안 부채**(평문 비밀번호·RLS 무력화·정답 노출 등)는 `lib/README.md` — 키우지 말 것.
 
-## 기획 문서 (`docs/`)
+## 작업 흐름
 
-(다소 오래되어 일단 신뢰도 떨어짐. 현재 세션의 요구사항에 더 집중)
-
-- `docs/3. 자료/개념 정리/` — 도메인 개념(자기주도지수, 알림, 리포트, M:N 배정),
-  `유저 개념/` 아래 역할별 유저스토리
-- `docs/1. 프로젝트/산청 우정학사 중등부 베타테스트/` — 베타 요청사항·계정·교재
+- 비-자명한 작업은 plan mode로 의사결정 정렬 후 구현.
+- 라이브 서비스다: 파괴적 변경은 분할 배포 + 매니저 공지. 시드 SQL 재실행 주의(DELETE 포함).
+- 기존 코드·docs는 더미 흔적/클라이언트 목소리일 수 있어 근거 삼기 전 검증할 것.
+- `docs/`는 보관·운영 자료다 (`docs/README.md`) — 현행 기준은 코드와 코드 폴더 README.

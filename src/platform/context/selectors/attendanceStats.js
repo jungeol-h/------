@@ -1,11 +1,11 @@
-import { toDateStr } from '../../utils/dateUtils.js'
-
 // [Read] 학생 1명의 출결 누적 통계 — data를 인자로 받는 순수함수
 //
 // 판정(present/late/absent, early_leave)은 이미 서버가 확정한 값이다.
 // 여기서는 그 값을 세고, 화면·PDF용으로 날짜 내림차순 정리만 한다.
 // present/late/absent는 status 기준, earlyLeave는 checkoutStatus 기준으로
 // 서로 독립 집계한다(지각이면서 조퇴한 날은 late·earlyLeave 양쪽에 카운트).
+
+import { toDateStr } from '../../utils/dateUtils.js'
 
 // 출결 주의 판정 임계 — 최근 30일 결석 3회 이상 (관리자 대시보드 핵심지표)
 export const ATTENDANCE_CAUTION_DAYS = 30

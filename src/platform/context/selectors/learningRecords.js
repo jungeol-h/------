@@ -1,3 +1,6 @@
+// [Read] 학습기록 기본 유틸 — selectors 중 최다 피참조 (actualMinutes 등).
+// 학습기록(learning_records)의 시간 계산·필터 공통 함수와 학습방법 상수.
+
 export const STUDY_METHODS = [
   '개념학습',
   '인강듣기',

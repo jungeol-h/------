@@ -1,7 +1,7 @@
 // [Read] 분석 지표 산출 — data를 인자로 받는 순수함수
 import { actualMinutes, timeTrackedRecords } from './learningRecords.js'
 //
-// docs/3. 자료/개념 정리/유저 개념/학습자/학생.md 의 자기주도지수 공식 구현.
+// 자기주도지수 공식 구현 — 공식·구간표는 selectors/README.md 참고 (기획 원본은 docs/99. 보관됨).
 // 공식: (1일 학습시간 점수) + (자가평가 점수) 합산 50점 만점 → 백분위 환산.
 //
 // 한계: docs는 자가평가 4종(학습량/집중도/만족도/효율성, 각 10점)을 명시하지만

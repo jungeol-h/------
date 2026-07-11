@@ -28,3 +28,6 @@ dist-ssr
 *.sln
 *.sw?
 .obsidian/workspace.json
+
+# 보관된 과거 프로젝트 레포 (자체 .git 포함 — 이 레포에서 추적하지 않음)
+docs/*/*quiz-app*/

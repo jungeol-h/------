@@ -1,5 +1,5 @@
 // [Read] 일/주간 리포트 집계 — data를 인자로 받는 순수함수.
-// docs/3. 자료/개념 정리/리포트.md 의 리포트 항목 구성을 따른다.
+// 리포트 항목 구성 근거(보관): docs/99. 보관됨/기획 원본(2026-07 반영완료)/개념 정리/리포트.md
 
 import { getSelfDirectedIndex } from './indices.js'
 import { toDateStr } from '../../utils/dateUtils.js'

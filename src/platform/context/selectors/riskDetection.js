@@ -2,12 +2,12 @@
 //
 // 위험 "탐지"는 레코드를 미리 만들지 않고 조회 시점에 계산한다 (관제탑형).
 // 교육자가 화면을 열 때 마인드 점수 낮은 학생을 우선 파악하는 것이 목적이다.
-// docs/통계.md "교육자 대시보드 = 위험군 탐지 관제탑" 과 일치.
+// 기획 근거(보관): docs/99. 보관됨/기획 원본(2026-07 반영완료)/개념 정리/통계 및 분석.md — "교육자 대시보드 = 위험군 탐지 관제탑".
 //
 // 위험에 대한 "조치(코칭) 기록"은 alerts 테이블이 담당한다 — 이 파일과 별개.
 
 // 마인드 3항목으로 위험 등급 판정. 순수함수.
-// docs/유저 개념/학습자/학생.md: 합산 -6 이하 또는 단일 -4 이하 → 위험.
+// 기준 출처는 selectors/README.md (기획 원본은 docs/99. 보관됨): 합산 -6 이하 또는 단일 -4 이하 → 위험.
 // 반환: null(정상) | 'warning' | 'danger'
 export function evaluateMindLevel({ mood, motivation, confidence }) {
   const total = mood + motivation + confidence
