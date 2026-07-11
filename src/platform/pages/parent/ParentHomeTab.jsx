@@ -1,3 +1,6 @@
+// 학부모 홈 탭 (/parent/home) — 선택 자녀(child prop)의 오늘 요약 3카드:
+// 등원 상태(classifyToday + 등/하원 시각), 학습 이행(todo 완료/전체 + 학습시간), 마인드 기록 합계.
+
 import { CalendarCheck, BookOpen, Heart } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
 import { classifyToday } from '../../context/selectors/attendance.js'

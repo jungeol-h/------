@@ -1,3 +1,7 @@
+// 열람자(viewer, 본부장·공무원) 라우트 셸 (/viewer/*) — 3탭: 통계·학생·업무기록, 전부 열람 전용.
+// 관리자 화면 재사용: StatisticsTab, UserManagementTab(readOnly), 공용 WorkRecordsTab.
+// 학생 상세는 /viewer/student/:studentId.
+
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { BarChart2, Users, MessageSquare, Loader } from 'lucide-react'
 import PageLayout from '../../components/layout/PageLayout.jsx'

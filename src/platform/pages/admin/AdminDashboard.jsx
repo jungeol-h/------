@@ -1,3 +1,7 @@
+// 관리자(센터장) 라우트 셸 (/admin/*) — 5탭: 홈·학생·업무기록·확인평가·외부상담.
+// 확인평가는 wide 레이아웃 별도 라우트, 학생 상세는 /admin/student/:studentId.
+// 구 통계(/admin/statistics)·업무계획(/admin/plans) 경로는 홈·업무기록 탭으로 리다이렉트.
+
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { Home, UserCog, MessageSquare, ClipboardCheck, Globe, Loader } from 'lucide-react'
 import PageLayout from '../../components/layout/PageLayout.jsx'

@@ -1,3 +1,8 @@
+// 학생 학습 탭 (/student/learning) — 계획하기·공부하기·돌아보기 3개 서브탭.
+// 계획하기: 날짜별 플래너 CRUD + 드래그 정렬. 공부하기: 계획별 학습 타이머.
+// 돌아보기: 과목별 통계·출결·오늘의 자기점수·성찰 리포트. 순수 로직은 learningTabLogic.js 분리.
+// [임시] TEMP_ALLOW_PAST_ACTUAL_EDIT로 과거 실제시간 보정 허용 — tempBetaNotice.js 참고.
+
 import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   CalendarDays, Check, ChevronDown, ChevronUp, Clock, GripVertical, Pause, Play, Plus,

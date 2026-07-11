@@ -1,3 +1,7 @@
+// 교과강사(instructor)·컨설턴트(consultant) 공용 라우트 셸 (/instructor/*, /consultant/*).
+// 공통 탭: 학생·업무기록·과제 + instructor 전용 확인평가(wide) + consultant 전용 외부상담.
+// 학생 상세는 /{role}/student/:studentId. 타이틀·경로는 currentUser.role로 분기.
+
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { Users, MessageSquare, ClipboardList, ClipboardCheck, Globe, Loader } from 'lucide-react'
 import PageLayout from '../../components/layout/PageLayout.jsx'

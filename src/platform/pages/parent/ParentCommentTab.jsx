@@ -1,3 +1,6 @@
+// 학부모 코멘트 탭 (/parent/comments) — 선생님이 남긴 선택 자녀(child prop)의
+// 상담 기록을 최신순으로 열람 (읽기 전용, 유형·대상 배지 + 작성자 표시).
+
 import { MessageSquare } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
 import { COUNSELING_TYPE_LABELS, COUNSELING_TARGET_LABELS } from '../../data/counselingTypes.js'

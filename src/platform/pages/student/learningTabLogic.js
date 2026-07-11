@@ -1,3 +1,6 @@
+// LearningTab 보조 순수함수 모듈 — 분 포맷, 날짜별 플래너 조회/정렬(plansForDate),
+// 날짜 스트립·월 달력 배열 생성, 드래그 재정렬 sortOrder 계산 등. Vitest 단위테스트 대상.
+
 import { toDateStr } from '../../utils/dateUtils.js'
 import { actualMinutes, subjectBreakdown } from '../../context/selectors/learningRecords.js'
 

@@ -1,3 +1,7 @@
+// 학생 확인평가 응시 (/student/diagnosis/quiz) — 본인 학년·선택 과목의 공개 회차 목록 → 문항 풀이 → 결과.
+// 풀이 중 답안은 localStorage 초안으로 저장해 이탈 후 복구한다. 제출은 submitQuizAttempt.
+// 서술형 문항은 '채점 대기'(isCorrect === null)로 표시되고 선생님 채점 후 점수가 갱신된다.
+
 import { useEffect, useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight, ClipboardCheck, CheckCircle2, XCircle, RotateCcw, Loader, Clock } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'

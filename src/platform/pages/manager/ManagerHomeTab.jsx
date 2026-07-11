@@ -1,3 +1,7 @@
+// 매니저 홈 탭 (/manager/home) — 담당 학생 중 마인드 위험 학생 목록(getRiskStudents 실시간 계산)과
+// 코칭 코멘트 모달(recordCoaching), 담당 학생별 학습시간·미완료 과제·상담 횟수 요약 카드.
+// 코칭 완료 여부는 data.alerts 기록 존재로 표시한다.
+
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AlertTriangle, X, CheckCheck, Clock, ClipboardList, MessageCircle, User } from 'lucide-react'

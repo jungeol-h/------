@@ -1,3 +1,6 @@
+// 학생 과제 탭 (/student/task) — 부여받은 과제를 미완료/완료로 나눠 보여주고 완료 토글(toggleTask).
+// 파일 제출 버튼은 미구현 — 누르면 "정식 버전에서 지원" 안내 토스트만 띄운다.
+
 import { useState } from 'react'
 import { CheckCircle2, Circle, ClipboardList, Upload } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'

@@ -1,3 +1,7 @@
+// 외생 상담 프로그램의 관리자 전용 모달 2종 — 프로그램 추가(ProgramFormModal)와
+// 학생 일괄 등록(StudentImportModal: 붙여넣은 텍스트를 parseStudentLines로 파싱 → 미리보기 → bulkInsert).
+// ExternalCounselingTab에서 admin 역할에게만 노출된다.
+
 import { useMemo, useState } from 'react'
 import { X, CheckCheck } from 'lucide-react'
 import { createProgram, bulkInsertStudents, parseStudentLines } from './externalData.js'

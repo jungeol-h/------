@@ -60,3 +60,5 @@ src/platform/
 | 외부학생 명단 시드 | 명단 수령 대기 (`scripts/seed-external-program.sql`) |
 | UX 개선 Tier 1~2 | 계획 확정, 미착수 (`docs/1. Task/6.*.md`) |
 | LearningTab(1,400줄) 분리 | Tier 3 보류 — 사용자 체감 없음 |
+| 진로설계 '진로 활동 기록' 더미 | `CareerDesignTab.jsx`에 가짜 3건 하드코딩 노출 중 — 실데이터 연결 또는 섹션 제거를 클라이언트와 협의 |
+| 타이머 버그 임시 보정 철거 | `student/tempBetaNotice.js` + `[임시]` 블록 — 타이머 안정화 확인 후 제거 |

@@ -1,3 +1,7 @@
+// 관리자 학생 탭 (/admin/users) — 학생 목록 그리드(검색·정렬, 출결/학습/마인드/과제/일정 지표 배지)
+// + 학생 등록/수정/비활성 처리, 학부모 계정 관리 모달, 보고서 PDF 출력.
+// 지표는 getStudentIndicatorMap으로 1-pass 계산. viewer의 /viewer/students에서 readOnly로 재사용.
+
 import { useState, useMemo, useCallback } from 'react'
 import { User, AlertCircle, Plus, MoreVertical, Pencil, UserX, UserCheck, Search, ArrowUp, ArrowDown } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'

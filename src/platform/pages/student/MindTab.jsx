@@ -1,3 +1,7 @@
+// 학생 마인드 탭 (/student/mind) — '마음 기록'과 '오늘의 일기' 두 서브뷰 토글.
+// 마음 기록: 기분·학습 동기·자신감 -5~+5 슬라이더 + 메모 → addMindRecord, 최근 5건 표시.
+// 일기: 칭찬·반성·다짐 3항목 → addDiaryRecord (같은 날 재저장 시 덮어쓰기 안내).
+
 import { useState } from 'react'
 import { Check, BookHeart, NotebookPen } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'

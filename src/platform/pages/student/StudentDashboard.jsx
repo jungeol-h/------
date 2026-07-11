@@ -1,3 +1,7 @@
+// 학생 라우트 셸 (/student/*) — 5탭: 홈·학습·과제·마인드·진단(+ 하위 학습진단/진로설계/확인평가).
+// DataContext 로딩 가드 후 PageLayout + Routes 구성.
+// [임시] 타이머 버그 안내 모달(TimerFixNoticeModal)을 학생별 1회 노출 — 철수 시 제거.
+
 import { useState } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { Home, BookOpen, ClipboardList, Heart, Activity, Loader } from 'lucide-react'

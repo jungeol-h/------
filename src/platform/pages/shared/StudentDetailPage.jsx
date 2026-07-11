@@ -1,3 +1,8 @@
+// 학생 상세 공용 페이지 — manager/admin/instructor/consultant/viewer 대시보드의
+// student/:studentId 라우트에서 사용. 상단 학생 요약(위험 배지·자기주도지수·담당 매니저) +
+// 내부 7탭: 마인드·일기·학습·과제·학습진단·진로설계·상담. 과제·상담 탭은 CRUD 포함,
+// viewer는 작성 불가(canWrite=false).
+
 import { useState, useMemo, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import { User, AlertCircle, Plus, Pencil, Trash2 } from 'lucide-react'

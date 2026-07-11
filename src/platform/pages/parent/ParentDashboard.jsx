@@ -1,3 +1,6 @@
+// 학부모 라우트 셸 (/parent/*) — 3탭: 홈·학습·코멘트. 학부모 fetch에서 data.students가 곧 자녀 목록.
+// 자녀 2명 이상이면 선택 세그먼트를 노출하고, 선택된 자녀를 child prop으로 각 탭에 내려준다.
+
 import { useState } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { Home, BarChart2, MessageSquare, Loader, Users } from 'lucide-react'

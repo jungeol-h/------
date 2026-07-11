@@ -1,3 +1,7 @@
+// 확인평가 모니터링 탭 — 관리자(/admin/quiz)와 교과강사(/instructor/quiz) 공용.
+// 회차별 응시/미응시/평균 요약 카드 + 회차 관리(QuizSetManagement) + 응시 결과·채점 테이블 + PDF 보고서.
+// 강사는 본인 과목(instructorQuizSubject) 회차·응시만 필터, 관리자는 전체를 본다.
+
 import { useCallback, useMemo } from 'react'
 import { ClipboardCheck } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'

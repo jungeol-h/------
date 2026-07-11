@@ -1,3 +1,6 @@
+// 학부모 학습 탭 (/parent/learning) — 선택 자녀(child prop)의 자기주도지수(getSelfDirectedIndex),
+// 최근 7일 학습시간 막대 차트, 과목별 학습시간 도넛 차트.
+
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,

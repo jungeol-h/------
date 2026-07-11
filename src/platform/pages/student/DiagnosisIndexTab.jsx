@@ -1,3 +1,6 @@
+// 학생 진단 탭 인덱스 (/student/diagnosis) — 학습진단·진로설계·확인평가
+// 하위 라우트로 가는 링크 카드 3개만 렌더링. 데이터 접근 없음.
+
 import { Link } from 'react-router-dom'
 import { Activity, Compass, ClipboardCheck, ChevronRight } from 'lucide-react'
 

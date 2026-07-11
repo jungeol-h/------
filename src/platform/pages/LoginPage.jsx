@@ -1,3 +1,7 @@
+// 로그인 화면 (라우트 '/') — 학번/아이디 + 비밀번호로 AuthContext.login 호출 후
+// 역할별 홈(ROLE_PATHS)으로 이동. 이미 로그인 상태면 자동 리다이렉트.
+// 상단에 PWA 설치 가이드(/install-guide) 배너 포함.
+
 import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { GraduationCap, Eye, EyeOff, Loader, Download } from 'lucide-react'

@@ -1,3 +1,6 @@
+// 매니저 학생 탭 (/manager/students) — 담당(assignments) 학생 카드 목록.
+// 위험 배지·주간 학습 미니차트·학습시간/마음점수/기록일 요약, 클릭 시 학생 상세로 이동.
+
 import { User, AlertCircle } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'

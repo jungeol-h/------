@@ -1,3 +1,7 @@
+// 관리자 홈 탭 (/admin/home) — 학년별 인원 현황, 핵심지표(긴급 업무보고·출결/학습/마인드 주의 + 상세 모달),
+// 마인드 위험 학생 미리보기, 시스템 정합성 점검(getReconciliationIssues), 오늘의 업무 일정,
+// 탭 진입 카드, 하단 통계(StatisticsSection). 지표는 전부 selector로 조회 시점에 계산한다.
+
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {

@@ -1,3 +1,7 @@
+// 학생 진로설계 (/student/diagnosis/career) — 동사 선택 → 활동 선택 → 계열 확인 → 결과 4단계 검사.
+// 7개 계열(인문~예체능) 가중치 합산으로 추천 계열과 세부 분야(학과·직업·활동)를 제시하고
+// saveCareerDesignResult로 저장. 계열·동사·활동·분야 데이터는 이 파일에 상수로 내장.
+
 import { useState } from 'react'
 import { ChevronRight, ChevronLeft, RotateCcw, History } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
@@ -174,6 +178,9 @@ function ReportProgress() {
   )
 }
 
+// ⚠️ 더미 데이터 — 결과 화면 '진로 활동 기록' 섹션에 하드코딩된 가짜 3건이 실학생에게
+// 노출되고 있다 (진로 활동 테이블 미구현). 실데이터 연결 전까지 유지 여부는 클라이언트와
+// 협의 필요 — 루트 README 백로그 참고.
 const ACTIVITY_RECORDS = [
   { date: '2026-04-15', title: '이공계 진로 탐색 세미나', badge: '강연' },
   { date: '2026-04-10', title: '자기소개서 기초 특강', badge: '특강' },

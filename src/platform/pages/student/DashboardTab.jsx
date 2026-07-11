@@ -1,3 +1,7 @@
+// 학생 홈 탭 (/student/dashboard) — 환영 배너(출석·로그인 횟수), 오늘 학습계획 시계 타임테이블,
+// 마인드 날씨·오늘 학습·미완료 과제 요약 카드, 오늘 과목별 학습 차트, 과제 현황,
+// 선생님 코멘트·리마인더 말풍선(getStudentHomeMessages).
+
 import { Clock, AlertCircle, CheckCircle2, Circle, Sun, Cloud, CloudRain, Cloudy, MessageCircle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext.jsx'

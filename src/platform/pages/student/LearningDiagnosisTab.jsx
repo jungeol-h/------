@@ -1,3 +1,7 @@
+// 학생 학습진단 (/student/diagnosis/learning) — 30문항 리커트 설문 → 영역/단계 점수·등급 계산
+// (utils/learningDiagnosisEngine) → 요약·코칭 리포트·실행 과제 3탭 결과 화면.
+// 결과는 saveLearningDiagnosisResult로 저장하며, 기존 결과가 있으면 결과 화면부터 시작.
+
 import { useState, useMemo } from 'react'
 import { ChevronLeft, ChevronRight, RotateCcw, CheckSquare, Square, Activity } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'

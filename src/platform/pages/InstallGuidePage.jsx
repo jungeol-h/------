@@ -1,3 +1,6 @@
+// PWA 설치 가이드 정적 페이지 (/install-guide, 로그인 화면 배너에서 진입).
+// Android(Chrome)/iOS(Safari) 홈 화면 추가 방법과 초기 로그인 안내를 단계별로 보여준다.
+
 import { useNavigate } from "react-router-dom";
 import {
   ChevronLeft,
@@ -72,7 +75,7 @@ export default function InstallGuidePage() {
             </div>
           </div>
         </div>
-        {/* iOS 가이드 */}3
+        {/* iOS 가이드 */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="bg-blue-500 px-5 py-3 flex items-center gap-2">
             <span className="text-white font-bold text-sm">
