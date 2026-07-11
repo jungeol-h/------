@@ -4,6 +4,7 @@ import { useCallback } from 'react'
 import { supabase } from '../../lib/supabase.js'
 import { toTodoItem, toTask } from '../../lib/supabaseHelpers.js'
 import { makeId } from '../dataModel.js'
+import { todayStr } from '../../utils/dateUtils.js'
 import { withWriteRetry } from '../../lib/supabaseRetry.js'
 
 export function useTaskDomain(data, setData) {
@@ -34,7 +35,7 @@ export function useTaskDomain(data, setData) {
       const row = {
         id: makeId('td'),
         student_id: studentId,
-        date: new Date().toISOString().slice(0, 10),
+        date: todayStr(),
         subject,
         planned_min: plannedMin,
         content,

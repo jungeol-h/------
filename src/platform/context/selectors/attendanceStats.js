@@ -1,4 +1,4 @@
-import { toDateStr } from './weeklyLearning.js'
+import { toDateStr } from '../../utils/dateUtils.js'
 
 // [Read] 학생 1명의 출결 누적 통계 — data를 인자로 받는 순수함수
 //

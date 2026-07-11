@@ -6,6 +6,7 @@
 // 수집하고 []를 돌려주므로 앱이 죽지 않는다(자녀 0명과 동일하게 처리).
 
 import { supabase } from '../../lib/supabase.js'
+import { daysAgoStr } from '../../utils/dateUtils.js'
 import {
   toUser, toMindRecord, toDiaryRecord, toLearningRecord, toTask,
   toTodoItem, toCounselingRecord, toAttendanceRecord, toAttendanceSchedule,
@@ -33,7 +34,7 @@ export async function fetchForParent(userId) {
   // 상담 코멘트 작성자 표기용 교육자 목록
   const educatorRoles = ['manager', 'admin', 'instructor', 'consultant']
   // 출결 기록은 최근 90일
-  const attendanceSince = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10)
+  const attendanceSince = daysAgoStr(90)
 
   const [
     studentsRes, learningRes, mindRes, tasksRes, todoRes, diaryRes,

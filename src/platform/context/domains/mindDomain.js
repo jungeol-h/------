@@ -7,12 +7,13 @@ import { useCallback } from 'react'
 import { supabase } from '../../lib/supabase.js'
 import { toMindRecord } from '../../lib/supabaseHelpers.js'
 import { makeId } from '../dataModel.js'
+import { todayStr } from '../../utils/dateUtils.js'
 import { withWriteRetry } from '../../lib/supabaseRetry.js'
 
 export function useMindDomain(setData) {
   const addMindRecord = useCallback(
     async (studentId, { mood, motivation, confidence, memo }) => {
-      const date = new Date().toISOString().slice(0, 10)
+      const date = todayStr()
       const row = {
         id: makeId('m'),
         student_id: studentId,

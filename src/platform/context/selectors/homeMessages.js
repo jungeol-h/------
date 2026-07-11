@@ -6,7 +6,7 @@
 //  3) schedule : 오늘/내일 업무계획에 본인이 태그된 일정
 // 학생 fetch는 상담기록을 제한 컬럼(follow_up 등)만 받으므로 본문 노출 없음.
 
-import { toDateStr } from './weeklyLearning.js'
+import { toDateStr } from '../../utils/dateUtils.js'
 import { COUNSELING_TYPE_LABELS } from '../../data/counselingTypes.js'
 
 const COACH_WINDOW_DAYS = 14

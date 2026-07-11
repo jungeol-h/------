@@ -10,7 +10,7 @@ import {
   collectRows,
 } from '../../lib/supabaseHelpers.js'
 import { EMPTY } from '../dataModel.js'
-import { toDateStr } from '../selectors/weeklyLearning.js'
+import { toDateStr } from '../../utils/dateUtils.js'
 
 export async function fetchForStudent(userId) {
   const todayStr = toDateStr(new Date())

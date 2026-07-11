@@ -116,7 +116,7 @@ export function buildCoachingReport(stageGrades, stageStatus) {
   // 개선 방향은 약한 단계 해결로 전환
   if (weakStage) {
     const label = STAGE_META[weakStage].label
-    improvement = `${STAGE_META[weakStage]?.label} 단계를 보완하기 위해 ${STAGE_TASKS[weakStage].join(', ')} 등을 꾸준히 실천하는 것을 권장합니다. ${strongStage ? `이미 갖춰진 ${STAGE_META[strongStage].label} 단계의 강점을 활용하면 더 빠른 성장이 가능합니다.` : ''}`
+    improvement = `${label} 단계를 보완하기 위해 ${STAGE_TASKS[weakStage].join(', ')} 등을 꾸준히 실천하는 것을 권장합니다. ${strongStage ? `이미 갖춰진 ${STAGE_META[strongStage].label} 단계의 강점을 활용하면 더 빠른 성장이 가능합니다.` : ''}`
   }
 
   return { currentState, strength, problemCause, improvement }

@@ -1,4 +1,4 @@
-import { toDateStr } from '../../context/selectors/weeklyLearning.js'
+import { toDateStr } from '../../utils/dateUtils.js'
 import { actualMinutes, subjectBreakdown } from '../../context/selectors/learningRecords.js'
 
 export function formatMinutes(minutes) {

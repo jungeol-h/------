@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { CalendarDays, Plus, Pencil, Trash2 } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
-import { toDateStr } from '../../context/selectors/weeklyLearning.js'
+import { toDateStr } from '../../utils/dateUtils.js'
 import { COUNSELING_TYPE_LABELS } from '../../data/counselingTypes.js'
 import {
   WORK_PLAN_STATUSES, WORK_PLAN_STATUS_LABELS, WORK_PLAN_STATUS_BADGE,

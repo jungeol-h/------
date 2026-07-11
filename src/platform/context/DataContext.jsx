@@ -93,6 +93,8 @@ export function DataProvider({ children }) {
 
     load()
     return () => { cancelled = true }
+    // currentUser 객체 identity가 아니라 id/role 변경에만 refetch하려는 의도적 deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.id, currentUser?.role, fetchAll])
 
   // 수동 새로고침 — loading/dataReady는 건드리지 않아 화면을 로딩 상태로 갈아엎지 않는다.

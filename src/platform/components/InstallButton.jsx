@@ -3,30 +3,30 @@ import { Download, X, Smartphone } from 'lucide-react'
 
 export default function InstallButton() {
   const [promptEvent, setPromptEvent] = useState(null)
-  const [isIOS, setIsIOS] = useState(false)
   const [showIOSGuide, setShowIOSGuide] = useState(false)
-  const [installed, setInstalled] = useState(false)
+  // 렌더 전에 확정되는 값은 lazy init으로 — effect 안 동기 setState 금지 룰 준수.
+  const [isIOS] = useState(() => /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream)
+  // 이미 standalone(설치됨) 상태면 버튼 숨김
+  const [installed, setInstalled] = useState(
+    () => window.matchMedia('(display-mode: standalone)').matches
+  )
 
   useEffect(() => {
-    // 이미 standalone(설치됨) 상태면 버튼 숨김
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-      setInstalled(true)
-      return
-    }
-
-    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream
-    setIsIOS(ios)
+    if (installed) return undefined
 
     const handler = (e) => {
       e.preventDefault()
       setPromptEvent(e)
     }
+    const onInstalled = () => setInstalled(true)
     window.addEventListener('beforeinstallprompt', handler)
+    window.addEventListener('appinstalled', onInstalled)
 
-    window.addEventListener('appinstalled', () => setInstalled(true))
-
-    return () => window.removeEventListener('beforeinstallprompt', handler)
-  }, [])
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler)
+      window.removeEventListener('appinstalled', onInstalled)
+    }
+  }, [installed])
 
   const handleInstall = async () => {
     if (isIOS) {

@@ -3,6 +3,7 @@
 // 활동 데이터(마인드/학습 등)는 active 학생만 fetch해 통계에 미반영한다.
 
 import { supabase } from '../../lib/supabase.js'
+import { daysAgoStr } from '../../utils/dateUtils.js'
 import {
   toUser, toMindRecord, toDiaryRecord, toLearningRecord, toTask,
   toCounselingRecord, toAlert, toCareerDesignResult,
@@ -40,7 +41,7 @@ export async function fetchForAdmin() {
   const setIds = setRows.map((s) => s.id)
 
   // 출결은 최근 60일 윈도 — 대시보드 출결 주의 지표·학생 목록 출결 컬럼용 (fetchForManager와 동일)
-  const attendanceSince = new Date(Date.now() - 60 * 86400000).toISOString().slice(0, 10)
+  const attendanceSince = daysAgoStr(60)
 
   const [mindRes, learningRes, tasksRes, diaryRes, careerRes, diagRes, attemptsRes, attendanceRes] = studentIds.length > 0
     ? await Promise.all([

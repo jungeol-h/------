@@ -1,15 +1,7 @@
 // [Read] 최근 7일 학습시간 집계 — data를 인자로 받는 순수함수
 
 import { actualMinutes } from './learningRecords.js'
-
-// Date → 'YYYY-MM-DD' 로컬 날짜 문자열. toISOString()은 UTC로 변환되어
-// 한국 시간대(UTC+9)에서 자정 무렵 날짜가 하루 밀리므로 쓰지 않는다.
-export function toDateStr(d) {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
+import { toDateStr } from '../../utils/dateUtils.js'
 
 // 오늘 기준 최근 7일의 날짜 문자열(YYYY-MM-DD) 배열. 과거→오늘 순.
 export function lastSevenDays(today = new Date()) {

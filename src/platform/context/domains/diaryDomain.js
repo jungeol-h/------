@@ -4,13 +4,14 @@ import { useCallback } from 'react'
 import { supabase } from '../../lib/supabase.js'
 import { toDiaryRecord } from '../../lib/supabaseHelpers.js'
 import { makeId } from '../dataModel.js'
+import { todayStr } from '../../utils/dateUtils.js'
 import { withWriteRetry } from '../../lib/supabaseRetry.js'
 
 export function useDiaryDomain(data, setData) {
   // 오늘 날짜 일기가 있으면 덮어쓰기(upsert), 없으면 신규.
   const addDiaryRecord = useCallback(
     async (studentId, { praise, reflection, resolution }) => {
-      const date = new Date().toISOString().slice(0, 10)
+      const date = todayStr()
       const existing = data.diaryRecords.find(
         (d) => d.studentId === studentId && d.date === date
       )

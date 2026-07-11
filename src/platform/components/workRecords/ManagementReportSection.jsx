@@ -5,9 +5,8 @@ import { useAuth } from '../../context/AuthContext.jsx'
 import {
   MANAGEMENT_WORK_TYPES, MANAGEMENT_WORK_TYPE_LABELS,
 } from '../../data/workRecordTypes.js'
-import { toDateStr } from '../../context/selectors/weeklyLearning.js'
+import { todayStr as today } from '../../utils/dateUtils.js'
 
-const today = () => toDateStr(new Date()) // 로컬 날짜 (UTC 변환 시 하루 밀림 방지)
 
 const EMPTY_FORM = () => ({
   date: today(),

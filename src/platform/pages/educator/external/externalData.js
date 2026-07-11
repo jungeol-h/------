@@ -10,6 +10,7 @@
 import { supabase } from '../../../lib/supabase.js'
 import { withWriteRetry } from '../../../lib/supabaseRetry.js'
 import { makeId } from '../../../context/dataModel.js'
+import { todayStr } from '../../../utils/dateUtils.js'
 
 // ─── 로컬 변환 ─────────────────────────────────────────────────
 
@@ -159,7 +160,7 @@ export async function createRecord({ programStudentId, counselorId, content, typ
     id: makeId('pc'),
     program_student_id: programStudentId,
     counselor_id: counselorId,
-    date: date ?? new Date().toISOString().slice(0, 10),
+    date: date ?? todayStr(),
     content,
     type: type ?? 'etc',
     target_type: targetType ?? 'student',

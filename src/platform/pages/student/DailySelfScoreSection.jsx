@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Save, Star } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { useData } from '../../context/DataContext.jsx'
-import { toDateStr } from '../../context/selectors/weeklyLearning.js'
+import { toDateStr } from '../../utils/dateUtils.js'
 
 // 돌아보기 "오늘의 자기주도 학습 점수" — 100점 만점 자기평가 + 기억할 점 메모.
 // 하루 1건 upsert(재저장 = 덮어쓰기). 왼쪽 최근 14일 막대그래프, 오른쪽 선택일 메모.

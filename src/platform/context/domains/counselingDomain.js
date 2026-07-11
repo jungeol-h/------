@@ -11,6 +11,7 @@ import { useCallback } from 'react'
 import { supabase } from '../../lib/supabase.js'
 import { toCounselingRecord } from '../../lib/supabaseHelpers.js'
 import { makeId } from '../dataModel.js'
+import { todayStr } from '../../utils/dateUtils.js'
 import { withWriteRetry } from '../../lib/supabaseRetry.js'
 
 export function useCounselingDomain(setData) {
@@ -22,7 +23,7 @@ export function useCounselingDomain(setData) {
         id: makeId('c'),
         student_id: studentId,
         manager_id: authorId,
-        date: new Date().toISOString().slice(0, 10),
+        date: todayStr(),
         content,
         type,
         target_type: targetType ?? 'student',

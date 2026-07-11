@@ -8,6 +8,7 @@ import {
   toLearningDiagnosisResult,
 } from '../../lib/supabaseHelpers.js'
 import { makeId } from '../dataModel.js'
+import { todayStr } from '../../utils/dateUtils.js'
 import { withWriteRetry } from '../../lib/supabaseRetry.js'
 
 export function useCareerDomain(setData) {
@@ -20,7 +21,7 @@ export function useCareerDomain(setData) {
       const row = {
         id: makeId('cr'),
         student_id: studentId,
-        date: new Date().toISOString().slice(0, 10),
+        date: todayStr(),
         selected_verbs: selectedVerbs,
         selected_activities: selectedActivities,
         selected_categories: selectedCategories,
@@ -56,7 +57,7 @@ export function useCareerDomain(setData) {
       const row = {
         id: makeId('dr'),
         student_id: studentId,
-        date: new Date().toISOString().slice(0, 10),
+        date: todayStr(),
         answers: resultData.answers ?? [],
         domain_scores: resultData.domainScores ?? {},
         stage_scores: resultData.stageScores ?? {},

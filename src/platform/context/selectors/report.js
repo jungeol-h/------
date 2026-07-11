@@ -2,7 +2,8 @@
 // docs/3. 자료/개념 정리/리포트.md 의 리포트 항목 구성을 따른다.
 
 import { getSelfDirectedIndex } from './indices.js'
-import { lastSevenDays, getWeeklyLearning, toDateStr } from './weeklyLearning.js'
+import { toDateStr } from '../../utils/dateUtils.js'
+import { lastSevenDays, getWeeklyLearning } from './weeklyLearning.js'
 import { subjectBreakdown } from './studentView.js'
 import { actualMinutes, timeTrackedRecords } from './learningRecords.js'
 

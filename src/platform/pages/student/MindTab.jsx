@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Check, BookHeart, NotebookPen } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
+import { todayStr } from '../../utils/dateUtils.js'
 
 function scoreColor(total) {
   if (total > 3) return 'text-blue-600'
@@ -230,7 +231,7 @@ export default function MindTab() {
 
           {/* 오늘 일기 존재 여부 표시 */}
           {(() => {
-            const today = new Date().toISOString().slice(0, 10)
+            const today = todayStr()
             const todayDiary = data.diaryRecords.find(d => d.studentId === currentUser?.id && d.date === today)
             return todayDiary ? (
               <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-sm text-green-700">

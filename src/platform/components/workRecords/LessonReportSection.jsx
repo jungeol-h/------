@@ -5,9 +5,8 @@ import { useAuth } from '../../context/AuthContext.jsx'
 import { LESSON_MAX_STUDENTS } from '../../data/workRecordTypes.js'
 import { educatorDisplayName } from '../../utils/educatorName.js'
 import StudentCombobox from '../counseling/StudentCombobox.jsx'
-import { toDateStr } from '../../context/selectors/weeklyLearning.js'
+import { todayStr as today } from '../../utils/dateUtils.js'
 
-const today = () => toDateStr(new Date()) // 로컬 날짜 (UTC 변환 시 하루 밀림 방지)
 
 const EMPTY_FORM = () => ({
   date: today(),

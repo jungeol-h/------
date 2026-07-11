@@ -7,6 +7,7 @@ import { actualMinutes } from '../../context/selectors/learningRecords.js'
 import { getAttendanceSummary } from '../../context/selectors/attendanceStats.js'
 import { getStudentHomeMessages } from '../../context/selectors/homeMessages.js'
 import { todayPlansFor } from './learningTabLogic.js'
+import { todayStr } from '../../utils/dateUtils.js'
 import ClockTimetable from '../../components/student/ClockTimetable.jsx'
 
 function getMoodWeather(mindRecord) {
@@ -35,7 +36,7 @@ export default function DashboardTab() {
   const doneTasks = myTasks.filter(t => t.status === 'done').length
 
   // 오늘 과목별 학습 시간
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayStr()
   const todayRecords = myRecords.filter(r => r.date === today)
   const subjectMap = {}
   todayRecords.forEach(r => {

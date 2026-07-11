@@ -6,7 +6,7 @@ import {
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
-import { toDateStr } from '../../context/selectors/weeklyLearning.js'
+import { toDateStr } from '../../utils/dateUtils.js'
 import { getAttendanceSummary } from '../../context/selectors/attendanceStats.js'
 import { buildReflectionData } from '../../context/selectors/reflectionReport.js'
 import DownloadPdfButton from '../../pdf/components/DownloadPdfButton.jsx'

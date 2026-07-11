@@ -1,7 +1,7 @@
 // [Read] 관리자 홈 하단 통계 확장 — data를 인자로 받는 순수함수.
 // 누적 출결 / 학습시간 평균 / 업무횟수(상담 유형별)
 
-import { toDateStr } from './weeklyLearning.js'
+import { toDateStr } from '../../utils/dateUtils.js'
 import { actualMinutes } from './learningRecords.js'
 import { COUNSELING_TYPE_LABELS } from '../../data/counselingTypes.js'
 

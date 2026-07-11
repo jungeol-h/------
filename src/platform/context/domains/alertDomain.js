@@ -8,6 +8,7 @@ import { useCallback } from 'react'
 import { supabase } from '../../lib/supabase.js'
 import { toAlert, toCounselingRecord } from '../../lib/supabaseHelpers.js'
 import { makeId } from '../dataModel.js'
+import { todayStr } from '../../utils/dateUtils.js'
 import { withWriteRetry } from '../../lib/supabaseRetry.js'
 
 export function useAlertDomain(setData) {
@@ -16,7 +17,7 @@ export function useAlertDomain(setData) {
   // NOTE: 두 insert는 트랜잭션이 없어 alert만 저장된 채 counseling이 실패하는 부분 실패가 가능하다.
   const recordCoaching = useCallback(
     async ({ studentId, managerId, studentName, level, comment }) => {
-      const date = new Date().toISOString().slice(0, 10)
+      const date = todayStr()
 
       const alertRow = {
         id: makeId('al'),

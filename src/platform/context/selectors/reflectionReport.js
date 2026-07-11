@@ -4,7 +4,7 @@
 import { actualMinutes, timeTrackedRecords } from './learningRecords.js'
 import { getSelfDirectedIndex, getEmotionStability } from './indices.js'
 import { getAttendanceSummary } from './attendanceStats.js'
-import { toDateStr } from './weeklyLearning.js'
+import { toDateStr } from '../../utils/dateUtils.js'
 
 // 오늘 기준 최근 4주(주=7일)의 주별 학습시간 합계. 최근 주가 위로 오도록 정렬.
 // [{ label: 'M/D~M/D', minutes }]

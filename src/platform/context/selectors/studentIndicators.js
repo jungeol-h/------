@@ -4,7 +4,8 @@
 // 행마다 selector를 부르면 O(학생수 × 레코드수)라, 각 레코드 배열을
 // 1-pass로 훑어 Map(studentId → 지표)을 만들어 useMemo 1회 계산으로 쓴다.
 
-import { toDateStr, lastSevenDays } from './weeklyLearning.js'
+import { toDateStr } from '../../utils/dateUtils.js'
+import { lastSevenDays } from './weeklyLearning.js'
 import { actualMinutes } from './learningRecords.js'
 import { ATTENDANCE_CAUTION_DAYS } from './attendanceStats.js'
 import { evaluateMindLevel, MIND_CAUTION_THRESHOLD } from './riskDetection.js'

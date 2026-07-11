@@ -2,6 +2,7 @@
 // 비활성 학생은 매니저 화면 전체에서 제외한다.
 
 import { supabase } from '../../lib/supabase.js'
+import { daysAgoStr } from '../../utils/dateUtils.js'
 import {
   toUser, toMindRecord, toDiaryRecord, toLearningRecord, toTask,
   toCounselingRecord, toAlert, toCareerDesignResult,
@@ -45,7 +46,7 @@ export async function fetchForManager(userId) {
   }
 
   // 출결: 기록은 최근 60일, 알림은 미해결 전체 + 최근 7일
-  const attendanceSince = new Date(Date.now() - 60 * 86400000).toISOString().slice(0, 10)
+  const attendanceSince = daysAgoStr(60)
   const notificationsSince = new Date(Date.now() - 7 * 86400000).toISOString()
 
   const [mindRes, alertsRes, counselingRes, tasksRes, learningRes, diaryRes, careerRes, diagRes, attemptsRes, setsRes, attendanceRes, schedulesRes, attNotiRes, urgentRes, educatorsRes, lessonReportsRes] = await Promise.all([
