@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
-import { X, Send, CheckCircle2, Clock } from 'lucide-react'
+import { Send, CheckCircle2, Clock } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
+import ModalShell from '../common/ModalShell.jsx'
 
 // 긴급 보고·건의 모달 — 강사/컨설턴트/매니저가 관리자에게 직접 전달.
 // 하단에 본인이 보낸 최근 보고 목록 + 관리자 확인 여부 배지.
@@ -36,14 +37,7 @@ export default function UrgentReportModal({ onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center px-4 pb-4">
-      <div className="bg-white rounded-3xl w-full max-w-lg p-5 space-y-4 max-h-[85vh] overflow-y-auto">
-        <div className="flex items-center justify-between">
-          <h3 className="font-bold text-gray-900 text-base">긴급 보고 · 건의</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1">
-            <X size={20} />
-          </button>
-        </div>
+    <ModalShell title="긴급 보고 · 건의" onClose={onClose} maxHeight="max-h-[85vh]">
         <p className="text-xs text-gray-500 -mt-2">
           관리자에게 바로 전달됩니다. 관리자가 확인하면 목록에 표시돼요.
         </p>
@@ -92,7 +86,6 @@ export default function UrgentReportModal({ onClose }) {
             </ul>
           </div>
         )}
-      </div>
-    </div>
+    </ModalShell>
   )
 }

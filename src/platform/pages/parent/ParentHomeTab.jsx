@@ -2,7 +2,7 @@ import { CalendarCheck, BookOpen, Heart } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
 import { classifyToday } from '../../context/selectors/attendance.js'
 import { actualMinutes } from '../../context/selectors/learningRecords.js'
-import { toDateStr } from '../../context/selectors/weeklyLearning.js'
+import { toDateStr } from '../../utils/dateUtils.js'
 import { formatMinutes } from '../student/learningTabLogic.js'
 
 const STATUS_LABELS = {

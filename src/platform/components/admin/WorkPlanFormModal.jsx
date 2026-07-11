@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { X, CheckCheck } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
+import ModalShell from '../common/ModalShell.jsx'
 import StudentCombobox from '../counseling/StudentCombobox.jsx'
 import { COUNSELING_TYPES, COUNSELING_TYPE_LABELS } from '../../data/counselingTypes.js'
 import { WORK_PLAN_STATUSES, WORK_PLAN_STATUS_LABELS } from '../../data/workRecordTypes.js'
@@ -55,15 +56,7 @@ export default function WorkPlanFormModal({ students = [], plan, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center px-4 pb-4">
-      <div className="bg-white rounded-3xl w-full max-w-lg p-5 space-y-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between">
-          <h3 className="font-bold text-gray-900 text-base">{isEdit ? '업무계획 수정' : '업무계획 추가'}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1">
-            <X size={20} />
-          </button>
-        </div>
-
+    <ModalShell title={isEdit ? '업무계획 수정' : '업무계획 추가'} onClose={onClose}>
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="text-xs text-gray-500 mb-1 block">일자 (필수)</label>
@@ -151,7 +144,6 @@ export default function WorkPlanFormModal({ students = [], plan, onClose }) {
             저장
           </button>
         </div>
-      </div>
-    </div>
+    </ModalShell>
   )
 }

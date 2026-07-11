@@ -1,17 +1,29 @@
-// [Write] 업무계획 도메인 — 관리자 일정 CRUD (일시/업무유형/대상학생/메모).
+// [Write] 업무계획 도메인 — 관리자 일정 CRUD (일시/업무유형/대상학생/메모/진행상태).
 // types·studentIds는 jsonb 배열 (유형 중복 체크, 대상 학생 복수 허용).
+// status: planned → in_progress → done (WorkPlanTab 카드 배지 클릭으로 순환).
 
-import { useCallback } from 'react'
-import { supabase } from '../../lib/supabase.js'
+import { useMemo } from 'react'
 import { toWorkPlan } from '../../lib/supabaseHelpers.js'
-import { makeId } from '../dataModel.js'
-import { withWriteRetry } from '../../lib/supabaseRetry.js'
+import { makeAdder, makeUpdater, makeDeleter } from './crudKit.js'
+
+const TABLE = 'work_plans'
+const COLLECTION = 'workPlans'
+
+const FIELD_MAP = {
+  planDate: 'plan_date',
+  planTime: 'plan_time',
+  types: 'types',
+  studentIds: 'student_ids',
+  memo: 'memo',
+  status: 'status',
+}
 
 export function useWorkPlanDomain(setData) {
-  const addWorkPlan = useCallback(
-    async ({ authorId, planDate, planTime = '', types = [], studentIds = [], memo = '' }) => {
-      const row = {
-        id: makeId('wp'),
+  return useMemo(() => ({
+    addWorkPlan: makeAdder(setData, {
+      table: TABLE, collection: COLLECTION, prefix: 'wp', toLocal: toWorkPlan,
+      label: 'addWorkPlan',
+      toRow: ({ authorId, planDate, planTime = '', types = [], studentIds = [], memo = '' }) => ({
         author_id: authorId,
         plan_date: planDate,
         plan_time: planTime,
@@ -19,57 +31,13 @@ export function useWorkPlanDomain(setData) {
         student_ids: studentIds,
         memo,
         status: 'planned',
-      }
-      const { error } = await withWriteRetry(
-        () => supabase.from('work_plans').insert(row),
-        { label: 'addWorkPlan' }
-      )
-      if (error) throw error
-      setData((prev) => ({
-        ...prev,
-        workPlans: [toWorkPlan({ ...row, created_at: new Date().toISOString() }), ...prev.workPlans],
-      }))
-    },
-    [setData]
-  )
-
-  const updateWorkPlan = useCallback(
-    async (id, patch) => {
-      const snake = {}
-      if (patch.planDate !== undefined) snake.plan_date = patch.planDate
-      if (patch.planTime !== undefined) snake.plan_time = patch.planTime
-      if (patch.types !== undefined) snake.types = patch.types
-      if (patch.studentIds !== undefined) snake.student_ids = patch.studentIds
-      if (patch.memo !== undefined) snake.memo = patch.memo
-      if (patch.status !== undefined) snake.status = patch.status
-      if (Object.keys(snake).length === 0) return
-      const { error } = await withWriteRetry(
-        () => supabase.from('work_plans').update(snake).eq('id', id),
-        { label: 'updateWorkPlan' }
-      )
-      if (error) throw error
-      setData((prev) => ({
-        ...prev,
-        workPlans: prev.workPlans.map((p) => (p.id === id ? { ...p, ...patch } : p)),
-      }))
-    },
-    [setData]
-  )
-
-  const deleteWorkPlan = useCallback(
-    async (id) => {
-      const { error } = await withWriteRetry(
-        () => supabase.from('work_plans').delete().eq('id', id),
-        { label: 'deleteWorkPlan' }
-      )
-      if (error) throw error
-      setData((prev) => ({
-        ...prev,
-        workPlans: prev.workPlans.filter((p) => p.id !== id),
-      }))
-    },
-    [setData]
-  )
-
-  return { addWorkPlan, updateWorkPlan, deleteWorkPlan }
+      }),
+    }),
+    updateWorkPlan: makeUpdater(setData, {
+      table: TABLE, collection: COLLECTION, fieldMap: FIELD_MAP, label: 'updateWorkPlan',
+    }),
+    deleteWorkPlan: makeDeleter(setData, {
+      table: TABLE, collection: COLLECTION, label: 'deleteWorkPlan',
+    }),
+  }), [setData])
 }

@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
-import { CheckCheck, Pencil, Trash2, X, FileSpreadsheet } from 'lucide-react'
+import { CheckCheck, Pencil, Trash2, FileSpreadsheet } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
+import ModalShell from '../common/ModalShell.jsx'
 import {
   FINANCE_CATEGORIES, FINANCE_CATEGORY_LABELS,
   PAYMENT_METHODS, PAYMENT_METHOD_LABELS,
@@ -324,14 +325,7 @@ export default function FinanceSection({ readOnly = false }) {
       </section>
 
       {editing && editForm && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center px-4 pb-4">
-          <div className="bg-white rounded-3xl w-full max-w-lg p-5 space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold text-gray-900 text-base">재정 기록 수정</h3>
-              <button onClick={() => setEditing(null)} className="text-gray-400 hover:text-gray-600 p-1">
-                <X size={20} />
-              </button>
-            </div>
+        <ModalShell title="재정 기록 수정" onClose={() => setEditing(null)}>
             <FinanceFields value={editForm} onChange={setEditForm} />
             <AttachmentField
               existing={editAttachments}
@@ -355,8 +349,7 @@ export default function FinanceSection({ readOnly = false }) {
                 저장
               </button>
             </div>
-          </div>
-        </div>
+        </ModalShell>
       )}
     </div>
   )

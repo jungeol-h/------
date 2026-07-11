@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { CheckCheck, Pencil, Trash2, X } from 'lucide-react'
+import { CheckCheck, Pencil, Trash2 } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
+import ModalShell from '../common/ModalShell.jsx'
 import {
   MANAGEMENT_WORK_TYPES, MANAGEMENT_WORK_TYPE_LABELS,
 } from '../../data/workRecordTypes.js'
@@ -180,14 +181,7 @@ export default function ManagementReportSection({ readOnly = false }) {
       </section>
 
       {editing && editForm && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center px-4 pb-4">
-          <div className="bg-white rounded-3xl w-full max-w-lg p-5 space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold text-gray-900 text-base">관리보고 수정</h3>
-              <button onClick={() => setEditing(null)} className="text-gray-400 hover:text-gray-600 p-1">
-                <X size={20} />
-              </button>
-            </div>
+        <ModalShell title="관리보고 수정" onClose={() => setEditing(null)}>
             <ManagementFields value={editForm} onChange={setEditForm} />
             <div className="flex gap-2">
               <button onClick={() => setEditing(null)} className="flex-1 py-3 border border-gray-200 rounded-xl text-gray-600 font-medium">
@@ -202,8 +196,7 @@ export default function ManagementReportSection({ readOnly = false }) {
                 저장
               </button>
             </div>
-          </div>
-        </div>
+        </ModalShell>
       )}
     </div>
   )

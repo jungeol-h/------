@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext.jsx'
 import { LESSON_MAX_STUDENTS } from '../../data/workRecordTypes.js'
 import { educatorDisplayName } from '../../utils/educatorName.js'
 import StudentCombobox from '../counseling/StudentCombobox.jsx'
+import ModalShell from '../common/ModalShell.jsx'
 import { todayStr as today } from '../../utils/dateUtils.js'
 
 
@@ -244,14 +245,7 @@ export default function LessonReportSection({ students, readOnly = false }) {
       </section>
 
       {editing && editForm && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center px-4 pb-4">
-          <div className="bg-white rounded-3xl w-full max-w-lg p-5 space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold text-gray-900 text-base">수업보고 수정</h3>
-              <button onClick={() => setEditing(null)} className="text-gray-400 hover:text-gray-600 p-1">
-                <X size={20} />
-              </button>
-            </div>
+        <ModalShell title="수업보고 수정" onClose={() => setEditing(null)}>
             <LessonFields value={editForm} onChange={setEditForm} students={students} />
             <div className="flex gap-2">
               <button onClick={() => setEditing(null)} className="flex-1 py-3 border border-gray-200 rounded-xl text-gray-600 font-medium">
@@ -266,8 +260,7 @@ export default function LessonReportSection({ students, readOnly = false }) {
                 저장
               </button>
             </div>
-          </div>
-        </div>
+        </ModalShell>
       )}
     </div>
   )

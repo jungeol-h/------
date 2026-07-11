@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { X, CheckCheck } from 'lucide-react'
+import { CheckCheck } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
+import ModalShell from '../common/ModalShell.jsx'
 import {
   COUNSELING_TYPES, COUNSELING_TYPE_LABELS,
   COUNSELING_TARGET_TYPES, COUNSELING_TARGET_LABELS,
@@ -61,15 +62,7 @@ export default function CounselingFormModal({ students = [], fixedStudent, recor
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center px-4 pb-4">
-      <div className="bg-white rounded-3xl w-full max-w-lg p-5 space-y-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between">
-          <h3 className="font-bold text-gray-900 text-base">{isEdit ? '상담 수정' : '상담 작성'}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1">
-            <X size={20} />
-          </button>
-        </div>
-
+    <ModalShell title={isEdit ? '상담 수정' : '상담 작성'} onClose={onClose}>
         {isEdit || fixedStudent ? (
           <div className="rounded-xl bg-gray-50 p-3 text-sm font-semibold text-gray-700">
             {(isEdit ? editStudent?.name : fixedStudent?.name) ?? '학생'} 학생
@@ -166,7 +159,6 @@ export default function CounselingFormModal({ students = [], fixedStudent, recor
             저장
           </button>
         </div>
-      </div>
-    </div>
+    </ModalShell>
   )
 }

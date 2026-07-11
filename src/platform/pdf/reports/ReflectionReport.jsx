@@ -1,9 +1,9 @@
-import { View, Text, StyleSheet } from '@react-pdf/renderer'
+import { View } from '@react-pdf/renderer'
 import PageWrapper from '../components/PageWrapper'
 import Section from '../components/Section'
 import Table from '../components/Table'
 import KpiGrid from '../components/KpiGrid'
-import { colors, fontSize } from '../config/styles'
+import { InfoGrid, InfoRow } from '../components/InfoGrid.jsx'
 
 // 종합 성장 리포트 — 출결·자기주도 학습·과제수행·확인평가·마인드 종합.
 // DataContext에 의존하지 않고 순수 props만 받는다.
@@ -16,40 +16,6 @@ import { colors, fontSize } from '../config/styles'
 //   mind: { avgMood, avgMotivation, avgConfidence, stability, recentCount },
 //   generatedAt, author,
 // }
-
-const infoStyles = StyleSheet.create({
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginHorizontal: -4,
-  },
-  item: {
-    width: '50%',
-    paddingHorizontal: 4,
-    paddingVertical: 2,
-    flexDirection: 'row',
-  },
-  label: {
-    fontSize: fontSize.xs,
-    color: colors.muted,
-    width: 78,
-  },
-  value: {
-    fontSize: fontSize.sm,
-    color: colors.text,
-    fontWeight: 600,
-    flex: 1,
-  },
-})
-
-function InfoRow({ label, value }) {
-  return (
-    <View style={infoStyles.item}>
-      <Text style={infoStyles.label}>{label}</Text>
-      <Text style={infoStyles.value}>{value || '-'}</Text>
-    </View>
-  )
-}
 
 const STATUS_LABEL = { present: '출석', late: '지각', absent: '결석' }
 
@@ -178,11 +144,11 @@ export default function ReflectionReport({
       author={author}
     >
       <Section title="학생 정보">
-        <View style={infoStyles.grid}>
+        <InfoGrid>
           <InfoRow label="이름" value={student.name} />
           <InfoRow label="학교" value={student.school} />
           <InfoRow label="학년" value={student.grade} />
-        </View>
+        </InfoGrid>
       </Section>
 
       <Section title="출결 요약">
@@ -192,10 +158,10 @@ export default function ReflectionReport({
       </Section>
 
       <Section title="자기주도 학습">
-        <View style={infoStyles.grid}>
+        <InfoGrid>
           <InfoRow label="자기주도지수" value={learning.selfIndex == null ? '-' : `${learning.selfIndex}점`} />
           <InfoRow label="총 학습시간" value={formatMinutes(learning.totalMinutes)} />
-        </View>
+        </InfoGrid>
         <View style={{ height: 8 }} />
         <Table columns={weeklyColumns} rows={weeklyRows} emptyText="주별 학습 기록이 없습니다." />
       </Section>
@@ -207,22 +173,22 @@ export default function ReflectionReport({
       </Section>
 
       <Section title="확인평가 결과">
-        <View style={infoStyles.grid}>
+        <InfoGrid>
           <InfoRow label="평균 정답률" value={quiz.avgPct == null ? '-' : `${quiz.avgPct}%`} />
           <InfoRow label="응시 횟수" value={`${quizRows.length}회`} />
-        </View>
+        </InfoGrid>
         <View style={{ height: 8 }} />
         <Table columns={quizColumns} rows={quizRows} emptyText="확인평가 응시 기록이 없습니다." />
       </Section>
 
       <Section title="마인드">
-        <View style={infoStyles.grid}>
+        <InfoGrid>
           <InfoRow label="평균 기분" value={fmtAvg(mind.avgMood)} />
           <InfoRow label="평균 동기" value={fmtAvg(mind.avgMotivation)} />
           <InfoRow label="평균 자신감" value={fmtAvg(mind.avgConfidence)} />
           <InfoRow label="정서 안정도" value={mind.stability == null ? '-' : `${fmtScore(mind.stability)}점`} />
           <InfoRow label="기록 수" value={`${mind.recentCount ?? 0}건`} />
-        </View>
+        </InfoGrid>
       </Section>
     </PageWrapper>
   )
