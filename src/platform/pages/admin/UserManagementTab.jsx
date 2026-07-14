@@ -14,6 +14,8 @@ import { useAuth } from '../../context/AuthContext.jsx'
 import { useNavigate } from 'react-router-dom'
 import StudentFormModal from '../../components/admin/StudentFormModal.jsx'
 import ParentManagementModal from '../../components/admin/ParentManagementModal.jsx'
+import EducatorGroupModal from '../../components/admin/EducatorGroupModal.jsx'
+import { GROUP_OPTIONS } from '../../data/groups.js'
 import DownloadPdfButton from '../../pdf/components/DownloadPdfButton.jsx'
 import { buildFilename, nowDateTime } from '../../pdf/utils/formatters.js'
 import { authorOf } from '../../pdf/config/meta.js'
@@ -31,7 +33,7 @@ const MIND_BADGES = {
 const LIST_GRID = 'grid-cols-[minmax(130px,1fr)_60px_100px_100px_48px_48px_52px_52px_44px_48px_32px]'
 
 export default function UserManagementTab({ readOnly = false }) {
-  const { data, createStudent, updateStudent, setStudentStatus } = useData()
+  const { data, createStudent, updateStudent, updateEducatorGroups, setStudentStatus } = useData()
   const { currentUser } = useAuth()
   const navigate = useNavigate()
 
@@ -40,6 +42,8 @@ export default function UserManagementTab({ readOnly = false }) {
   const [menuOpenId, setMenuOpenId] = useState(null)
   const [showParentModal, setShowParentModal] = useState(false)
   const [query, setQuery] = useState('')
+  const [filterGroup, setFilterGroup] = useState('all') // 'all' | GROUP_OPTIONS 값
+  const [groupEditTarget, setGroupEditTarget] = useState(null) // 소속 편집 대상 교육자
   const [sortKey, setSortKey] = useState('name') // 'name' | 'grade' | 'manager' | 'risk' | 'selfIndex'
   const [sortDir, setSortDir] = useState('asc')  // 'asc' | 'desc'
 
@@ -59,9 +63,12 @@ export default function UserManagementTab({ readOnly = false }) {
   }
 
   const visibleStudents = useMemo(() => {
+    const grouped = filterGroup === 'all'
+      ? baseStudents
+      : baseStudents.filter((s) => (s.groups ?? []).includes(filterGroup))
     const q = query.trim().toLowerCase()
     const filtered = q
-      ? baseStudents.filter((s) => {
+      ? grouped.filter((s) => {
           const mgr = managerNameOf(s.id)
           return (
             (s.name || '').toLowerCase().includes(q) ||
@@ -71,7 +78,7 @@ export default function UserManagementTab({ readOnly = false }) {
             mgr.toLowerCase().includes(q)
           )
         })
-      : baseStudents.slice()
+      : grouped.slice()
 
     const dir = sortDir === 'asc' ? 1 : -1
     const cmp = (a, b) => {
@@ -95,7 +102,7 @@ export default function UserManagementTab({ readOnly = false }) {
     }
     return filtered.sort(cmp)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [baseStudents, query, sortKey, sortDir, data.assignments, data.educators])
+  }, [baseStudents, query, filterGroup, sortKey, sortDir, data.assignments, data.educators])
 
   const toggleSort = (key) => {
     if (sortKey === key) {
@@ -210,16 +217,28 @@ export default function UserManagementTab({ readOnly = false }) {
           </div>
         </div>
 
-        {/* 검색바 */}
-        <div className="mb-2 relative">
-          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="이름·학교·학년·반·담당 검색"
-            className="w-full pl-8 pr-3 py-2 text-xs bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-emerald-400"
-          />
+        {/* 그룹 필터 + 검색바 */}
+        <div className="mb-2 flex gap-2">
+          <select
+            value={filterGroup}
+            onChange={(e) => setFilterGroup(e.target.value)}
+            className="px-2.5 py-2 text-xs bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-emerald-400"
+          >
+            <option value="all">전체 그룹</option>
+            {GROUP_OPTIONS.map((g) => (
+              <option key={g} value={g}>{g}</option>
+            ))}
+          </select>
+          <div className="relative flex-1">
+            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="이름·학교·학년·반·담당 검색"
+              className="w-full pl-8 pr-3 py-2 text-xs bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-emerald-400"
+            />
+          </div>
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm overflow-x-auto">
@@ -299,7 +318,7 @@ export default function UserManagementTab({ readOnly = false }) {
                         )}
                       </div>
                       <span className="text-xs text-gray-400 truncate block">
-                        {s.school || '학교 미입력'}{s.grade ? ` · ${s.grade}` : ''}{s.className ? ` ${s.className}` : ''}
+                        {s.groups?.[0] ? `${s.groups[0]} · ` : ''}{s.school || '학교 미입력'}{s.grade ? ` · ${s.grade}` : ''}{s.className ? ` ${s.className}` : ''}
                       </span>
                     </div>
                   </div>
@@ -386,25 +405,41 @@ export default function UserManagementTab({ readOnly = false }) {
         </div>
       </section>
 
-      {/* ── 교육자 목록 (읽기 전용 유지) ── */}
+      {/* ── 교육자 목록 (소속 편집 외 읽기 전용) ── */}
       <section>
         <h3 className="text-sm font-bold text-gray-500 mb-3">교육자 ({data.educators.length}명)</h3>
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-          <div className="grid grid-cols-[1fr_auto_auto] text-xs text-gray-400 font-semibold px-3 py-2 border-b border-gray-100 bg-gray-50">
+          <div className="grid grid-cols-[1fr_auto_auto_auto] text-xs text-gray-400 font-semibold px-3 py-2 border-b border-gray-100 bg-gray-50">
             <span>이름</span>
+            <span className="w-28 text-center">소속</span>
             <span className="w-20 text-center">역할</span>
             <span className="w-14 text-right">담당</span>
           </div>
           {data.educators.map((e) => {
             const assignedCount = data.assignments.filter((a) => a.educatorId === e.id).length
+            const groupLabel = e.groups?.length ? e.groups.join(', ') : '전체'
             return (
-              <div key={e.id} className="grid grid-cols-[1fr_auto_auto] items-center px-3 py-2.5 border-b border-gray-50 last:border-0">
+              <div key={e.id} className="grid grid-cols-[1fr_auto_auto_auto] items-center px-3 py-2.5 border-b border-gray-50 last:border-0">
                 <div className="flex items-center gap-2">
                   <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
                     <User size={13} className="text-gray-400" />
                   </div>
                   <span className="font-semibold text-sm text-gray-800">{e.name}</span>
                 </div>
+                {readOnly ? (
+                  <span className="w-28 text-center text-xs text-gray-500 truncate" title={groupLabel}>
+                    {groupLabel}
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setGroupEditTarget(e)}
+                    className="w-28 text-center text-xs text-gray-500 truncate hover:text-emerald-600 hover:underline"
+                    title={`${groupLabel} — 클릭해서 소속 편집`}
+                  >
+                    {groupLabel}
+                  </button>
+                )}
                 <span className="w-20 text-center text-xs text-gray-500">{ROLE_LABELS[e.role] || e.role}</span>
                 <span className="w-14 text-right text-sm font-bold text-emerald-600">
                   {e.role === 'manager' ? `${assignedCount}명` : '-'}
@@ -428,6 +463,14 @@ export default function UserManagementTab({ readOnly = false }) {
 
       {!readOnly && showParentModal && (
         <ParentManagementModal onClose={() => setShowParentModal(false)} />
+      )}
+
+      {!readOnly && groupEditTarget && (
+        <EducatorGroupModal
+          educator={groupEditTarget}
+          onSave={(groups) => updateEducatorGroups(groupEditTarget.id, groups)}
+          onClose={() => setGroupEditTarget(null)}
+        />
       )}
     </div>
   )

@@ -1,9 +1,16 @@
 // 관리자 역할 초기 데이터 fetch — 전체 사용자 + 활성 학생의 활동 + 월간 통계.
 // 사용자 관리 탭은 비활성 학생도 보여줘야 하므로 students는 전체 유지하되,
 // 활동 데이터(마인드/학습 등)는 active 학생만 fetch해 통계에 미반영한다.
+//
+// 그룹 스코프: instructor/consultant/viewer도 이 fetcher를 공유한다.
+// scope({ userId, role })가 오면 admin 외 역할은 자기 소속 그룹(users.group_names)의
+// 학생으로 studentIds를 좁힌다 — 활동 데이터가 .in('student_id')로 fetch되므로
+// 통계·확인평가가 자동 정합된다. 화면단에서 students만 거르면 전량 합산 통계
+// (누적출결·업무횟수)와 퀴즈 응시/대상 비율이 깨지므로 반드시 여기서 거른다.
 
 import { supabase } from '../../lib/supabase.js'
 import { daysAgoStr } from '../../utils/dateUtils.js'
+import { canViewByGroups, canViewRecordGroup } from '../../utils/groupScope.js'
 import {
   toUser, toMindRecord, toDiaryRecord, toLearningRecord, toTask,
   toCounselingRecord, toAlert, toCareerDesignResult,
@@ -14,7 +21,7 @@ import {
 } from '../../lib/supabaseHelpers.js'
 import { EMPTY } from '../dataModel.js'
 
-export async function fetchForAdmin() {
+export async function fetchForAdmin(scope = null) {
   const errors = []
   const meta = {}
 
@@ -34,9 +41,29 @@ export async function fetchForAdmin() {
   ])
 
   const allUsers = collectRows(usersRes, 'users', errors)
-  const studentIds = allUsers
-    .filter((u) => u.role === 'student' && (u.status ?? 'active') === 'active')
+
+  // 그룹 스코프 — 열람자 그룹은 localStorage 세션이 아니라 방금 fetch한 row에서 읽는다(스테일 방지).
+  // admin이거나 그룹이 비어 있으면 viewerGroups=null → canViewByGroups가 전부 통과.
+  const requester = scope && scope.role !== 'admin'
+    ? allUsers.find((u) => u.id === scope.userId)
+    : null
+  const viewerGroups = requester?.group_names?.length ? requester.group_names : null // 빈 배열도 전체 열람
+
+  const scopedStudents = allUsers.filter(
+    (u) => u.role === 'student' && canViewByGroups(viewerGroups, u.group_names)
+  )
+  const scopedStudentIdSet = new Set(scopedStudents.map((u) => u.id)) // 비활성 포함 — 기록 표시용
+  const studentIds = scopedStudents
+    .filter((u) => (u.status ?? 'active') === 'active')
     .map((u) => u.id)
+
+  // 학생 참조가 있는 기록은 스코프 학생 기준, 없는 기록(관리보고·재정·긴급보고)은 group_name 기준.
+  const byStudentId = (row) => !row.student_id || scopedStudentIdSet.has(row.student_id)
+  const byStudentIdList = (row) => {
+    const ids = Array.isArray(row.student_ids) ? row.student_ids : []
+    return ids.length === 0 || ids.some((id) => scopedStudentIdSet.has(id))
+  }
+  const byRecordGroup = (row) => canViewRecordGroup(viewerGroups, row.group_name)
   const setRows = collectRows(setsRes, 'quiz_sets', errors)
   const setIds = setRows.map((s) => s.id)
 
@@ -68,15 +95,19 @@ export async function fetchForAdmin() {
     ? await supabase.from('quiz_questions').select('*').in('quiz_set_id', setIds).order('order_no')
     : { data: [] }
 
+  // 학부모는 스코프 학생의 부모만 남긴다 (parent_children 링크 기준)
+  const parentChildRows = collectRows(parentChildrenRes, 'parent_children', errors).filter(byStudentId)
+  const scopedParentIds = new Set(parentChildRows.map((r) => r.parent_id))
+
   return {
     ...EMPTY,
-    students: allUsers.filter((u) => u.role === 'student').map(toUser),
+    students: scopedStudents.map(toUser),
     educators: allUsers.filter((u) => u.role !== 'student' && u.role !== 'parent').map(toUser),
-    parents: allUsers.filter((u) => u.role === 'parent').map(toUser),
-    parentChildren: collectRows(parentChildrenRes, 'parent_children', errors).map(toParentChild),
-    assignments: collectRows(assnRes, 'assignments', errors).map(toAssignment),
-    alerts: collectRows(alertsRes, 'alerts', errors).map(toAlert),
-    counselingRecords: collectRows(counselingRes, 'counseling_records', errors).map(toCounselingRecord),
+    parents: allUsers.filter((u) => u.role === 'parent' && (viewerGroups == null || scopedParentIds.has(u.id))).map(toUser),
+    parentChildren: parentChildRows.map(toParentChild),
+    assignments: collectRows(assnRes, 'assignments', errors).filter(byStudentId).map(toAssignment),
+    alerts: collectRows(alertsRes, 'alerts', errors).filter(byStudentId).map(toAlert),
+    counselingRecords: collectRows(counselingRes, 'counseling_records', errors).filter(byStudentId).map(toCounselingRecord),
     mindRecords: collectRows(mindRes, 'mind_records', errors).map(toMindRecord),
     learningRecords: collectRows(learningRes, 'learning_records', errors).map(toLearningRecord),
     tasks: collectRows(tasksRes, 'tasks', errors).map(toTask),
@@ -94,11 +125,11 @@ export async function fetchForAdmin() {
     quizQuestions: collectRows(questionsRes, 'quiz_questions', errors).map(toQuizQuestion),
     quizAttempts: collectRows(attemptsRes, 'quiz_attempts', errors).map(toQuizAttempt),
     attendanceRecords: collectRows(attendanceRes, 'attendance_records', errors).map(toAttendanceRecord),
-    workPlans: collectRows(workPlansRes, 'work_plans', errors).map(toWorkPlan),
-    urgentReports: collectRows(urgentReportsRes, 'urgent_reports', errors).map(toUrgentReport),
-    managementReports: collectRows(managementReportsRes, 'management_reports', errors).map(toManagementReport),
-    financeRecords: collectRows(financeRecordsRes, 'finance_records', errors).map(toFinanceRecord),
-    lessonReports: collectRows(lessonReportsRes, 'lesson_reports', errors).map(toLessonReport),
+    workPlans: collectRows(workPlansRes, 'work_plans', errors).filter(byStudentIdList).map(toWorkPlan),
+    urgentReports: collectRows(urgentReportsRes, 'urgent_reports', errors).filter(byRecordGroup).map(toUrgentReport),
+    managementReports: collectRows(managementReportsRes, 'management_reports', errors).filter(byRecordGroup).map(toManagementReport),
+    financeRecords: collectRows(financeRecordsRes, 'finance_records', errors).filter(byRecordGroup).map(toFinanceRecord),
+    lessonReports: collectRows(lessonReportsRes, 'lesson_reports', errors).filter(byStudentIdList).map(toLessonReport),
     _fetchErrors: errors,
     _fetchMeta: meta,
   }

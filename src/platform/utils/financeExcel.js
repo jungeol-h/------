@@ -4,7 +4,7 @@
 import { FINANCE_CATEGORY_LABELS, PAYMENT_METHOD_LABELS } from '../data/workRecordTypes.js'
 
 export const FINANCE_SHEET_HEADER = [
-  '날짜', '구입품목', '물품명', '단가', '갯수', '금액', '구입처', '결제수단', '작성자',
+  '날짜', '소속', '구입품목', '물품명', '단가', '갯수', '금액', '구입처', '결제수단', '작성자',
 ]
 
 export function buildFinanceSheet(records, { educators = [] } = {}) {
@@ -14,6 +14,7 @@ export function buildFinanceSheet(records, { educators = [] } = {}) {
 
   const rows = sorted.map((r) => [
     r.date,
+    r.groupName || '공용',
     FINANCE_CATEGORY_LABELS[r.category] ?? r.category,
     r.itemName,
     r.unitPrice ?? 0,
@@ -25,7 +26,7 @@ export function buildFinanceSheet(records, { educators = [] } = {}) {
   ])
 
   const total = sorted.reduce((sum, r) => sum + (r.amount ?? 0), 0)
-  const totalRow = ['합계', '', '', '', '', total, '', '', '']
+  const totalRow = ['합계', '', '', '', '', '', total, '', '', '']
 
   return { header: FINANCE_SHEET_HEADER, rows, totalRow }
 }

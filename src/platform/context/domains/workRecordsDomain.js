@@ -20,6 +20,7 @@ const MANAGEMENT = {
     endTime: 'end_time',
     content: 'content',
     note: 'note',
+    groupName: 'group_name', // 소속 그룹 태그 — null = 공용
   },
 }
 
@@ -37,6 +38,7 @@ const FINANCE = {
     vendor: 'vendor',
     paymentMethod: 'payment_method',
     attachments: 'attachments', // 영수증 jsonb 메타 — 실파일은 lib/financeFiles.js
+    groupName: 'group_name',
   },
 }
 
@@ -61,7 +63,7 @@ export function useWorkRecordsDomain(setData) {
   return useMemo(() => ({
     addManagementReport: makeAdder(setData, {
       ...MANAGEMENT, prefix: 'mr', toLocal: toManagementReport, label: 'addManagementReport',
-      toRow: ({ authorId, date, workType = 'etc', startTime = '', endTime = '', content = '', note = '' }) => ({
+      toRow: ({ authorId, date, workType = 'etc', startTime = '', endTime = '', content = '', note = '', groupName = null }) => ({
         author_id: authorId,
         date,
         work_type: workType,
@@ -69,6 +71,7 @@ export function useWorkRecordsDomain(setData) {
         end_time: endTime,
         content,
         note,
+        group_name: groupName || null,
       }),
     }),
     updateManagementReport: makeUpdater(setData, { ...MANAGEMENT, label: 'updateManagementReport' }),
@@ -76,7 +79,7 @@ export function useWorkRecordsDomain(setData) {
 
     addFinanceRecord: makeAdder(setData, {
       ...FINANCE, prefix: 'fin', toLocal: toFinanceRecord, label: 'addFinanceRecord',
-      toRow: ({ authorId, date, category = 'etc', itemName = '', unitPrice = 0, quantity = 1, amount = 0, vendor = '', paymentMethod = 'personal_card', attachments = [] }) => ({
+      toRow: ({ authorId, date, category = 'etc', itemName = '', unitPrice = 0, quantity = 1, amount = 0, vendor = '', paymentMethod = 'personal_card', attachments = [], groupName = null }) => ({
         author_id: authorId,
         date,
         category,
@@ -87,6 +90,7 @@ export function useWorkRecordsDomain(setData) {
         vendor,
         payment_method: paymentMethod,
         attachments,
+        group_name: groupName || null,
       }),
     }),
     updateFinanceRecord: makeUpdater(setData, { ...FINANCE, label: 'updateFinanceRecord' }),

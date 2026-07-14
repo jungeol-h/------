@@ -27,7 +27,12 @@ export default function UrgentReportModal({ onClose }) {
     if (!canSend) return
     setSaving(true)
     try {
-      await addUrgentReport({ authorId: currentUser?.id, content: content.trim() })
+      // 작성자 첫 소속을 자동 태그 — 그룹 스코프 열람 필터용 (무소속이면 공용)
+      await addUrgentReport({
+        authorId: currentUser?.id,
+        content: content.trim(),
+        groupName: currentUser?.groups?.[0] ?? null,
+      })
       setContent('')
     } catch {
       // 저장 실패는 전역 Toast가 표면화한다.

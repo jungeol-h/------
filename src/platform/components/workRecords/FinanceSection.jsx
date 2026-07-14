@@ -7,6 +7,7 @@ import {
   FINANCE_CATEGORIES, FINANCE_CATEGORY_LABELS,
   PAYMENT_METHODS, PAYMENT_METHOD_LABELS,
 } from '../../data/workRecordTypes.js'
+import { GROUP_OPTIONS } from '../../data/groups.js'
 import { AttachmentField, AttachmentChips } from '../counseling/AttachmentField.jsx'
 import {
   validateReceipt, uploadReceiptFiles, receiptFileUrl, removeReceiptFiles,
@@ -25,6 +26,7 @@ const EMPTY_FORM = () => ({
   amount: '',
   vendor: '',
   paymentMethod: PAYMENT_METHODS[0],
+  groupName: '', // '' = 공용 (전 그룹에서 보임)
 })
 
 const fieldClass =
@@ -93,6 +95,15 @@ function FinanceFields({ value, onChange }) {
           </select>
         </div>
       </div>
+      <div>
+        <label className="text-xs text-gray-500 mb-1 block">소속 그룹</label>
+        <select value={value.groupName ?? ''} onChange={set('groupName')} className={`${fieldClass} w-full`}>
+          <option value="">공용 (전체)</option>
+          {GROUP_OPTIONS.map((g) => (
+            <option key={g} value={g}>{g}</option>
+          ))}
+        </select>
+      </div>
     </>
   )
 }
@@ -124,6 +135,7 @@ export default function FinanceSection({ readOnly = false }) {
     amount: toInt(f.amount),
     vendor: f.vendor.trim(),
     paymentMethod: f.paymentMethod,
+    groupName: f.groupName || null,
   })
 
   const handleSave = async () => {
@@ -162,6 +174,7 @@ export default function FinanceSection({ readOnly = false }) {
       amount: String(r.amount ?? ''),
       vendor: r.vendor,
       paymentMethod: r.paymentMethod,
+      groupName: r.groupName ?? '',
     })
     setEditAttachments(r.attachments ?? [])
     setEditAttachFiles([])
@@ -204,8 +217,8 @@ export default function FinanceSection({ readOnly = false }) {
       const sumRow = sheet.addRow(totalRow)
       sumRow.font = { bold: true }
       sheet.columns.forEach((col, i) => {
-        col.width = [12, 10, 20, 10, 7, 12, 16, 10, 10][i] ?? 12
-        if ([3, 5].includes(i)) col.numFmt = '#,##0'
+        col.width = [12, 12, 10, 20, 10, 7, 12, 16, 10, 10][i] ?? 12
+        if ([4, 6].includes(i)) col.numFmt = '#,##0'
       })
       const buffer = await workbook.xlsx.writeBuffer()
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
@@ -270,6 +283,7 @@ export default function FinanceSection({ readOnly = false }) {
               <thead>
                 <tr className="text-gray-500 border-b border-gray-100 bg-gray-50/60">
                   <th className="px-3 py-2.5 text-left font-semibold">날짜</th>
+                  <th className="px-3 py-2.5 text-left font-semibold">소속</th>
                   <th className="px-3 py-2.5 text-left font-semibold">구입품목</th>
                   <th className="px-3 py-2.5 text-left font-semibold">물품명</th>
                   <th className="px-3 py-2.5 text-right font-semibold">단가</th>
@@ -285,6 +299,7 @@ export default function FinanceSection({ readOnly = false }) {
                 {records.map((r) => (
                   <tr key={r.id} className="border-b border-gray-50 last:border-0">
                     <td className="px-3 py-2.5 text-gray-600 whitespace-nowrap">{r.date}</td>
+                    <td className="px-3 py-2.5 text-gray-600 whitespace-nowrap">{r.groupName || '공용'}</td>
                     <td className="px-3 py-2.5 whitespace-nowrap">
                       <span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-semibold">
                         {FINANCE_CATEGORY_LABELS[r.category] ?? r.category}
@@ -314,7 +329,7 @@ export default function FinanceSection({ readOnly = false }) {
               </tbody>
               <tfoot>
                 <tr className="bg-gray-50/60 font-bold text-gray-800">
-                  <td className="px-3 py-2.5" colSpan={5}>합계</td>
+                  <td className="px-3 py-2.5" colSpan={6}>합계</td>
                   <td className="px-3 py-2.5 text-right whitespace-nowrap">{won(total)}</td>
                   <td className="px-3 py-2.5" colSpan={readOnly ? 3 : 4} />
                 </tr>

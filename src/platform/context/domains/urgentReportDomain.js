@@ -8,12 +8,13 @@ import { withWriteRetry } from '../../lib/supabaseRetry.js'
 
 export function useUrgentReportDomain(setData) {
   const addUrgentReport = useCallback(
-    async ({ authorId, content }) => {
+    async ({ authorId, content, groupName = null }) => {
       const row = {
         id: makeId('ur'),
         author_id: authorId,
         content,
         confirmed: false,
+        group_name: groupName || null, // 작성자 소속 자동 태그 — null = 공용
       }
       const { error } = await withWriteRetry(
         () => supabase.from('urgent_reports').insert(row),

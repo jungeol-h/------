@@ -18,6 +18,7 @@ export const toUser = (row) => ({
   status: row.status ?? 'active',
   enrolledAt: row.enrolled_at ?? null,
   subject: row.subject ?? '',
+  groups: row.group_names ?? [], // 소속 그룹 (빈 배열 = 무소속: 직원이면 전체 열람, 학생이면 공용)
 })
 
 export const toMindRecord = (row) => ({
@@ -217,6 +218,7 @@ export const toManagementReport = (row) => ({
   endTime: row.end_time ?? '',
   content: row.content ?? '',
   note: row.note ?? '',
+  groupName: row.group_name ?? null, // null = 공용 (그룹 도입 전 기록)
   createdAt: row.created_at,
 })
 
@@ -232,6 +234,7 @@ export const toFinanceRecord = (row) => ({
   vendor: row.vendor ?? '',
   paymentMethod: row.payment_method ?? 'personal_card',
   attachments: toArray(row.attachments), // [{ path, name, size }] — 영수증·사진 메타
+  groupName: row.group_name ?? null,
   createdAt: row.created_at,
 })
 
@@ -254,6 +257,7 @@ export const toUrgentReport = (row) => ({
   id: row.id,
   authorId: row.author_id,
   content: row.content,
+  groupName: row.group_name ?? null,
   confirmed: row.confirmed ?? false,
   confirmedBy: row.confirmed_by ?? null,
   confirmedAt: row.confirmed_at ?? null,

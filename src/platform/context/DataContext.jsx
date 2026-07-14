@@ -52,7 +52,8 @@ export function DataProvider({ children }) {
     if (userRole === 'manager') return fetchForManager(userId)
     if (userRole === 'admin') return fetchForAdmin()
     if (userRole === 'parent') return fetchForParent(userId)
-    if (['instructor', 'consultant', 'viewer'].includes(userRole)) return fetchForAdmin()
+    // 직원 3종은 admin fetcher 공유하되 자기 소속 그룹(users.group_names)으로 스코프된다
+    if (['instructor', 'consultant', 'viewer'].includes(userRole)) return fetchForAdmin({ userId, role: userRole })
     return EMPTY
   }, [userId, userRole])
 

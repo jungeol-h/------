@@ -13,7 +13,7 @@ export function useStudentDomain(setData) {
   const createStudent = useCallback(
     async ({
       name, gender, grade, className, school,
-      loginId, password, parentPassword, managerId, enrolledAt,
+      loginId, password, parentPassword, managerId, enrolledAt, groups,
     }) => {
       const id = makeId('s')
       const row = {
@@ -25,6 +25,7 @@ export function useStudentDomain(setData) {
         school: school ?? '',
         grade: grade ?? '',
         class_name: className ?? '',
+        group_names: groups ?? [],
         parent_password: parentPassword ?? '',
         gender: gender ?? null,
         self_index: 70,
@@ -77,6 +78,7 @@ export function useStudentDomain(setData) {
       if (patch.grade !== undefined) snake.grade = patch.grade
       if (patch.className !== undefined) snake.class_name = patch.className
       if (patch.school !== undefined) snake.school = patch.school
+      if (patch.groups !== undefined) snake.group_names = patch.groups
       if (patch.parentPassword !== undefined) snake.parent_password = patch.parentPassword
       if (patch.enrolledAt !== undefined) snake.enrolled_at = patch.enrolledAt || null
 
@@ -136,6 +138,24 @@ export function useStudentDomain(setData) {
     [setData]
   )
 
+  // 교직원 소속 그룹 수정 (admin 전용 UI — 사용자 관리 탭 교육자 목록)
+  const updateEducatorGroups = useCallback(
+    async (educatorId, groups) => {
+      const { error } = await withWriteRetry(
+        () => supabase.from('users').update({ group_names: groups }).eq('id', educatorId),
+        { label: 'updateEducatorGroups' }
+      )
+      if (error) throw error
+      setData((prev) => ({
+        ...prev,
+        educators: prev.educators.map((e) =>
+          e.id === educatorId ? { ...e, groups } : e
+        ),
+      }))
+    },
+    [setData]
+  )
+
   // 학생 활성/비활성 토글 (soft delete)
   const setStudentStatus = useCallback(
     async (studentId, status) => {
@@ -154,5 +174,5 @@ export function useStudentDomain(setData) {
     [setData]
   )
 
-  return { createStudent, updateStudent, setStudentStatus }
+  return { createStudent, updateStudent, updateEducatorGroups, setStudentStatus }
 }

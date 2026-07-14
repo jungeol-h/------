@@ -11,6 +11,7 @@ import {
   toAttendanceNotification, toUrgentReport, toLessonReport, collectRows,
 } from '../../lib/supabaseHelpers.js'
 import { EMPTY } from '../dataModel.js'
+import { canViewByGroups } from '../../utils/groupScope.js'
 
 export async function fetchForManager(userId) {
   const errors = []
@@ -49,7 +50,7 @@ export async function fetchForManager(userId) {
   const attendanceSince = daysAgoStr(60)
   const notificationsSince = new Date(Date.now() - 7 * 86400000).toISOString()
 
-  const [mindRes, alertsRes, counselingRes, tasksRes, learningRes, diaryRes, careerRes, diagRes, attemptsRes, setsRes, attendanceRes, schedulesRes, attNotiRes, urgentRes, educatorsRes, lessonReportsRes] = await Promise.all([
+  const [mindRes, alertsRes, counselingRes, tasksRes, learningRes, diaryRes, careerRes, diagRes, attemptsRes, setsRes, attendanceRes, schedulesRes, attNotiRes, urgentRes, educatorsRes, lessonReportsRes, studentGroupsRes] = await Promise.all([
     supabase.from('mind_records').select('*', { count: 'exact' }).in('student_id', studentIds).order('date', { ascending: false }).limit(2000),
     supabase.from('alerts').select('*').eq('manager_id', userId).order('created_at', { ascending: false }),
     // 담당 학생의 상담 기록 전체 — 작성자 무관 열람 (2026-07 클라이언트: 학생별 기록은 모든 강사 열람)
@@ -70,6 +71,8 @@ export async function fetchForManager(userId) {
     supabase.from('users').select('*').not('role', 'in', '("student","parent")'),
     // 수업보고 — 상담과 동일하게 작성자 무관 전체 열람 (student_ids가 jsonb라 서버 필터 불가, 소량)
     supabase.from('lesson_reports').select('*').order('date', { ascending: false }).limit(1000),
+    // 수업보고 그룹 필터용 — 전체 학생의 소속만 가볍게 조회
+    supabase.from('users').select('id, group_names').eq('role', 'student'),
   ])
 
   const recordMeta = (res, table) => {
@@ -86,12 +89,24 @@ export async function fetchForManager(userId) {
     ? await supabase.from('quiz_questions').select('*').in('quiz_set_id', setIds).order('order_no')
     : { data: [] }
 
+  // 수업보고 그룹 스코프 — 태그된 학생 중 한 명이라도 매니저 소속 그룹이면 보인다.
+  // (매니저 자신의 그룹은 educators fetch에 포함된 본인 row에서 읽는다)
+  const educatorRows = collectRows(educatorsRes, 'users', errors)
+  const viewerGroups = educatorRows.find((u) => u.id === userId)?.group_names ?? null
+  const studentGroupById = new Map(
+    collectRows(studentGroupsRes, 'users', errors).map((u) => [u.id, u.group_names])
+  )
+  const lessonInScope = (row) => {
+    const ids = Array.isArray(row.student_ids) ? row.student_ids : []
+    return ids.length === 0 || ids.some((id) => canViewByGroups(viewerGroups, studentGroupById.get(id)))
+  }
+
   return {
     ...EMPTY,
     students: activeStudents.map(toUser),
-    educators: collectRows(educatorsRes, 'users', errors).map(toUser),
+    educators: educatorRows.map(toUser),
     urgentReports: collectRows(urgentRes, 'urgent_reports', errors).map(toUrgentReport),
-    lessonReports: collectRows(lessonReportsRes, 'lesson_reports', errors).map(toLessonReport),
+    lessonReports: collectRows(lessonReportsRes, 'lesson_reports', errors).filter(lessonInScope).map(toLessonReport),
     assignments,
     mindRecords: collectRows(mindRes, 'mind_records', errors).map(toMindRecord),
     alerts: collectRows(alertsRes, 'alerts', errors).map(toAlert),

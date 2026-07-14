@@ -6,6 +6,7 @@ import ModalShell from '../common/ModalShell.jsx'
 import {
   MANAGEMENT_WORK_TYPES, MANAGEMENT_WORK_TYPE_LABELS,
 } from '../../data/workRecordTypes.js'
+import { GROUP_OPTIONS } from '../../data/groups.js'
 import { todayStr as today } from '../../utils/dateUtils.js'
 
 
@@ -16,6 +17,7 @@ const EMPTY_FORM = () => ({
   endTime: '',
   content: '',
   note: '',
+  groupName: '', // '' = 공용 (전 그룹에서 보임)
 })
 
 const fieldClass =
@@ -51,6 +53,15 @@ function ManagementFields({ value, onChange }) {
         </div>
       </div>
       <div>
+        <label className="text-xs text-gray-500 mb-1 block">소속 그룹</label>
+        <select value={value.groupName ?? ''} onChange={set('groupName')} className={`${fieldClass} w-full`}>
+          <option value="">공용 (전체)</option>
+          {GROUP_OPTIONS.map((g) => (
+            <option key={g} value={g}>{g}</option>
+          ))}
+        </select>
+      </div>
+      <div>
         <label className="text-xs text-gray-500 mb-1 block">세부내용</label>
         <textarea value={value.content} onChange={set('content')} rows={3} className={`${fieldClass} w-full resize-none`} />
       </div>
@@ -77,7 +88,7 @@ export default function ManagementReportSection({ readOnly = false }) {
     if (!canSave) return
     setSaving(true)
     try {
-      await addManagementReport({ authorId: currentUser?.id, ...form })
+      await addManagementReport({ authorId: currentUser?.id, ...form, groupName: form.groupName || null })
       setForm(EMPTY_FORM())
     } catch {
       // 실패는 전역 Toast가 표면화한다.
@@ -104,6 +115,7 @@ export default function ManagementReportSection({ readOnly = false }) {
       endTime: r.endTime,
       content: r.content,
       note: r.note,
+      groupName: r.groupName ?? '',
     })
   }
 
@@ -111,7 +123,7 @@ export default function ManagementReportSection({ readOnly = false }) {
     if (!editForm?.date || !editForm.content.trim()) return
     setSaving(true)
     try {
-      await updateManagementReport(editing.id, editForm)
+      await updateManagementReport(editing.id, { ...editForm, groupName: editForm.groupName || null })
       setEditing(null)
     } catch {
       // 실패는 전역 Toast가 표면화한다.
@@ -152,6 +164,11 @@ export default function ManagementReportSection({ readOnly = false }) {
                     <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full font-semibold">
                       {MANAGEMENT_WORK_TYPE_LABELS[r.workType] ?? r.workType}
                     </span>
+                    {r.groupName && (
+                      <span className="text-xs bg-violet-100 text-violet-600 px-2 py-0.5 rounded-full font-semibold">
+                        {r.groupName}
+                      </span>
+                    )}
                     <span className="text-xs text-gray-400">
                       {r.date}
                       {r.startTime && ` ${r.startTime}~${r.endTime || ''}`}

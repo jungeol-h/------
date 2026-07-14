@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { X, Save } from 'lucide-react'
+import { GROUP_OPTIONS } from '../../data/groups.js'
 
 const GRADE_OPTIONS = ['중1', '중2', '중3']
 const LOGIN_ID_RE = /^[가-힣A-Za-z0-9_]+$/
@@ -50,6 +51,7 @@ export default function StudentFormModal({
   const [name, setName] = useState(initial?.name ?? '')
   const [gender, setGender] = useState(initial?.gender ?? '')
   const [grade, setGrade] = useState(initial?.grade ?? '중1')
+  const [group, setGroup] = useState(initial?.groups?.[0] ?? GROUP_OPTIONS[0]) // 학생은 단일 소속
   const [className, setClassName] = useState(initial?.className ?? '')
   const [school, setSchool] = useState(initial?.school ?? '')
   const [loginId, setLoginId] = useState(initial?.loginId ?? '')
@@ -120,6 +122,7 @@ export default function StudentFormModal({
         name: nameClean,
         gender: gender || null,
         grade,
+        groups: [group], // 저장은 배열 — users.group_names
         className: classNameClean,
         school: schoolClean,
         loginId: loginIdClean,
@@ -213,6 +216,19 @@ export default function StudentFormModal({
                 placeholder="예: 중2A"
               />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold text-gray-500 mb-1">소속 그룹 *</label>
+            <select
+              value={group}
+              onChange={(e) => setGroup(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
+            >
+              {GROUP_OPTIONS.map((g) => (
+                <option key={g} value={g}>{g}</option>
+              ))}
+            </select>
           </div>
 
           <div className="grid grid-cols-2 gap-2">
