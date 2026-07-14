@@ -45,6 +45,7 @@ DB 스키마 변경은 **Supabase Studio SQL Editor에서 수동 실행**한다 
 | `add-counseling-attachments.sql` | counseling_records.attachments + 'counseling-files' 버킷 | **확인 필요** — 미적용 시 상담 PDF 첨부 저장 에러 |
 | `add-2607-work-records.sql` | management_reports·finance_records·lesson_reports + 상담 시간·업무계획 status + 'finance-receipts' 버킷 | **확인 필요** — 미적용 시 업무기록 3메뉴 저장 에러 + 배너(3개 항목) |
 | `add-user-groups.sql` | users.group_names(소속 그룹, 복수) + 관리보고·재정·긴급보고 group_name + 역할별 백필 (add-2607-work-records 선행 필요) | **미적용** — 미적용 시 직원이 전체 학생을 봄(그룹 필터 무동작) |
+| `add-study-location.sql` | learning_records.study_location (공부 장소: 센터·집·스카·학원·학교) | **미적용** — 미적용 시 학습 계획 저장이 DB 에러 |
 
 ## 시드·일회성 유틸 (재실행 금지 또는 불필요)
 

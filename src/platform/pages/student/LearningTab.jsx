@@ -18,6 +18,7 @@ import DownloadPdfButton from '../../pdf/components/DownloadPdfButton.jsx'
 import { buildFilename, nowDateTime } from '../../pdf/utils/formatters.js'
 import { authorOf } from '../../pdf/config/meta.js'
 import {
+  STUDY_LOCATIONS,
   STUDY_METHODS,
   actualMinutes,
   subjectBreakdown,
@@ -50,6 +51,7 @@ const TIME_STEPS = [
 const EMPTY_PLAN = {
   subject: '',
   studyMethod: '',
+  studyLocation: '',
   content: '',
   plannedMin: '',
   startTime: '',
@@ -209,6 +211,7 @@ function PlanTab({ studentId, records }) {
     const value = {
       subject: rowValue(row, 'subject'),
       studyMethod: rowValue(row, 'studyMethod'),
+      studyLocation: rowValue(row, 'studyLocation'),
       content: rowValue(row, 'content'),
       plannedMin: rowValue(row, 'plannedMin'),
       startTime: rowValue(row, 'startTime'),
@@ -217,6 +220,7 @@ function PlanTab({ studentId, records }) {
     const payload = {
       subject: value.subject,
       studyMethod: value.studyMethod,
+      studyLocation: value.studyLocation,
       content: value.content?.trim() ?? '',
       plannedMin: value.plannedMin ? Number(value.plannedMin) : null,
       startTime: value.startTime || null,
@@ -448,6 +452,7 @@ function PlanTab({ studentId, records }) {
           const actual = row.record ? actualMinutes(row.record) : 0
           const subject = rowValue(row, 'subject')
           const studyMethod = rowValue(row, 'studyMethod')
+          const studyLocation = rowValue(row, 'studyLocation')
           const content = rowValue(row, 'content')
           const plannedMin = rowValue(row, 'plannedMin')
           const isOpen = openRowKey === row.key
@@ -528,6 +533,11 @@ function PlanTab({ studentId, records }) {
                           {studyMethod}
                         </span>
                       )}
+                      {studyLocation && (
+                        <span className="text-[11px] px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-semibold">
+                          {studyLocation}
+                        </span>
+                      )}
                     </div>
                     <p className="text-xs text-gray-500 mt-1 truncate">
                       {content || (isPastDate ? '기록된 학습 내용이 없습니다' : '카드를 눌러 과목, 학습법, 내용을 채우세요')}
@@ -568,6 +578,10 @@ function PlanTab({ studentId, records }) {
                         <div className="rounded-lg bg-white border border-gray-200 p-3">
                           <p className="text-[11px] font-bold text-gray-500">학습법</p>
                           <p className="text-sm font-bold text-gray-900 mt-1">{studyMethod || '-'}</p>
+                        </div>
+                        <div className="rounded-lg bg-white border border-gray-200 p-3">
+                          <p className="text-[11px] font-bold text-gray-500">공부 장소</p>
+                          <p className="text-sm font-bold text-gray-900 mt-1">{studyLocation || '-'}</p>
                         </div>
                       </div>
                       <div className="rounded-lg bg-white border border-gray-200 p-3">
@@ -634,6 +648,17 @@ function PlanTab({ studentId, records }) {
                       >
                         <option value="">선택</option>
                         {STUDY_METHODS.map((method) => <option key={method} value={method}>{method}</option>)}
+                      </select>
+                    </label>
+                    <label className="space-y-1">
+                      <span className="text-[11px] font-bold text-gray-500">공부 장소</span>
+                      <select
+                        value={studyLocation}
+                        onChange={(e) => handleCellChange(row, 'studyLocation', e.target.value)}
+                        className="w-full h-10 px-3 rounded-lg border border-gray-200 bg-white text-sm focus:outline-none focus:border-indigo-400"
+                      >
+                        <option value="">선택</option>
+                        {STUDY_LOCATIONS.map((location) => <option key={location} value={location}>{location}</option>)}
                       </select>
                     </label>
                   </div>
@@ -747,6 +772,7 @@ function StudyPlanCard({
   onSave,
   onReset,
   onComplete,
+  onChangeLocation,
 }) {
   const actual = actualMinutes(plan)
   const planned = Number(plan.plannedMin || 0)
@@ -784,6 +810,11 @@ function StudyPlanCard({
                 {plan.studyMethod}
               </span>
             )}
+            {plan.studyLocation && (
+              <span className="text-[11px] px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-semibold">
+                {plan.studyLocation}
+              </span>
+            )}
           </div>
           <p className="text-xs text-gray-500 mt-1 line-clamp-2">
             {plan.content || '학습 내용 없음'}
@@ -818,6 +849,17 @@ function StudyPlanCard({
             <span className="text-[11px] font-bold text-gray-500">현재 기록</span>
             <span className="font-mono text-lg font-bold text-gray-900">{formatTime(elapsed)}</span>
           </div>
+          <label className="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2">
+            <span className="text-[11px] font-bold text-gray-500 flex-shrink-0">공부 장소</span>
+            <select
+              value={plan.studyLocation || ''}
+              onChange={(e) => onChangeLocation(plan, e.target.value)}
+              className="flex-1 h-8 px-2 rounded-lg border border-gray-200 bg-white text-sm focus:outline-none focus:border-indigo-400"
+            >
+              <option value="">선택</option>
+              {STUDY_LOCATIONS.map((location) => <option key={location} value={location}>{location}</option>)}
+            </select>
+          </label>
           <div className="flex gap-2">
             <button
               type="button"
@@ -1107,6 +1149,14 @@ function StudyTab({ records, todayPlans }) {
     }
   }
 
+  const changeLocation = async (plan, studyLocation) => {
+    try {
+      await updateLearningRecord(plan.id, { studyLocation })
+    } catch {
+      // 저장 실패는 전역 Toast가 표면화한다.
+    }
+  }
+
   const requestComplete = async (plan) => {
     const planned = Number(plan.plannedMin || 0)
     const actual = actualMinutes(plan)
@@ -1165,6 +1215,7 @@ function StudyTab({ records, todayPlans }) {
                   clearTimerState()
                 }}
                 onComplete={requestComplete}
+                onChangeLocation={changeLocation}
               />
             ))}
           </div>

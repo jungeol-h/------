@@ -234,6 +234,7 @@ function LearningSection({ studentId, data }) {
                 )}
                 <span className="text-xs text-gray-400">{r.recordType === 'planner' ? '계획' : '타이머'}</span>
                 {r.studyMethod && <span className="text-xs text-gray-400">{r.studyMethod}</span>}
+                {r.studyLocation && <span className="text-xs text-gray-400">{r.studyLocation}</span>}
                 {r.focus != null && <span className="text-xs text-gray-400">집중도 {r.focus}%</span>}
               </div>
               {r.content && <p className="text-xs text-gray-500 mt-1 whitespace-pre-wrap">{r.content}</p>}

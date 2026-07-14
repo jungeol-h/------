@@ -1,5 +1,5 @@
 // [Read] 학습기록 기본 유틸 — selectors 중 최다 피참조 (actualMinutes 등).
-// 학습기록(learning_records)의 시간 계산·필터 공통 함수와 학습방법 상수.
+// 학습기록(learning_records)의 시간 계산·필터 공통 함수와 학습방법·공부장소 상수.
 
 export const STUDY_METHODS = [
   '개념학습',
@@ -10,6 +10,14 @@ export const STUDY_METHODS = [
   '암기',
   '문제풀기',
   '오답노트',
+]
+
+export const STUDY_LOCATIONS = [
+  '센터',
+  '집',
+  '스카',
+  '학원',
+  '학교',
 ]
 
 export function actualMinutes(record) {

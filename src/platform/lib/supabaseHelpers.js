@@ -50,6 +50,7 @@ export const toLearningRecord = (row) => ({
   recordType: row.record_type ?? 'timer',
   status: row.status ?? 'done',
   studyMethod: row.study_method ?? '',
+  studyLocation: row.study_location ?? '',
   content: row.content ?? '',
   plannedMin: row.planned_min ?? null,
   sortOrder: row.sort_order ?? null,

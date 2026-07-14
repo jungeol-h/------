@@ -47,7 +47,7 @@ export function useLearningDomain(setData) {
   )
 
   const addLearningPlan = useCallback(
-    async (studentId, { date = todayStr(), subject, studyMethod, content, plannedMin = null, sortOrder = null, startTime = null }) => {
+    async (studentId, { date = todayStr(), subject, studyMethod, studyLocation = '', content, plannedMin = null, sortOrder = null, startTime = null }) => {
       const row = {
         id: makeId('l'),
         student_id: studentId,
@@ -59,6 +59,7 @@ export function useLearningDomain(setData) {
         record_type: 'planner',
         status: 'pending',
         study_method: studyMethod,
+        study_location: studyLocation || null,
         content,
         planned_min: plannedMin || null,
         sort_order: sortOrder,
@@ -114,6 +115,7 @@ export function useLearningDomain(setData) {
       const snake = {}
       if (patch.subject !== undefined) snake.subject = patch.subject
       if (patch.studyMethod !== undefined) snake.study_method = patch.studyMethod || null
+      if (patch.studyLocation !== undefined) snake.study_location = patch.studyLocation || null
       if (patch.content !== undefined) snake.content = patch.content
       if (patch.plannedMin !== undefined) snake.planned_min = patch.plannedMin || null
       if (patch.sortOrder !== undefined) snake.sort_order = patch.sortOrder
@@ -145,6 +147,7 @@ export function useLearningDomain(setData) {
                 record_type: r.recordType,
                 status: snake.status ?? r.status,
                 study_method: Object.hasOwn(snake, 'study_method') ? snake.study_method : r.studyMethod,
+                study_location: Object.hasOwn(snake, 'study_location') ? snake.study_location : r.studyLocation,
                 content: Object.hasOwn(snake, 'content') ? snake.content : r.content,
                 planned_min: Object.hasOwn(snake, 'planned_min') ? snake.planned_min : r.plannedMin,
                 sort_order: Object.hasOwn(snake, 'sort_order') ? snake.sort_order : r.sortOrder,

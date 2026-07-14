@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Siren, X, CheckCheck, MonitorSmartphone, CalendarClock, Pencil, Copy, FileSp readsheet,
+  Siren, X, CheckCheck, MonitorSmartphone, CalendarClock, Pencil, Copy, FileSpreadsheet,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
