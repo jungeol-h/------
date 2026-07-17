@@ -1,9 +1,9 @@
 // 관리자 학생 탭 (/admin/users) — 학생 목록 그리드(검색·정렬, 출결/학습/마인드/과제/일정 지표 배지)
-// + 학생 등록/수정/비활성 처리, 학부모 계정 관리 모달, 보고서 PDF 출력.
+// + 학생 등록(개별·엑셀 일괄)/수정/등록 상태 변경(재원·신청취소·퇴원), 학부모 계정 관리 모달, 보고서 PDF 출력.
 // 지표는 getStudentIndicatorMap으로 1-pass 계산. viewer의 /viewer/students에서 readOnly로 재사용.
 
 import { useState, useMemo, useCallback } from 'react'
-import { User, AlertCircle, Plus, MoreVertical, Pencil, UserX, UserCheck, Search, ArrowUp, ArrowDown } from 'lucide-react'
+import { User, AlertCircle, Plus, Upload, MoreVertical, Pencil, UserX, UserCheck, Search, ArrowUp, ArrowDown } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
 import { getMindStatus } from '../../context/selectors/riskDetection.js'
 import { getStudentIndicatorMap } from '../../context/selectors/studentIndicators.js'
@@ -15,7 +15,9 @@ import { useNavigate } from 'react-router-dom'
 import StudentFormModal from '../../components/admin/StudentFormModal.jsx'
 import ParentManagementModal from '../../components/admin/ParentManagementModal.jsx'
 import EducatorGroupModal from '../../components/admin/EducatorGroupModal.jsx'
+import BulkStudentUploadModal from '../../components/admin/BulkStudentUploadModal.jsx'
 import { GROUP_OPTIONS } from '../../data/groups.js'
+import { STUDENT_STATUS_OPTIONS, STUDENT_STATUS_LABELS, isActiveStudent } from '../../data/studentStatus.js'
 import DownloadPdfButton from '../../pdf/components/DownloadPdfButton.jsx'
 import { buildFilename, nowDateTime } from '../../pdf/utils/formatters.js'
 import { authorOf } from '../../pdf/config/meta.js'
@@ -37,10 +39,11 @@ export default function UserManagementTab({ readOnly = false }) {
   const { currentUser } = useAuth()
   const navigate = useNavigate()
 
-  const [showInactive, setShowInactive] = useState(false)
+  const [showInactive, setShowInactive] = useState(false) // 재원 외(신청취소·퇴원·비활성) 표시
   const [modal, setModal] = useState(null) // { mode: 'create' } | { mode: 'edit', student }
   const [menuOpenId, setMenuOpenId] = useState(null)
   const [showParentModal, setShowParentModal] = useState(false)
+  const [showBulkModal, setShowBulkModal] = useState(false)
   const [query, setQuery] = useState('')
   const [filterGroup, setFilterGroup] = useState('all') // 'all' | GROUP_OPTIONS 값
   const [groupEditTarget, setGroupEditTarget] = useState(null) // 소속 편집 대상 교육자
@@ -52,8 +55,8 @@ export default function UserManagementTab({ readOnly = false }) {
 
   const managers = data.educators.filter((e) => e.role === 'manager')
   const allStudents = data.students
-  const activeStudents = allStudents.filter((s) => (s.status ?? 'active') === 'active')
-  const inactiveStudents = allStudents.filter((s) => s.status === 'inactive')
+  const activeStudents = allStudents.filter(isActiveStudent)
+  const nonActiveStudents = allStudents.filter((s) => !isActiveStudent(s))
   const baseStudents = showInactive ? allStudents : activeStudents
 
   const managerNameOf = (studentId) => {
@@ -153,12 +156,11 @@ export default function UserManagementTab({ readOnly = false }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visibleStudents, showInactive, query, sortKey, sortDir, currentUser])
 
-  const handleToggleStatus = async (student) => {
-    const isActive = (student.status ?? 'active') === 'active'
-    const next = isActive ? 'inactive' : 'active'
-    const confirmMsg = isActive
-      ? `${student.name} 학생을 비활성화할까요? 다른 화면(매니저/통계)에서 숨겨집니다.`
-      : `${student.name} 학생을 다시 활성화할까요?`
+  const handleChangeStatus = async (student, next) => {
+    const label = STUDENT_STATUS_LABELS[next]
+    const confirmMsg = next === 'active'
+      ? `${student.name} 학생을 재원 상태로 되돌릴까요? 로그인과 다른 화면 표시가 다시 활성화됩니다.`
+      : `${student.name} 학생을 '${label}' 상태로 변경할까요? 로그인이 막히고 매니저/통계 화면에서 숨겨집니다.`
     if (!window.confirm(confirmMsg)) return
     try {
       await setStudentStatus(student.id, next)
@@ -193,7 +195,7 @@ export default function UserManagementTab({ readOnly = false }) {
       <section>
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-bold text-gray-500">
-            학생 (활성 {activeStudents.length}명{inactiveStudents.length > 0 ? ` / 비활성 ${inactiveStudents.length}명` : ''})
+            학생 (재원 {activeStudents.length}명{nonActiveStudents.length > 0 ? ` / 그 외 ${nonActiveStudents.length}명` : ''})
           </h3>
           <div className="flex items-center gap-2">
             <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer select-none">
@@ -203,16 +205,25 @@ export default function UserManagementTab({ readOnly = false }) {
                 onChange={(e) => setShowInactive(e.target.checked)}
                 className="w-3.5 h-3.5"
               />
-              비활성 표시
+              퇴원·취소 포함
             </label>
             {!readOnly && (
-              <button
-                onClick={() => setModal({ mode: 'create' })}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700"
-              >
-                <Plus size={14} />
-                학생 추가
-              </button>
+              <>
+                <button
+                  onClick={() => setShowBulkModal(true)}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-emerald-600 text-emerald-700 text-xs font-semibold hover:bg-emerald-50"
+                >
+                  <Upload size={14} />
+                  일괄 등록
+                </button>
+                <button
+                  onClick={() => setModal({ mode: 'create' })}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700"
+                >
+                  <Plus size={14} />
+                  학생 추가
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -284,7 +295,7 @@ export default function UserManagementTab({ readOnly = false }) {
               const mgr = managers.find((m) =>
                 data.assignments.some((a) => a.studentId === s.id && a.educatorId === m.id)
               )
-              const isInactive = s.status === 'inactive'
+              const isInactive = !isActiveStudent(s)
               const genderLabel = s.gender ? GENDER_LABELS[s.gender] : null
               const ind = indicatorMap.get(s.id)
               const mindBadge = ind?.mind ? MIND_BADGES[ind.mind] : null
@@ -314,7 +325,9 @@ export default function UserManagementTab({ readOnly = false }) {
                         )}
                         {hasAlert && !isInactive && <AlertCircle size={11} className="text-red-500 flex-shrink-0" />}
                         {isInactive && (
-                          <span className="text-[10px] font-bold px-1 rounded text-gray-500 bg-gray-200">비활성</span>
+                          <span className="text-[10px] font-bold px-1 rounded text-gray-500 bg-gray-200">
+                            {STUDENT_STATUS_LABELS[s.status] ?? '비활성'}
+                          </span>
                         )}
                       </div>
                       <span className="text-xs text-gray-400 truncate block">
@@ -386,12 +399,21 @@ export default function UserManagementTab({ readOnly = false }) {
                           >
                             <Pencil size={12} /> 수정
                           </button>
-                          <button
-                            onClick={() => handleToggleStatus(s)}
-                            className="w-full px-3 py-1.5 text-left text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                          >
-                            {isInactive ? <><UserCheck size={12} /> 활성화</> : <><UserX size={12} /> 비활성화</>}
-                          </button>
+                          <div className="border-t border-gray-100 mt-1 pt-1">
+                            <div className="px-3 py-0.5 text-[10px] text-gray-400">상태 변경</div>
+                            {STUDENT_STATUS_OPTIONS
+                              .filter((o) => o.value !== (s.status ?? 'active'))
+                              .map((o) => (
+                                <button
+                                  key={o.value}
+                                  onClick={() => handleChangeStatus(s, o.value)}
+                                  className="w-full px-3 py-1.5 text-left text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                >
+                                  {o.value === 'active' ? <UserCheck size={12} /> : <UserX size={12} />}
+                                  {o.label}{o.value !== 'active' ? ' 처리' : ''}
+                                </button>
+                              ))}
+                          </div>
                         </div>
                       </>
                     )}
@@ -463,6 +485,10 @@ export default function UserManagementTab({ readOnly = false }) {
 
       {!readOnly && showParentModal && (
         <ParentManagementModal onClose={() => setShowParentModal(false)} />
+      )}
+
+      {!readOnly && showBulkModal && (
+        <BulkStudentUploadModal onClose={() => setShowBulkModal(false)} />
       )}
 
       {!readOnly && groupEditTarget && (

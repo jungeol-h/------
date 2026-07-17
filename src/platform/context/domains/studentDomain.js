@@ -67,6 +67,42 @@ export function useStudentDomain(setData) {
     [setData]
   )
 
+  // 학생 일괄 등록 (엑셀 업로드) — login_id가 이미 있는 행은 건너뛰고(ignoreDuplicates)
+  // 실제 삽입된 행만 로컬 반영. 반환: { inserted, skipped }
+  const bulkCreateStudents = useCallback(
+    async (list) => {
+      const rows = list.map((s) => ({
+        id: makeId('s'),
+        login_id: s.loginId,
+        password: s.password,
+        name: s.name,
+        role: 'student',
+        school: s.school ?? '',
+        grade: s.grade ?? '',
+        class_name: s.className ?? '',
+        group_names: s.groups ?? [],
+        parent_password: s.parentPassword ?? '',
+        gender: s.gender ?? null,
+        self_index: 70,
+        risk_level: 'normal',
+        status: s.status ?? 'active',
+        enrolled_at: s.enrolledAt || null,
+      }))
+      const { data: inserted, error } = await withWriteRetry(
+        () => supabase
+          .from('users')
+          .upsert(rows, { onConflict: 'login_id', ignoreDuplicates: true })
+          .select(),
+        { label: 'bulkCreateStudents' }
+      )
+      if (error) throw error
+      const locals = (inserted ?? []).map(toUser)
+      setData((prev) => ({ ...prev, students: [...prev.students, ...locals] }))
+      return { inserted: locals.length, skipped: rows.length - locals.length }
+    },
+    [setData]
+  )
+
   // 학생 정보 수정. patch에 managerId 키가 있으면 assignments를 갈아치운다.
   const updateStudent = useCallback(
     async (studentId, patch) => {
@@ -156,7 +192,7 @@ export function useStudentDomain(setData) {
     [setData]
   )
 
-  // 학생 활성/비활성 토글 (soft delete)
+  // 학생 등록 상태 변경 (soft delete) — status: data/studentStatus.js 값
   const setStudentStatus = useCallback(
     async (studentId, status) => {
       const { error } = await withWriteRetry(
@@ -174,5 +210,5 @@ export function useStudentDomain(setData) {
     [setData]
   )
 
-  return { createStudent, updateStudent, updateEducatorGroups, setStudentStatus }
+  return { createStudent, bulkCreateStudents, updateStudent, updateEducatorGroups, setStudentStatus }
 }

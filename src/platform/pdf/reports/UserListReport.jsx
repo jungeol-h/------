@@ -10,7 +10,9 @@ const RISK_LABELS = {
   danger: { label: '위험', color: colors.accentRed, bg: '#fee2e2' },
 }
 const STATUS_LABELS = {
-  active: { label: '활성', color: colors.accentBlue, bg: '#dbeafe' },
+  active: { label: '재원', color: colors.accentBlue, bg: '#dbeafe' },
+  cancelled: { label: '신청취소', color: colors.accentAmber, bg: '#fef3c7' },
+  withdrawn: { label: '퇴원', color: colors.muted, bg: '#e5e7eb' },
   inactive: { label: '비활성', color: colors.muted, bg: '#e5e7eb' },
 }
 const GENDER_LABELS = { M: '남', F: '여' }
@@ -130,7 +132,7 @@ export default function UserListReport({
 
   const danger = students.filter((s) => s.riskLevel === 'danger').length
   const warning = students.filter((s) => s.riskLevel === 'warning').length
-  const inactive = students.filter((s) => s.status === 'inactive').length
+  const inactive = students.filter((s) => (s.status ?? 'active') !== 'active').length
 
   return (
     <PageWrapper
@@ -143,7 +145,7 @@ export default function UserListReport({
         <View style={filterStyles.grid}>
           <FilterRow
             label="표시 범위"
-            value={showInactive ? '전체 (활성 + 비활성)' : '활성 학생만'}
+            value={showInactive ? '전체 (재원 + 퇴원·취소)' : '재원 학생만'}
           />
           <FilterRow label="검색어" value={query ? `"${query}"` : '(없음)'} />
           <FilterRow label="정렬" value={sortLabel} />
@@ -153,7 +155,7 @@ export default function UserListReport({
             value={`위험 ${danger}명 · 주의 ${warning}명`}
           />
           <FilterRow
-            label="비활성 인원"
+            label="재원 외 인원"
             value={`${inactive}명`}
           />
         </View>

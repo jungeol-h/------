@@ -9,6 +9,7 @@ import ManagementReportSection from '../../components/workRecords/ManagementRepo
 import FinanceSection from '../../components/workRecords/FinanceSection.jsx'
 import LessonReportSection from '../../components/workRecords/LessonReportSection.jsx'
 import WorkPlanTab from '../admin/WorkPlanTab.jsx'
+import { isActiveStudent } from '../../data/studentStatus.js'
 
 // 업무기록 통합 탭 — 5메뉴(업무계획·관리보고·재정·상담보고·수업보고), 전 역할 공용.
 // 권한(2026-07 클라이언트 확정):
@@ -54,11 +55,11 @@ export default function WorkRecordsTab() {
       )
       return data.students.filter((s) => myIds.has(s.id))
     }
-    return data.students.filter((s) => s.status !== 'inactive')
+    return data.students.filter(isActiveStudent)
   }, [data.students, data.assignments, role, isAdmin, isViewer, currentUser?.id])
 
   const lessonStudents = useMemo(
-    () => counselingStudents.filter((s) => s.status !== 'inactive'),
+    () => counselingStudents.filter(isActiveStudent),
     [counselingStudents]
   )
 

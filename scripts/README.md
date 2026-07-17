@@ -28,9 +28,9 @@ DB 스키마 변경은 **Supabase Studio SQL Editor에서 수동 실행**한다 
 
 ## scripts/ 증분 마이그레이션 이력
 
-2026-07-11에 당시 대기분까지 전부 적용 확인됨. 그 이후 작성분 2건은 적용 여부 확인 필요.
+2026-07-17에 아래 전 항목 적용 확인됨 (REST로 실DB 컬럼·테이블 존재 검증).
 
-| 파일 | 내용 | 상태 (2026-07-12 기준) |
+| 파일 | 내용 | 상태 (2026-07-17 기준) |
 |---|---|---|
 | `add-todo-content.sql` | todo_items.content | 적용됨 |
 | `add-learning-record-sort-order.sql` | learning_records.sort_order | 적용됨 |
@@ -42,10 +42,10 @@ DB 스키마 변경은 **Supabase Studio SQL Editor에서 수동 실행**한다 
 | `add-quiz-subject.sql` | quiz_sets.subject (add-user-subject 선행 필요) | 적용됨 |
 | `add-parent-role.sql` | parent_children 매핑 테이블 | 적용됨 |
 | `add-2607-client-features.sql` | login_logs·daily_self_scores·work_plans·urgent_reports 등 | 적용됨 |
-| `add-counseling-attachments.sql` | counseling_records.attachments + 'counseling-files' 버킷 | **확인 필요** — 미적용 시 상담 PDF 첨부 저장 에러 |
-| `add-2607-work-records.sql` | management_reports·finance_records·lesson_reports + 상담 시간·업무계획 status + 'finance-receipts' 버킷 | **확인 필요** — 미적용 시 업무기록 3메뉴 저장 에러 + 배너(3개 항목) |
-| `add-user-groups.sql` | users.group_names(소속 그룹, 복수) + 관리보고·재정·긴급보고 group_name + 역할별 백필 (add-2607-work-records 선행 필요) | **미적용** — 미적용 시 직원이 전체 학생을 봄(그룹 필터 무동작) |
-| `add-study-location.sql` | learning_records.study_location (공부 장소: 센터·집·스카·학원·학교) | **미적용** — 미적용 시 학습 계획 저장이 DB 에러 |
+| `add-counseling-attachments.sql` | counseling_records.attachments + 'counseling-files' 버킷 | 적용됨 |
+| `add-2607-work-records.sql` | management_reports·finance_records·lesson_reports + 상담 시간·업무계획 status + 'finance-receipts' 버킷 | 적용됨 |
+| `add-user-groups.sql` | users.group_names(소속 그룹, 복수) + 관리보고·재정·긴급보고 group_name + 역할별 백필 (add-2607-work-records 선행 필요) | 적용됨 |
+| `add-study-location.sql` | learning_records.study_location (공부 장소: 센터·집·스카·학원·학교) | 적용됨 |
 
 ## 시드·일회성 유틸 (재실행 금지 또는 불필요)
 
@@ -54,5 +54,6 @@ DB 스키마 변경은 **Supabase Studio SQL Editor에서 수동 실행**한다 
 | `seed-test-accounts.sql` / `seed-staff-accounts.sql` | 베타 계정·교직원 7명 시드 (적용됨). 황광희(admin)는 FK CASCADE 때문에 delete-then-insert 금지 — 조건부 insert 유지 |
 | `seed-quiz-content.sql` | 확인평가 초기 문항 시드 (적용됨) |
 | `seed-external-program.sql` | 외부(외생) 상담 프로그램 시드 — **외부학생 명단 수령 후 실행 예정 (보류 중)** |
+| `seed-navi4-students.sql` | 안동NAVI 4기 학생 77명 시드 (신청서 엑셀 기반, 신청취소 5명 status='cancelled') — **적용됨 (2026-07-17, REST로 삽입)**. 재실행해도 안전(on conflict do nothing). 이후 명단은 앱의 관리자 → 학생 → 일괄 등록으로 처리 가능 |
 | `diagnose-quiz.sql` | 퀴즈 데이터 점검용 조회 (읽기 전용) |
 | `patch-quiz-rls.sql` / `migrate-remaining-todo-items.sql` / `unify-learning-records.sql` | 과거 일회성 보정 (완료) |
