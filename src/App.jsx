@@ -12,6 +12,7 @@ import ViewerDashboard from './platform/pages/viewer/ViewerDashboard.jsx'
 import ParentDashboard from './platform/pages/parent/ParentDashboard.jsx'
 import ProtectedRoute from './platform/components/layout/ProtectedRoute.jsx'
 import InstallGuidePage from './platform/pages/InstallGuidePage.jsx'
+import InstallGate from './platform/components/InstallGate.jsx'
 
 export default function App() {
   return (
@@ -20,6 +21,8 @@ export default function App() {
         <DataProvider>
           <FeedbackProvider>
             <ToastProvider>
+            {/* 모바일 브라우저 접속 차단 — PWA 설치 강제 (데스크톱 제외) */}
+            <InstallGate />
             <Routes>
               <Route path="/" element={<LoginPage />} />
               <Route
