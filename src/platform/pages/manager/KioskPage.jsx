@@ -3,7 +3,7 @@
 // 지각·조퇴 판정은 서버 RPC가 DB 시각으로 한다. 여기서는 입력·표시만.
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { Delete, X, LogIn, LogOut, CheckCircle2, AlertCircle, Loader } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
 
@@ -33,7 +33,10 @@ const TONE_STYLES = {
 
 export default function KioskPage() {
   const navigate = useNavigate()
+  const { pathname } = useLocation()
   const { kioskFindStudents, kioskCheckIn, kioskCheckOut } = useData()
+  // /admin/kiosk와 /manager/kiosk 양쪽에 마운트된다 — 종료 시 각자 대시보드로
+  const exitTo = pathname.startsWith('/admin') ? '/admin/home' : '/manager/attendance'
 
   // step: input → select → result
   const [digits, setDigits] = useState('')
@@ -113,9 +116,9 @@ export default function KioskPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-6 py-8 select-none">
-      {/* 매니저용 나가기 — 학생 눈에 안 띄게 작게 */}
+      {/* 교직원용 나가기 — 학생 눈에 안 띄게 작게 */}
       <button
-        onClick={() => navigate('/manager/attendance')}
+        onClick={() => navigate(exitTo)}
         className="fixed top-3 right-3 text-gray-300 hover:text-gray-500 p-2"
         aria-label="키오스크 종료"
       >

@@ -6,7 +6,7 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Users, AlertTriangle, Bell, CalendarX, TrendingDown,
-  UserCog, ClipboardCheck, ChevronRight,
+  UserCog, ClipboardCheck, ChevronRight, MonitorSmartphone,
   ShieldCheck, ShieldAlert, CalendarDays, Siren,
 } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
@@ -330,6 +330,15 @@ export default function AdminHomeTab() {
             description="회차 관리 · 응시 모니터링"
             meta={`${quizSetCount}회 · 응시 ${attemptCount}건`}
             onClick={() => navigate('/admin/quiz')}
+          />
+          <NavCard
+            icon={MonitorSmartphone}
+            iconColor="text-indigo-600"
+            bgColor="bg-indigo-50"
+            title="등·하원 키오스크"
+            description="센터 공용 태블릿 전체화면"
+            meta="전화번호 뒷 4자리로 등·하원 체크"
+            onClick={() => navigate('/admin/kiosk')}
           />
         </div>
       </section>

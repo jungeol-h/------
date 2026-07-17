@@ -12,6 +12,7 @@ import WorkRecordsTab from '../shared/WorkRecordsTab.jsx'
 import QuizMonitorTab from './QuizMonitorTab.jsx'
 import ExternalCounselingTab from '../educator/external/ExternalCounselingTab.jsx'
 import StudentDetailPage from '../shared/StudentDetailPage.jsx'
+import KioskPage from '../manager/KioskPage.jsx'
 
 // '업무계획'+'업무보고' 탭은 '업무기록' 통합 탭(5메뉴)으로 합쳐짐 (2026-07 클라이언트 요청)
 const TABS = [
@@ -49,6 +50,8 @@ export default function AdminDashboard() {
       <Route path="student/:studentId" element={
         <StudentDetailWrapper tabs={TABS} back="/admin/users" />
       } />
+      {/* 키오스크 — 센터 공용 태블릿용 전체화면 (Header/TabBar 없음). 매니저와 동일 화면 */}
+      <Route path="kiosk" element={<KioskPage />} />
       <Route path="quiz" element={
         <PageLayout title="관리자" tabs={TABS} wide>
           <QuizMonitorTab />

@@ -57,3 +57,4 @@ DB 스키마 변경은 **Supabase Studio SQL Editor에서 수동 실행**한다 
 | `seed-navi4-students.sql` | 안동NAVI 4기 학생 77명 시드 (신청서 엑셀 기반, 신청취소 5명 status='cancelled') — **적용됨 (2026-07-17, REST로 삽입)**. 재실행해도 안전(on conflict do nothing). 이후 명단은 앱의 관리자 → 학생 → 일괄 등록으로 처리 가능 |
 | `diagnose-quiz.sql` | 퀴즈 데이터 점검용 조회 (읽기 전용) |
 | `patch-quiz-rls.sql` / `migrate-remaining-todo-items.sql` / `unify-learning-records.sql` | 과거 일회성 보정 (완료) |
+| `delete-dummy-managers.sql` | 더미 매니저 m01~m04 삭제 + 실상담 1건 a-hwang 이관 — **적용됨 (2026-07-17, REST)**. 이후 실매니저 생성 시 assignments 재배정 필요 |
