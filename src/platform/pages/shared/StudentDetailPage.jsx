@@ -13,8 +13,11 @@ import {
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
 import { supabase } from '../../lib/supabase.js'
-import { toAttendanceRecord } from '../../lib/supabaseHelpers.js'
+import { toAttendanceRecord, toAttendanceSchedule } from '../../lib/supabaseHelpers.js'
 import { buildReflectionData } from '../../context/selectors/reflectionReport.js'
+import {
+  buildStudentCounselingEntries, formatScheduleBlocks,
+} from '../../context/selectors/studentCounselingReport.js'
 import { getMindStatus } from '../../context/selectors/riskDetection.js'
 import { COUNSELING_TYPE_LABELS, COUNSELING_TARGET_LABELS } from '../../data/counselingTypes.js'
 import CounselingFormModal from '../../components/counseling/CounselingFormModal.jsx'
@@ -631,26 +634,52 @@ function CounselingSection({ studentId, data, currentUser, canWrite = true }) {
   }
 
   const buildCounselingPdf = useCallback(async () => {
-    const sorted = records.slice().sort((a, b) => (a.date > b.date ? 1 : -1))
-    const { default: CounselingReport } = await import('../../pdf/reports/CounselingReport.jsx')
+    // 등록일정(자동 출결 시간블록) — admin fetch에는 attendance_schedules가 없다
+    // → 컨텍스트에 없으면 여기서만 lazy fetch (buildReflectionPdf와 동일 패턴).
+    let schedules = data.attendanceSchedules.filter((s) => s.studentId === studentId)
+    if (schedules.length === 0) {
+      try {
+        const res = await supabase
+          .from('attendance_schedules')
+          .select('*')
+          .eq('student_id', studentId)
+        if (res.error) throw res.error
+        schedules = (res.data ?? []).map(toAttendanceSchedule)
+      } catch {
+        schedules = [] // 등록일정 없이 출력
+      }
+    }
+
+    const { entries, totalCount, periodText } = buildStudentCounselingEntries(
+      records.map((r) => {
+        const typeLabel = COUNSELING_TYPE_LABELS[r.type] || r.type
+        const targetLabel = COUNSELING_TARGET_LABELS[r.targetType]
+        return {
+          ...r,
+          fallbackContent: r.comment,
+          educatorName: educatorDisplayName(data.educators.find((e) => e.id === r.educatorId)) ?? '-',
+          // 피상담자가 학생이 아니면 유형에 병기 (구 양식의 '대상' 컬럼 대체)
+          typeLabel: r.targetType && r.targetType !== 'student' ? `${typeLabel}(${targetLabel})` : typeLabel,
+        }
+      }),
+    )
+    const { default: StudentCounselingReport } = await import('../../pdf/reports/StudentCounselingReport.jsx')
     return {
       element: (
-        <CounselingReport
-          student={{ name: student?.name, school: student?.school, grade: student?.grade }}
-          records={sorted.map((r) => ({
-            date: r.date,
-            typeLabel: COUNSELING_TYPE_LABELS[r.type] || r.type,
-            targetLabel: COUNSELING_TARGET_LABELS[r.targetType] ?? '학생',
-            authorName: educatorDisplayName(data.educators.find((e) => e.id === r.educatorId)) ?? '-',
-            content: r.comment,
-          }))}
-          generatedAt={nowDateTime()}
-          author={authorOf(currentUser)}
+        <StudentCounselingReport
+          header={{
+            studentName: student?.name,
+            schoolGrade: [student?.school, student?.grade].filter(Boolean).join(' '),
+            periodText,
+            scheduleText: formatScheduleBlocks(schedules),
+            totalCount,
+          }}
+          entries={entries}
         />
       ),
       filename: buildFilename('상담보고서', student?.name),
     }
-  }, [records, student, data.educators, currentUser])
+  }, [records, student, studentId, data.educators, data.attendanceSchedules])
 
   const buildReflectionPdf = useCallback(async () => {
     // admin/manager fetch에는 이 학생의 출결이 없다 → 여기서만 lazy fetch.

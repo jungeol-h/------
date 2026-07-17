@@ -4,8 +4,8 @@ import { useData } from '../../../context/DataContext.jsx'
 import { useAuth } from '../../../context/AuthContext.jsx'
 import { COUNSELING_TYPE_LABELS, COUNSELING_TARGET_LABELS } from '../../../data/counselingTypes.js'
 import DownloadPdfButton from '../../../pdf/components/DownloadPdfButton.jsx'
-import { buildFilename, nowDateTime } from '../../../pdf/utils/formatters.js'
-import { authorOf } from '../../../pdf/config/meta.js'
+import { buildFilename } from '../../../pdf/utils/formatters.js'
+import { buildStudentCounselingEntries } from '../../../context/selectors/studentCounselingReport.js'
 import { educatorDisplayName } from '../../../utils/educatorName.js'
 import CounselingRecordBody from '../../../components/counseling/CounselingRecordBody.jsx'
 import ExternalCounselingForm from './ExternalCounselingForm.jsx'
@@ -51,29 +51,39 @@ export default function ExternalStudentDetail({
   }
 
   const buildPdf = useCallback(async () => {
-    const asc = records
-      .slice()
-      .sort((a, b) => (a.date > b.date ? 1 : a.date < b.date ? -1 : a.id > b.id ? 1 : -1))
-    const { default: CounselingReport } = await import('../../../pdf/reports/CounselingReport.jsx')
+    const { entries, totalCount, periodText } = buildStudentCounselingEntries(
+      records.map((r) => {
+        const typeLabel = COUNSELING_TYPE_LABELS[r.type] || r.type
+        const targetLabel = COUNSELING_TARGET_LABELS[r.targetType]
+        return {
+          ...r,
+          startTime: '', // 외부상담에는 시각 컬럼이 없다 → 날짜만 표기
+          endTime: '',
+          fallbackContent: r.content,
+          educatorName: authorName(r.counselorId),
+          // 피상담자가 학생이 아니면 유형에 병기 (구 양식의 '대상' 컬럼 대체)
+          typeLabel: r.targetType && r.targetType !== 'student' ? `${typeLabel}(${targetLabel})` : typeLabel,
+        }
+      }),
+    )
+    const { default: StudentCounselingReport } = await import('../../../pdf/reports/StudentCounselingReport.jsx')
     return {
       element: (
-        <CounselingReport
-          student={{ name: student?.name, school: student?.school, grade: student?.grade }}
-          records={asc.map((r) => ({
-            date: r.date,
-            typeLabel: COUNSELING_TYPE_LABELS[r.type] || r.type,
-            targetLabel: COUNSELING_TARGET_LABELS[r.targetType] ?? '학생',
-            authorName: authorName(r.counselorId),
-            content: r.content,
-          }))}
-          generatedAt={nowDateTime()}
-          author={authorOf(currentUser)}
+        <StudentCounselingReport
+          header={{
+            studentName: student?.name,
+            schoolGrade: [student?.school, student?.grade].filter(Boolean).join(' '),
+            periodText,
+            scheduleText: '', // 외생은 자동 출결(등록일정) 없음
+            totalCount,
+          }}
+          entries={entries}
         />
       ),
       filename: buildFilename('상담보고서', student?.name),
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [records, student, currentUser])
+  }, [records, student])
 
   return (
     <div className="space-y-3">
