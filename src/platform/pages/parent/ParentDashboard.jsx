@@ -3,16 +3,18 @@
 
 import { useState } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { Home, BarChart2, MessageSquare, Loader, Users } from 'lucide-react'
+import { Home, BarChart2, MessageSquare, CalendarClock, Loader, Users } from 'lucide-react'
 import PageLayout from '../../components/layout/PageLayout.jsx'
 import { useData } from '../../context/DataContext.jsx'
 import ParentHomeTab from './ParentHomeTab.jsx'
 import ParentLearningTab from './ParentLearningTab.jsx'
 import ParentCommentTab from './ParentCommentTab.jsx'
+import ParentBookingTab from './ParentBookingTab.jsx'
 
 const TABS = [
   { path: '/parent/home', label: '홈', icon: Home },
   { path: '/parent/learning', label: '학습', icon: BarChart2 },
+  { path: '/parent/booking', label: '예약', icon: CalendarClock },
   { path: '/parent/comments', label: '코멘트', icon: MessageSquare },
 ]
 
@@ -78,6 +80,7 @@ export default function ParentDashboard() {
         <Route index element={<Navigate to="home" replace />} />
         <Route path="home" element={<ParentHomeTab child={activeChild} />} />
         <Route path="learning" element={<ParentLearningTab child={activeChild} />} />
+        <Route path="booking" element={<ParentBookingTab child={activeChild} />} />
         <Route path="comments" element={<ParentCommentTab child={activeChild} />} />
         <Route path="*" element={<Navigate to="home" replace />} />
       </Routes>

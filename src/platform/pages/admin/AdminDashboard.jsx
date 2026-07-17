@@ -4,7 +4,7 @@
 // 출결 탭·키오스크는 매니저 화면 재사용 — 관리자는 전체 학생 대상 (2026-07 클라이언트 요청).
 
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { Home, UserCog, MessageSquare, ClipboardCheck, Globe, CalendarCheck, Loader } from 'lucide-react'
+import { Home, UserCog, MessageSquare, ClipboardCheck, Globe, CalendarCheck, CalendarClock, Loader } from 'lucide-react'
 import PageLayout from '../../components/layout/PageLayout.jsx'
 import { useData } from '../../context/DataContext.jsx'
 import AdminHomeTab from './AdminHomeTab.jsx'
@@ -15,12 +15,15 @@ import ExternalCounselingTab from '../educator/external/ExternalCounselingTab.js
 import StudentDetailPage from '../shared/StudentDetailPage.jsx'
 import KioskPage from '../manager/KioskPage.jsx'
 import AttendanceTab from '../manager/AttendanceTab.jsx'
+import AdminBookingTab from './AdminBookingTab.jsx'
 
 // '업무계획'+'업무보고' 탭은 '업무기록' 통합 탭(5메뉴)으로 합쳐짐 (2026-07 클라이언트 요청)
+// '예약' 탭은 컨설팅·코칭 예약 시스템 — 내부 5메뉴(운영현황·예약현황·타임테이블·프로그램·이력)
 const TABS = [
   { path: '/admin/home', label: '홈', icon: Home },
   { path: '/admin/attendance', label: '출결', icon: CalendarCheck },
   { path: '/admin/users', label: '학생', icon: UserCog },
+  { path: '/admin/booking', label: '예약', icon: CalendarClock },
   { path: '/admin/counseling', label: '업무기록', icon: MessageSquare },
   { path: '/admin/quiz', label: '확인평가', icon: ClipboardCheck },
   { path: '/admin/external', label: '외부상담', icon: Globe },
@@ -69,6 +72,7 @@ export default function AdminDashboard() {
             <Route path="statistics" element={<Navigate to="/admin/home" replace />} />
             <Route path="plans" element={<Navigate to="/admin/counseling?menu=plans" replace />} />
             <Route path="users" element={<UserManagementTab />} />
+            <Route path="booking" element={<AdminBookingTab />} />
             <Route path="counseling" element={<WorkRecordsTab />} />
             <Route path="external" element={<ExternalCounselingTab />} />
           </Routes>

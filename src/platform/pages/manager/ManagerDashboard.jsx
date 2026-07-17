@@ -3,7 +3,7 @@
 // 헤더 badge = 담당 학생 중 마인드 위험 학생 수(getRiskStudents).
 
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { Home, Users, MessageSquare, ClipboardCheck, CalendarCheck, Loader } from 'lucide-react'
+import { Home, Users, MessageSquare, ClipboardCheck, CalendarCheck, CalendarClock, Loader } from 'lucide-react'
 import PageLayout from '../../components/layout/PageLayout.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
@@ -15,12 +15,14 @@ import QuizMonitorTab from './QuizMonitorTab.jsx'
 import AttendanceTab from './AttendanceTab.jsx'
 import KioskPage from './KioskPage.jsx'
 import StudentDetailPage from '../shared/StudentDetailPage.jsx'
+import EducatorBookingTab from '../educator/EducatorBookingTab.jsx'
 
 const TABS = [
   { path: '/manager/home', label: '홈', icon: Home },
   { path: '/manager/attendance', label: '출결', icon: CalendarCheck },
   { path: '/manager/students', label: '학생', icon: Users },
   { path: '/manager/counseling', label: '업무기록', icon: MessageSquare },
+  { path: '/manager/booking', label: '예약', icon: CalendarClock },
   { path: '/manager/quiz', label: '확인평가', icon: ClipboardCheck },
 ]
 
@@ -64,6 +66,7 @@ export default function ManagerDashboard() {
             <Route path="attendance" element={<AttendanceTab />} />
             <Route path="students" element={<StudentListTab />} />
             <Route path="counseling" element={<WorkRecordsTab />} />
+            <Route path="booking" element={<EducatorBookingTab />} />
             <Route path="quiz" element={<QuizMonitorTab />} />
           </Routes>
         </PageLayout>

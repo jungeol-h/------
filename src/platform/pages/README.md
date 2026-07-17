@@ -5,12 +5,12 @@
 
 | 경로 | 역할 | 대시보드 | 탭 구성 |
 |---|---|---|---|
-| `/student/*` | student | `student/StudentDashboard` | 홈·학습·과제·마인드·진단(학습진단/진로설계/확인평가) |
-| `/manager/*` | manager | `manager/ManagerDashboard` | 홈·출결·학생·업무기록·확인평가 (+ `/manager/kiosk` 등하원 키오스크) |
-| `/admin/*` | admin | `admin/AdminDashboard` | 홈·출결·학생·업무기록·확인평가·외부상담 (+ `/admin/kiosk` — 출결 탭·키오스크는 `manager/`의 화면 재사용, 전체 학생 대상) |
-| `/instructor/*` `/consultant/*` | instructor·consultant | `educator/EducatorDashboard` 공용 | 학생·업무기록·과제 + 강사만 확인평가, 컨설턴트만 외부상담 |
+| `/student/*` | student | `student/StudentDashboard` | 홈·학습·과제·예약·마인드·진단(학습진단/진로설계/확인평가) |
+| `/manager/*` | manager | `manager/ManagerDashboard` | 홈·출결·학생·업무기록·예약·확인평가 (+ `/manager/kiosk` 등하원 키오스크) |
+| `/admin/*` | admin | `admin/AdminDashboard` | 홈·출결·학생·예약·업무기록·확인평가·외부상담 (+ `/admin/kiosk` — 출결 탭·키오스크는 `manager/`의 화면 재사용, 전체 학생 대상) |
+| `/instructor/*` `/consultant/*` | instructor·consultant | `educator/EducatorDashboard` 공용 | 학생·업무기록·예약관리·과제 + 강사만 확인평가, 컨설턴트만 외부상담 |
 | `/viewer/*` | viewer(공무원·열람) | `viewer/ViewerDashboard` | 통계·학생·업무기록 (열람 전용 + 출력 버튼) |
-| `/parent/*` | parent | `parent/ParentDashboard` | 홈·학습·코멘트 (자녀 읽기 전용) |
+| `/parent/*` | parent | `parent/ParentDashboard` | 홈·학습·예약·코멘트 (예약만 쓰기 가능, 나머지 자녀 읽기 전용) |
 
 `shared/`는 여러 역할이 같이 쓰는 화면: `StudentDetailPage`(학생 상세 — 역할별 진입),
 `WorkRecordsTab`(업무기록 통합 탭 5메뉴: 업무계획·관리보고·재정·상담보고·수업보고,
@@ -35,3 +35,6 @@
 - 모달은 `components/common/ModalShell.jsx`(하단 시트형)을 쓸 것. z-index: Header/TabBar
   `z-40`, 모달 `z-50`.
 - `educator/external/`은 별도 설계 — 그 폴더의 README 참고.
+- '예약' 탭들(학생·학부모·강사·매니저·관리자)은 전부 `src/platform/booking/` 격리 모듈의
+  얇은 래퍼다 — 데이터 계층·검증 규약은 `booking/README.md` 참고. **배포 전
+  `scripts/add-booking-system.sql` 선적용 필수.**

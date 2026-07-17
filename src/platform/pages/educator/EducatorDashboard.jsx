@@ -3,7 +3,7 @@
 // 학생 상세는 /{role}/student/:studentId. 타이틀·경로는 currentUser.role로 분기.
 
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { Users, MessageSquare, ClipboardList, ClipboardCheck, Globe, Loader } from 'lucide-react'
+import { Users, MessageSquare, ClipboardList, ClipboardCheck, Globe, CalendarClock, Loader } from 'lucide-react'
 import PageLayout from '../../components/layout/PageLayout.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
@@ -13,6 +13,7 @@ import EducatorTaskTab from './EducatorTaskTab.jsx'
 import ExternalCounselingTab from './external/ExternalCounselingTab.jsx'
 import QuizMonitorTab from '../admin/QuizMonitorTab.jsx'
 import StudentDetailPage from '../shared/StudentDetailPage.jsx'
+import EducatorBookingTab from './EducatorBookingTab.jsx'
 
 const ROLE_TITLES = { instructor: '교과강사', consultant: '컨설턴트' }
 
@@ -37,6 +38,7 @@ export default function EducatorDashboard() {
   const tabs = [
     { path: `${basePath}/students`, label: '학생', icon: Users },
     { path: `${basePath}/counseling`, label: '업무기록', icon: MessageSquare },
+    { path: `${basePath}/booking`, label: '예약관리', icon: CalendarClock },
     { path: `${basePath}/tasks`, label: '과제', icon: ClipboardList },
     ...(isInstructor
       ? [{ path: `${basePath}/quiz`, label: '확인평가', icon: ClipboardCheck }]
@@ -75,6 +77,7 @@ export default function EducatorDashboard() {
             <Route index element={<Navigate to="students" replace />} />
             <Route path="students" element={<EducatorStudentListTab />} />
             <Route path="counseling" element={<WorkRecordsTab />} />
+            <Route path="booking" element={<EducatorBookingTab />} />
             <Route path="tasks" element={<EducatorTaskTab />} />
             {isConsultant && (
               <Route path="external" element={<ExternalCounselingTab />} />

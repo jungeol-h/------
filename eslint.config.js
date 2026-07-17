@@ -40,6 +40,7 @@ export default defineConfig([
     files: [
       'src/platform/context/AuthContext.jsx',
       'src/platform/context/DataContext.jsx',
+      'src/platform/booking/BookingContext.jsx',
       'src/platform/components/FeedbackProvider.jsx',
       'src/platform/components/common/ToastProvider.jsx',
     ],
