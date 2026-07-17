@@ -24,7 +24,7 @@ Recharts · lucide-react · Supabase · @react-pdf/renderer. **JSX (TypeScript �
 
 - `context/` — 데이터 계층 4계층: DataContext(조립만) + fetchers[역할별 fetch] +
   domains[Write CRUD] + selectors[Read 순수함수] → `context/README.md`
-- `pages/` — 역할별 화면: `student/` `manager/` `admin/`(5탭: 홈·학생·업무기록·확인평가·외부상담)
+- `pages/` — 역할별 화면: `student/` `manager/` `admin/`(6탭: 홈·출결·학생·업무기록·확인평가·외부상담)
   `educator/`(강사·컨설턴트 공용) `parent/` `viewer/` `shared/` → `pages/README.md`
 - `components/`(공용 UI) `pdf/`(리포트) `lib/`(supabase·sentry) `utils/` `data/`(상수)
 

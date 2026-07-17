@@ -7,7 +7,7 @@
 |---|---|---|---|
 | `/student/*` | student | `student/StudentDashboard` | 홈·학습·과제·마인드·진단(학습진단/진로설계/확인평가) |
 | `/manager/*` | manager | `manager/ManagerDashboard` | 홈·출결·학생·업무기록·확인평가 (+ `/manager/kiosk` 등하원 키오스크) |
-| `/admin/*` | admin | `admin/AdminDashboard` | 홈·학생·업무기록·확인평가·외부상담 |
+| `/admin/*` | admin | `admin/AdminDashboard` | 홈·출결·학생·업무기록·확인평가·외부상담 (+ `/admin/kiosk` — 출결 탭·키오스크는 `manager/`의 화면 재사용, 전체 학생 대상) |
 | `/instructor/*` `/consultant/*` | instructor·consultant | `educator/EducatorDashboard` 공용 | 학생·업무기록·과제 + 강사만 확인평가, 컨설턴트만 외부상담 |
 | `/viewer/*` | viewer(공무원·열람) | `viewer/ViewerDashboard` | 통계·학생·업무기록 (열람 전용 + 출력 버튼) |
 | `/parent/*` | parent | `parent/ParentDashboard` | 홈·학습·코멘트 (자녀 읽기 전용) |

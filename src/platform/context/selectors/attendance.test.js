@@ -114,6 +114,17 @@ describe('getTodayAttendanceBoard — 담당 학생 현황판', () => {
     const allIds = Object.values(board).flat().map((e) => e.student.id)
     expect(allIds).not.toContain('s9')
   })
+
+  it('all=true(관리자)면 배정과 무관하게 전체 active 학생을 포함한다', () => {
+    const withInactive = {
+      ...data,
+      students: [...data.students, { id: 's10', name: '탈퇴생', status: 'inactive' }],
+    }
+    const board = getTodayAttendanceBoard(withInactive, { all: true, now: MONDAY_15H })
+    const allIds = Object.values(board).flat().map((e) => e.student.id)
+    expect(allIds).toContain('s9')
+    expect(allIds).not.toContain('s10')
+  })
 })
 
 describe('getUnresolvedAttendanceNotifications', () => {
@@ -134,5 +145,9 @@ describe('getUnresolvedAttendanceNotifications', () => {
     const result = getUnresolvedAttendanceNotifications(data, { educatorId: 'm01' })
     expect(result.map((n) => n.id)).toEqual(['n3', 'n1'])
     expect(result[0].studentName).toBe('가')
+
+    // all=true(관리자)면 담당 무관 전체 미해결 알림
+    const all = getUnresolvedAttendanceNotifications(data, { all: true })
+    expect(all.map((n) => n.id)).toEqual(['n4', 'n3', 'n1'])
   })
 })

@@ -1,9 +1,10 @@
-// 관리자(센터장) 라우트 셸 (/admin/*) — 5탭: 홈·학생·업무기록·확인평가·외부상담.
+// 관리자(센터장) 라우트 셸 (/admin/*) — 6탭: 홈·출결·학생·업무기록·확인평가·외부상담.
 // 확인평가는 wide 레이아웃 별도 라우트, 학생 상세는 /admin/student/:studentId.
 // 구 통계(/admin/statistics)·업무계획(/admin/plans) 경로는 홈·업무기록 탭으로 리다이렉트.
+// 출결 탭·키오스크는 매니저 화면 재사용 — 관리자는 전체 학생 대상 (2026-07 클라이언트 요청).
 
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { Home, UserCog, MessageSquare, ClipboardCheck, Globe, Loader } from 'lucide-react'
+import { Home, UserCog, MessageSquare, ClipboardCheck, Globe, CalendarCheck, Loader } from 'lucide-react'
 import PageLayout from '../../components/layout/PageLayout.jsx'
 import { useData } from '../../context/DataContext.jsx'
 import AdminHomeTab from './AdminHomeTab.jsx'
@@ -13,10 +14,12 @@ import QuizMonitorTab from './QuizMonitorTab.jsx'
 import ExternalCounselingTab from '../educator/external/ExternalCounselingTab.jsx'
 import StudentDetailPage from '../shared/StudentDetailPage.jsx'
 import KioskPage from '../manager/KioskPage.jsx'
+import AttendanceTab from '../manager/AttendanceTab.jsx'
 
 // '업무계획'+'업무보고' 탭은 '업무기록' 통합 탭(5메뉴)으로 합쳐짐 (2026-07 클라이언트 요청)
 const TABS = [
   { path: '/admin/home', label: '홈', icon: Home },
+  { path: '/admin/attendance', label: '출결', icon: CalendarCheck },
   { path: '/admin/users', label: '학생', icon: UserCog },
   { path: '/admin/counseling', label: '업무기록', icon: MessageSquare },
   { path: '/admin/quiz', label: '확인평가', icon: ClipboardCheck },
@@ -62,6 +65,7 @@ export default function AdminDashboard() {
           <Routes>
             <Route index element={<Navigate to="home" replace />} />
             <Route path="home" element={<AdminHomeTab />} />
+            <Route path="attendance" element={<AttendanceTab />} />
             <Route path="statistics" element={<Navigate to="/admin/home" replace />} />
             <Route path="plans" element={<Navigate to="/admin/counseling?menu=plans" replace />} />
             <Route path="users" element={<UserManagementTab />} />

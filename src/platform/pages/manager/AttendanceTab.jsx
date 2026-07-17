@@ -1,5 +1,6 @@
-// 매니저 출결 탭 — 긴급 알림 배너 · 오늘 현황판 · 요일별 시간표 편집 · 키오스크 진입.
+// 출결 탭 (매니저·관리자 공용) — 긴급 알림 배너 · 오늘 현황판 · 요일별 시간표 편집 · 키오스크 진입.
 // 판정(지각/조퇴/결석)은 서버가 하고, 여기서는 결과 표시와 수동 정정만 한다.
+// 매니저는 담당(배정) 학생만, 관리자(admin)는 전체 active 학생을 대상으로 한다.
 
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -40,6 +41,7 @@ const hhmm = (iso) => (iso ? new Date(iso).toTimeString().slice(0, 5) : '')
 export default function AttendanceTab() {
   const navigate = useNavigate()
   const { currentUser } = useAuth()
+  const isAdmin = currentUser?.role === 'admin'
   const {
     data, saveSchedule, updateAttendance,
     resolveAttendanceNotification, ingestAttendanceNotification,
@@ -59,20 +61,26 @@ export default function AttendanceTab() {
   }, [ingestAttendanceNotification])
 
   const notifications = useMemo(
-    () => getUnresolvedAttendanceNotifications(data, { educatorId: currentUser?.id }),
-    [data, currentUser?.id]
+    () => getUnresolvedAttendanceNotifications(data, { educatorId: currentUser?.id, all: isAdmin }),
+    [data, currentUser?.id, isAdmin]
   )
   const board = useMemo(
-    () => getTodayAttendanceBoard(data, { educatorId: currentUser?.id }),
-    [data, currentUser?.id]
+    () => getTodayAttendanceBoard(data, { educatorId: currentUser?.id, all: isAdmin }),
+    [data, currentUser?.id, isAdmin]
   )
 
   const myStudents = useMemo(() => {
+    if (isAdmin) {
+      return data.students
+        .filter((s) => (s.status ?? 'active') === 'active')
+        .slice()
+        .sort((a, b) => a.name.localeCompare(b.name, 'ko'))
+    }
     const ids = new Set(
       data.assignments.filter((a) => a.educatorId === currentUser?.id).map((a) => a.studentId)
     )
     return data.students.filter((s) => ids.has(s.id))
-  }, [data.assignments, data.students, currentUser?.id])
+  }, [data.assignments, data.students, currentUser?.id, isAdmin])
 
   const [editModal, setEditModal] = useState(null) // { student, record }
   const [scheduleStudentId, setScheduleStudentId] = useState('')
@@ -109,7 +117,7 @@ export default function AttendanceTab() {
 
       {/* 키오스크 진입 */}
       <button
-        onClick={() => navigate('/manager/kiosk')}
+        onClick={() => navigate(isAdmin ? '/admin/kiosk' : '/manager/kiosk')}
         className="w-full bg-indigo-500 text-white rounded-2xl p-4 flex items-center justify-center gap-2 font-bold active:scale-95 transition-all"
       >
         <MonitorSmartphone size={20} />
@@ -169,7 +177,9 @@ export default function AttendanceTab() {
             )
           })}
           {BOARD_GROUPS.every(({ key }) => (board[key] ?? []).length === 0) && (
-            <p className="text-sm text-gray-400 text-center py-6">담당 학생이 없습니다</p>
+            <p className="text-sm text-gray-400 text-center py-6">
+              {isAdmin ? '학생이 없습니다' : '담당 학생이 없습니다'}
+            </p>
           )}
         </div>
       </div>

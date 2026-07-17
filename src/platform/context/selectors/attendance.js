@@ -54,7 +54,8 @@ export function classifyToday({ record, schedule, now }) {
 }
 
 // 담당 학생들의 오늘 현황판. 반환: { [상태]: [{ student, record, schedule }] }
-export function getTodayAttendanceBoard(data, { educatorId, now = new Date() }) {
+// all=true(관리자)면 배정과 무관하게 전체 active 학생을 대상으로 한다.
+export function getTodayAttendanceBoard(data, { educatorId, all = false, now = new Date() }) {
   const todayStr = [
     now.getFullYear(),
     String(now.getMonth() + 1).padStart(2, '0'),
@@ -65,7 +66,9 @@ export function getTodayAttendanceBoard(data, { educatorId, now = new Date() }) 
   const myStudentIds = new Set(
     data.assignments.filter((a) => a.educatorId === educatorId).map((a) => a.studentId)
   )
-  const students = data.students.filter((s) => myStudentIds.has(s.id))
+  const students = all
+    ? data.students.filter((s) => (s.status ?? 'active') === 'active')
+    : data.students.filter((s) => myStudentIds.has(s.id))
 
   const recordByStudent = new Map(
     data.attendanceRecords.filter((r) => r.date === todayStr).map((r) => [r.studentId, r])
@@ -88,13 +91,14 @@ export function getTodayAttendanceBoard(data, { educatorId, now = new Date() }) 
 }
 
 // 미해결 출결 알림 (학생 이름 결합, 최신순)
-export function getUnresolvedAttendanceNotifications(data, { educatorId }) {
+// all=true(관리자)면 배정과 무관하게 전체 알림을 반환한다.
+export function getUnresolvedAttendanceNotifications(data, { educatorId, all = false }) {
   const myStudentIds = new Set(
     data.assignments.filter((a) => a.educatorId === educatorId).map((a) => a.studentId)
   )
   const nameById = new Map(data.students.map((s) => [s.id, s.name]))
   return data.attendanceNotifications
-    .filter((n) => !n.resolved && myStudentIds.has(n.studentId))
+    .filter((n) => !n.resolved && (all || myStudentIds.has(n.studentId)))
     .map((n) => ({ ...n, studentName: nameById.get(n.studentId) ?? '' }))
     .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
 }
