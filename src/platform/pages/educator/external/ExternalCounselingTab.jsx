@@ -1,16 +1,19 @@
 import { useEffect, useState, useCallback } from 'react'
-import { Loader, ChevronLeft, Plus, UserPlus, AlertCircle } from 'lucide-react'
+import { Loader, ChevronLeft, Plus, UserPlus, AlertCircle, Printer } from 'lucide-react'
 import { useAuth } from '../../../context/AuthContext.jsx'
-import { fetchPrograms, fetchProgramDetail } from './externalData.js'
+import { useData } from '../../../context/DataContext.jsx'
+import { fetchPrograms, fetchProgramDetail, fetchRecordsByCounselor } from './externalData.js'
 import ExternalStudentList from './ExternalStudentList.jsx'
 import ExternalStudentDetail from './ExternalStudentDetail.jsx'
 import { ProgramFormModal, StudentImportModal } from './ExternalAdminModals.jsx'
+import MonthlyReportModal from '../../../components/counseling/MonthlyReportModal.jsx'
 
 // 외생 상담 프로그램 진입점.
 // 플로우: 프로그램 선택 → 학교별 학생 목록 → 학생 선택 → 상담 기록.
 // 데이터는 DataContext와 격리 — 이 탭 진입 시 lazy fetch + 로컬 state.
 export default function ExternalCounselingTab() {
   const { currentUser } = useAuth()
+  const { data } = useData()
   const isAdmin = currentUser?.role === 'admin'
 
   const [programs, setPrograms] = useState([])
@@ -27,6 +30,25 @@ export default function ExternalCounselingTab() {
 
   const [showProgramForm, setShowProgramForm] = useState(false)
   const [showImport, setShowImport] = useState(false)
+  const [showMonthlyReport, setShowMonthlyReport] = useState(false)
+
+  // 월간 보고서 — 프로그램 횡단으로 강사의 전체 외부상담 이력을 조회.
+  // 외부상담에는 시각 컬럼이 없어 startTime/endTime을 빈 값으로 정규화한다.
+  const loadMonthlyRecords = useCallback(async (educatorId) => {
+    const { records, students } = await fetchRecordsByCounselor(educatorId)
+    const studentById = new Map(students.map((s) => [s.id, s]))
+    return {
+      records: records.map((r) => ({
+        ...r,
+        studentId: r.programStudentId,
+        educatorId: r.counselorId,
+        startTime: '',
+        endTime: '',
+        fallbackContent: r.content,
+      })),
+      getStudent: (id) => studentById.get(id),
+    }
+  }, [])
 
   const loadPrograms = useCallback(async () => {
     setProgramsLoading(true)
@@ -93,16 +115,22 @@ export default function ExternalCounselingTab() {
     }
     return (
       <div className="space-y-3">
-        {isAdmin && (
-          <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={() => setShowMonthlyReport(true)}
+            className="flex items-center gap-1 bg-violet-600 text-white text-sm font-bold px-3 py-2 rounded-xl hover:bg-violet-700 active:scale-95 transition-all"
+          >
+            <Printer size={16} /> 월간 보고서
+          </button>
+          {isAdmin && (
             <button
               onClick={() => setShowProgramForm(true)}
               className="flex items-center gap-1 bg-emerald-500 text-white text-sm font-bold px-3 py-2 rounded-xl hover:bg-emerald-600 active:scale-95 transition-all"
             >
               <Plus size={16} /> 프로그램 추가
             </button>
-          </div>
-        )}
+          )}
+        </div>
         {programs.length === 0 ? (
           <div className="flex flex-col items-center gap-2 text-gray-400 py-16">
             <p className="text-sm">등록된 외부 상담 프로그램이 없습니다.</p>
@@ -137,6 +165,22 @@ export default function ExternalCounselingTab() {
           <ProgramFormModal
             onClose={() => setShowProgramForm(false)}
             onSaved={(created) => setPrograms((prev) => [created, ...prev])}
+          />
+        )}
+
+        {showMonthlyReport && (
+          <MonthlyReportModal
+            educators={
+              isAdmin
+                ? data.educators.filter((e) =>
+                    ['admin', 'manager', 'instructor', 'consultant'].includes(e.role),
+                  )
+                : null
+            }
+            fixedEducator={isAdmin ? null : currentUser}
+            loadRecords={loadMonthlyRecords}
+            reportLabel="외부컨설팅보고서"
+            onClose={() => setShowMonthlyReport(false)}
           />
         )}
       </div>

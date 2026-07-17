@@ -8,6 +8,8 @@ components/ PageWrapper · Section · Table · KpiGrid · InfoGrid(라벨-값 2�
             ReportHeader/Footer · DownloadPdfButton · PdfPreviewModal
 utils/      downloadPdf.js(renderPdfBlob/saveBlob) · captureChart.js(Recharts→PNG) · formatters.js
 reports/    UserListReport · StatisticsReport · CounselingReport · QuizReport · ReflectionReport
+            MonthlyCounselingReport(강사별 월간 컨설팅 보고서 — 관공서 서식이라 PageWrapper 대신
+            자체 Document/Page. 세로 flex:1 금지 주석 참고)
 ```
 
 ## 새 리포트 추가 패턴

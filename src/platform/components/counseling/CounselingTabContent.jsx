@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { CheckCheck, Pencil, Trash2, Siren } from 'lucide-react'
+import { useState, useCallback } from 'react'
+import { CheckCheck, Pencil, Trash2, Siren, Printer } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
 import {
@@ -13,6 +13,7 @@ import CounselingFormModal from './CounselingFormModal.jsx'
 import CounselingContentFields from './CounselingContentFields.jsx'
 import CounselingRecordBody from './CounselingRecordBody.jsx'
 import UrgentReportModal from './UrgentReportModal.jsx'
+import MonthlyReportModal from './MonthlyReportModal.jsx'
 import { AttachmentField, AttachmentChips } from './AttachmentField.jsx'
 import { uploadCounselingPdfs, removeCounselingFiles } from '../../lib/counselingFiles.js'
 
@@ -35,6 +36,18 @@ export default function CounselingTabContent({ students, records, showAuthor = f
   const [saving, setSaving] = useState(false)
   const [editRecord, setEditRecord] = useState(null)
   const [showUrgent, setShowUrgent] = useState(false)
+  const [showMonthlyReport, setShowMonthlyReport] = useState(false)
+
+  // 월간 보고서 — 누적횟수(N회차)가 화면 필터와 무관하게 전체 이력 기준이어야
+  // 하므로 props의 records가 아니라 data.counselingRecords 전량을 넘긴다.
+  const isReportPicker = currentUser?.role === 'admin' || currentUser?.role === 'viewer'
+  const loadMonthlyRecords = useCallback(async () => {
+    const studentById = new Map(data.students.map((s) => [s.id, s]))
+    return {
+      records: data.counselingRecords.map((r) => ({ ...r, fallbackContent: r.comment })),
+      getStudent: (id) => studentById.get(id),
+    }
+  }, [data.counselingRecords, data.students])
 
   // 긴급 보고는 관리자에게 보내는 것 — 관리자 본인·열람 전용 역할에는 숨김
   const canUrgentReport = !readOnly && currentUser?.role !== 'admin'
@@ -176,7 +189,17 @@ export default function CounselingTabContent({ students, records, showAuthor = f
 
       {/* ── 기존 상담 리스트 ── */}
       <section className="space-y-3">
-        <h2 className="text-base font-bold text-gray-900">상담 기록</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-bold text-gray-900">상담 기록</h2>
+          <button
+            type="button"
+            onClick={() => setShowMonthlyReport(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-600 text-white text-xs font-semibold hover:bg-violet-700 active:scale-95 transition"
+          >
+            <Printer size={14} />
+            월간 보고서
+          </button>
+        </div>
         {records.length === 0 ? (
           <div className="text-center text-gray-400 py-12">상담 기록이 없어요 💬</div>
         ) : (
@@ -242,6 +265,22 @@ export default function CounselingTabContent({ students, records, showAuthor = f
       )}
 
       {showUrgent && <UrgentReportModal onClose={() => setShowUrgent(false)} />}
+
+      {showMonthlyReport && (
+        <MonthlyReportModal
+          educators={
+            isReportPicker
+              ? data.educators.filter((e) =>
+                  ['admin', 'manager', 'instructor', 'consultant'].includes(e.role),
+                )
+              : null
+          }
+          fixedEducator={isReportPicker ? null : currentUser}
+          loadRecords={loadMonthlyRecords}
+          reportLabel="컨설팅보고서"
+          onClose={() => setShowMonthlyReport(false)}
+        />
+      )}
     </div>
   )
 }

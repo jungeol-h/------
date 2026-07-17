@@ -119,6 +119,29 @@ export async function fetchProgramDetail(programId) {
   return { students, records }
 }
 
+// 강사(counselor) 단위 전체 상담 이력 + 해당 학생들 — 월간 보고서용(프로그램 횡단).
+export async function fetchRecordsByCounselor(counselorId) {
+  const { data: recRows, error } = await supabase
+    .from('program_counseling_records')
+    .select('*')
+    .eq('counselor_id', counselorId)
+    .order('date', { ascending: true })
+  if (error) throw error
+  const records = (recRows ?? []).map(toProgramRecord)
+
+  const ids = [...new Set(records.map((r) => r.programStudentId))]
+  let students = []
+  if (ids.length > 0) {
+    const { data: studentRows, error: sErr } = await supabase
+      .from('program_students')
+      .select('*')
+      .in('id', ids)
+    if (sErr) throw sErr
+    students = (studentRows ?? []).map(toProgramStudent)
+  }
+  return { records, students }
+}
+
 // ─── 쓰기 ─────────────────────────────────────────────────────
 
 export async function createProgram({ name, year }) {
