@@ -1,7 +1,7 @@
-import { Document, Page, View, Text } from '@react-pdf/renderer'
+import { Document, Page, View } from '@react-pdf/renderer'
 import { formStyles } from '../components/counselingFormStyles.js'
 import {
-  FormHeaderTable, DetailHead, EntryBlock, EmptyDetailBox,
+  FormTitle, FormHeaderTable, DetailHead, EntryBlock, EmptyDetailBox,
 } from '../components/CounselingFormLayout.jsx'
 
 // 강사별 월간 컨설팅 보고서 — docs/보고서 양식.pdf 재현 (관공서 제출용 서식).
@@ -14,7 +14,7 @@ import {
 //               topic, diagnosis, advice, followUp, fallbackContent, note }]
 //             — selectors/monthlyCounselingReport.js buildMonthlyCounselingEntries 산출물.
 
-export default function MonthlyCounselingReport({ header = {}, entries = [] }) {
+export default function MonthlyCounselingReport({ header = {}, entries = [], logoSrc }) {
   const headerRows = [
     [
       { width: '10%', text: '담당자', label: true },
@@ -40,7 +40,7 @@ export default function MonthlyCounselingReport({ header = {}, entries = [] }) {
       producer="나매크"
     >
       <Page size="A4" style={formStyles.page}>
-        <Text style={formStyles.title}>컨설팅 보고서</Text>
+        <FormTitle text="컨설팅 보고서" {...(logoSrc !== undefined && { logoSrc })} />
         <FormHeaderTable rows={headerRows} />
         <View>
           <DetailHead leftTopLabel="학생이름" leftBottomLabel="학교학년" />

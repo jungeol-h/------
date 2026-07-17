@@ -1,4 +1,4 @@
-import { View, Text } from '@react-pdf/renderer'
+import { View, Text, Image } from '@react-pdf/renderer'
 import { formStyles } from './counselingFormStyles.js'
 
 // 관공서 서식 상담 리포트 공용 골격 — docs/보고서 양식.pdf 계열.
@@ -8,12 +8,27 @@ import { formStyles } from './counselingFormStyles.js'
 // 블록은 wrap={false}로 건 경계에서만 나뉜다 (components/Table.jsx의 검증된 패턴).
 // 테두리는 머리가 4변, 블록이 좌/우/하 3변만 가져 페이지 경계에서도 이중선이 없다.
 //
+// 블록 내부는 [번호][본문(상단행/하단행)] 구조 — 상단행(이름·상담일시·누적횟수)의
+// borderBottom 하나가 가로 구분선 전체를 그어, 열별로 따로 그을 때 생기던
+// 미세한 어긋남이 없다.
+//
 // ⚠️ 세로 방향 flex:1 금지 — 높이 auto인 컨테이너에서 높이 0으로 붕괴해 내용이
 // 겹쳐 찍힌다(Yoga). 셀 높이는 전부 내용 기반, 열은 row stretch로 맞춘다.
 // 한계: 상담 1건이 A4 한 장을 넘으면 wrap={false}가 깨져 넘칠 수 있다(실사용상 비발생 전제).
 
 
-// 상단 헤더 표 — rows: [[{ width, text, label?, last? }, …], …]
+// 제목 행 — NAVI 로고 + 서식 제목. logoSrc는 브라우저에선 기본값(/navi-logo.png),
+// node 검증 스크립트에선 파일 경로를 넘긴다.
+export function FormTitle({ text, logoSrc = '/navi-logo.png' }) {
+  return (
+    <View style={formStyles.titleRow}>
+      {logoSrc ? <Image src={logoSrc} style={formStyles.titleLogo} /> : null}
+      <Text style={formStyles.titleText}>{text}</Text>
+    </View>
+  )
+}
+
+// 상단 헤더 표 — rows: [[{ width, text, label? }, …], …]
 export function FormHeaderTable({ rows }) {
   return (
     <View style={formStyles.headerTable}>
@@ -53,16 +68,11 @@ export function DetailHead({ leftTopLabel, leftBottomLabel }) {
         <View style={formStyles.colNo}>
           <Text style={formStyles.centerText}>번호</Text>
         </View>
-        <View style={formStyles.colLeft}>
-          <View style={formStyles.stackTop}>
-            <Text style={formStyles.centerText}>{leftTopLabel}</Text>
-          </View>
-          <View style={formStyles.stackBottom}>
-            <Text style={formStyles.centerText}>{leftBottomLabel}</Text>
-          </View>
-        </View>
-        <View style={formStyles.colMain}>
+        <View style={formStyles.colBody}>
           <View style={formStyles.rowTop}>
+            <View style={formStyles.leftTopCell}>
+              <Text style={formStyles.centerText}>{leftTopLabel}</Text>
+            </View>
             <View style={formStyles.dateTimeCell}>
               <Text style={formStyles.centerText}>상담일시(상담시간)</Text>
             </View>
@@ -71,6 +81,9 @@ export function DetailHead({ leftTopLabel, leftBottomLabel }) {
             </View>
           </View>
           <View style={formStyles.rowBody}>
+            <View style={formStyles.leftBottomCell}>
+              <Text style={formStyles.centerText}>{leftBottomLabel}</Text>
+            </View>
             <View style={[formStyles.contentCell, { justifyContent: 'center' }]}>
               <Text style={formStyles.centerText}>상담내용</Text>
             </View>
@@ -93,16 +106,11 @@ export function EntryBlock({ entry, leftTop, leftBottom }) {
       <View style={formStyles.colNo}>
         <Text style={formStyles.centerText}>{entry.no}</Text>
       </View>
-      <View style={formStyles.colLeft}>
-        <View style={formStyles.stackTop}>
-          <Text style={formStyles.centerText}>{leftTop || ' '}</Text>
-        </View>
-        <View style={formStyles.stackBottom}>
-          <Text style={formStyles.centerText}>{leftBottom || ' '}</Text>
-        </View>
-      </View>
-      <View style={formStyles.colMain}>
+      <View style={formStyles.colBody}>
         <View style={formStyles.rowTop}>
+          <View style={formStyles.leftTopCell}>
+            <Text style={formStyles.centerText}>{leftTop || ' '}</Text>
+          </View>
           <View style={formStyles.dateTimeCell}>
             <Text style={formStyles.centerText}>{entry.dateTimeText}</Text>
           </View>
@@ -111,6 +119,9 @@ export function EntryBlock({ entry, leftTop, leftBottom }) {
           </View>
         </View>
         <View style={formStyles.rowBody}>
+          <View style={formStyles.leftBottomCell}>
+            <Text style={formStyles.centerText}>{leftBottom || ' '}</Text>
+          </View>
           <View style={formStyles.contentCell}>
             {entry.fallbackContent ? (
               <Text>{entry.fallbackContent}</Text>

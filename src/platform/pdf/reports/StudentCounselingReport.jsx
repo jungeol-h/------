@@ -1,7 +1,7 @@
-import { Document, Page, View, Text } from '@react-pdf/renderer'
+import { Document, Page, View } from '@react-pdf/renderer'
 import { formStyles } from '../components/counselingFormStyles.js'
 import {
-  FormHeaderTable, DetailHead, EntryBlock, EmptyDetailBox,
+  FormTitle, FormHeaderTable, DetailHead, EntryBlock, EmptyDetailBox,
 } from '../components/CounselingFormLayout.jsx'
 
 // 학생별 컨설팅 리포트 — docs/학생별 상담이력 리포트.pdf 재현 (관공서 제출용 서식).
@@ -15,7 +15,7 @@ import {
 //               topic, diagnosis, advice, followUp, fallbackContent, note }]
 //             — buildStudentCounselingEntries 산출물.
 
-export default function StudentCounselingReport({ header = {}, entries = [] }) {
+export default function StudentCounselingReport({ header = {}, entries = [], logoSrc }) {
   const headerRows = [
     [
       { width: '10%', text: '학생이름', label: true },
@@ -41,7 +41,7 @@ export default function StudentCounselingReport({ header = {}, entries = [] }) {
       producer="나매크"
     >
       <Page size="A4" style={formStyles.page}>
-        <Text style={formStyles.title}>학생별 컨설팅 리포트</Text>
+        <FormTitle text="학생별 컨설팅 리포트" {...(logoSrc !== undefined && { logoSrc })} />
         <FormHeaderTable rows={headerRows} />
         <View>
           <DetailHead leftTopLabel="상담강사" leftBottomLabel="상담유형" />

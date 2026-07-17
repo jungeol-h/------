@@ -5,10 +5,13 @@ import { colors, fontSize } from '../config/styles'
 // (컴포넌트 파일과 분리: react-refresh/only-export-components)
 // ⚠️ 세로 방향 flex:1 금지 — 높이 auto인 컨테이너에서 높이 0으로 붕괴해 내용이
 // 겹쳐 찍힌다(Yoga). 셀 높이는 전부 내용 기반, 열은 row stretch로 맞춘다.
+// 가로 구분선은 행(rowTop)의 borderBottom 하나로만 긋는다 — 열마다 따로 그으면
+// 패딩 차이만큼 어긋난다.
 
 const BORDER = 0.8
 const line = { borderColor: colors.text, borderStyle: 'solid' }
-const RIGHT_COL = '20%' // 누적횟수/특이사항 열 (colMain 기준)
+const LEFT_COL = '16%' // 학생이름/학교학년 열 (colBody 기준)
+const RIGHT_COL = '17%' // 누적횟수/특이사항 열 (colBody 기준)
 
 export const formStyles = StyleSheet.create({
   page: {
@@ -18,11 +21,17 @@ export const formStyles = StyleSheet.create({
     padding: 36,
     lineHeight: 1.35,
   },
-  title: {
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  titleLogo: { width: 70, height: 22, marginRight: 10 },
+  titleText: {
     fontSize: fontSize.title,
     fontWeight: 700,
     textAlign: 'center',
-    marginBottom: 14,
   },
 
   // ── 상단 헤더 표 ──
@@ -49,7 +58,7 @@ export const formStyles = StyleSheet.create({
     paddingVertical: 4,
   },
   detailTitleText: { textAlign: 'center', fontWeight: 700 },
-  // 머리·블록 공통 골격: [번호 7%][좌측 15%][본문 78%]
+  // 머리·블록 공통 골격: [번호 7%][본문 93% = 상단행/하단행]
   block: {
     ...line,
     borderLeftWidth: BORDER,
@@ -65,19 +74,18 @@ export const formStyles = StyleSheet.create({
     borderRightWidth: BORDER,
     justifyContent: 'center',
   },
-  colLeft: { width: '15%', ...line, borderRightWidth: BORDER },
-  colMain: { width: '78%' },
+  colBody: { width: '93%' },
   centerText: { textAlign: 'center' },
-  // 좌측 열: 위/아래 2칸 — 내용 기반 높이
-  stackTop: {
-    ...line,
-    borderBottomWidth: BORDER,
-    paddingVertical: 4,
-    paddingHorizontal: 2,
-  },
-  stackBottom: { paddingVertical: 4, paddingHorizontal: 2 },
-  // 본문 상단 행: 상담일시 + 누적횟수
+  // 본문 상단 행: 이름 + 상담일시 + 누적횟수 — 구분선은 이 행의 borderBottom 하나뿐
   rowTop: { flexDirection: 'row', ...line, borderBottomWidth: BORDER },
+  leftTopCell: {
+    width: LEFT_COL,
+    ...line,
+    borderRightWidth: BORDER,
+    paddingVertical: 3,
+    paddingHorizontal: 2,
+    justifyContent: 'center',
+  },
   dateTimeCell: { flex: 1, paddingVertical: 3, paddingHorizontal: 4, justifyContent: 'center' },
   roundCell: {
     width: RIGHT_COL,
@@ -87,8 +95,16 @@ export const formStyles = StyleSheet.create({
     paddingHorizontal: 4,
     justifyContent: 'center',
   },
-  // 본문 하단 행: 상담내용 + 특이사항
+  // 본문 하단 행: 학교학년 + 상담내용 + 특이사항
   rowBody: { flexDirection: 'row', flexGrow: 1 },
+  leftBottomCell: {
+    width: LEFT_COL,
+    ...line,
+    borderRightWidth: BORDER,
+    paddingVertical: 4,
+    paddingHorizontal: 2,
+    justifyContent: 'center',
+  },
   contentCell: { flex: 1, paddingVertical: 4, paddingHorizontal: 6 },
   noteCell: {
     width: RIGHT_COL,
