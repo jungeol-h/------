@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react'
-import { CheckCheck, Pencil, Trash2, Siren, Printer } from 'lucide-react'
+import { useState, useCallback, useMemo } from 'react'
+import { CheckCheck, Pencil, Trash2, Siren, Printer, X } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
 import {
@@ -37,6 +37,45 @@ export default function CounselingTabContent({ students, records, showAuthor = f
   const [editRecord, setEditRecord] = useState(null)
   const [showUrgent, setShowUrgent] = useState(false)
   const [showMonthlyReport, setShowMonthlyReport] = useState(false)
+
+  // ── 상담 기록 검색 필터 (강사·학생·기간) ──
+  const [filterEducatorId, setFilterEducatorId] = useState('')
+  const [filterStudentId, setFilterStudentId] = useState('')
+  const [filterFrom, setFilterFrom] = useState('')
+  const [filterTo, setFilterTo] = useState('')
+
+  // 필터 옵션은 실제 기록에 등장하는 강사·학생에서만 파생 (빈 결과가 나올 옵션 배제)
+  const filterEducators = useMemo(() => {
+    const ids = new Set(records.map((r) => r.educatorId))
+    return data.educators
+      .filter((e) => ids.has(e.id))
+      .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'))
+  }, [records, data.educators])
+
+  const filterStudents = useMemo(() => {
+    const ids = new Set(records.map((r) => r.studentId))
+    return data.students
+      .filter((s) => ids.has(s.id))
+      .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'))
+  }, [records, data.students])
+
+  const filteredRecords = useMemo(
+    () => records.filter((r) =>
+      (!filterEducatorId || r.educatorId === filterEducatorId) &&
+      (!filterStudentId || r.studentId === filterStudentId) &&
+      (!filterFrom || r.date >= filterFrom) &&
+      (!filterTo || r.date <= filterTo)
+    ),
+    [records, filterEducatorId, filterStudentId, filterFrom, filterTo]
+  )
+
+  const hasFilter = Boolean(filterEducatorId || filterStudentId || filterFrom || filterTo)
+  const resetFilter = () => {
+    setFilterEducatorId('')
+    setFilterStudentId('')
+    setFilterFrom('')
+    setFilterTo('')
+  }
 
   // 월간 보고서 — 누적횟수(N회차)가 화면 필터와 무관하게 전체 이력 기준이어야
   // 하므로 props의 records가 아니라 data.counselingRecords 전량을 넘긴다.
@@ -190,7 +229,12 @@ export default function CounselingTabContent({ students, records, showAuthor = f
       {/* ── 기존 상담 리스트 ── */}
       <section className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-bold text-gray-900">상담 기록</h2>
+          <h2 className="text-base font-bold text-gray-900">
+            상담 기록
+            <span className="ml-1.5 text-sm font-semibold text-gray-400">
+              {hasFilter ? `${filteredRecords.length}건 / 전체 ${records.length}건` : `${records.length}건`}
+            </span>
+          </h2>
           <button
             type="button"
             onClick={() => setShowMonthlyReport(true)}
@@ -200,11 +244,72 @@ export default function CounselingTabContent({ students, records, showAuthor = f
             월간 보고서
           </button>
         </div>
-        {records.length === 0 ? (
-          <div className="text-center text-gray-400 py-12">상담 기록이 없어요 💬</div>
+
+        {/* 검색 필터 — 강사·학생·기간 */}
+        <div className="bg-white rounded-2xl shadow-sm p-4 space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">강사 (작성자)</label>
+              <select
+                value={filterEducatorId}
+                onChange={(e) => setFilterEducatorId(e.target.value)}
+                className={`${fieldClass} w-full`}
+              >
+                <option value="">전체 강사</option>
+                {filterEducators.map((e) => (
+                  <option key={e.id} value={e.id}>{educatorDisplayName(e)}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">학생</label>
+              <StudentCombobox
+                students={filterStudents}
+                value={filterStudentId}
+                onChange={setFilterStudentId}
+                placeholder="학생 검색..."
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-[1fr_1fr_auto] gap-3 items-end">
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">시작일</label>
+              <input
+                type="date"
+                value={filterFrom}
+                onChange={(e) => setFilterFrom(e.target.value)}
+                className={`${fieldClass} w-full`}
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">종료일</label>
+              <input
+                type="date"
+                value={filterTo}
+                onChange={(e) => setFilterTo(e.target.value)}
+                className={`${fieldClass} w-full`}
+              />
+            </div>
+            {hasFilter && (
+              <button
+                type="button"
+                onClick={resetFilter}
+                className="col-span-2 sm:col-span-1 h-[42px] px-4 rounded-xl bg-gray-100 text-gray-600 text-sm font-semibold flex items-center justify-center gap-1 hover:bg-gray-200"
+              >
+                <X size={14} />
+                초기화
+              </button>
+            )}
+          </div>
+        </div>
+
+        {filteredRecords.length === 0 ? (
+          <div className="text-center text-gray-400 py-12">
+            {hasFilter ? '조건에 맞는 상담 기록이 없어요 🔍' : '상담 기록이 없어요 💬'}
+          </div>
         ) : (
           <div className="space-y-3">
-            {records.map((r) => {
+            {filteredRecords.map((r) => {
               const student = data.students.find((s) => s.id === r.studentId)
               const author = data.educators.find((e) => e.id === r.educatorId)
               return (
