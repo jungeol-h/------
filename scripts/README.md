@@ -46,7 +46,7 @@ DB 스키마 변경은 **Supabase Studio SQL Editor에서 수동 실행**한다 
 | `add-2607-work-records.sql` | management_reports·finance_records·lesson_reports + 상담 시간·업무계획 status + 'finance-receipts' 버킷 | 적용됨 |
 | `add-user-groups.sql` | users.group_names(소속 그룹, 복수) + 관리보고·재정·긴급보고 group_name + 역할별 백필 (add-2607-work-records 선행 필요) | 적용됨 |
 | `add-study-location.sql` | learning_records.study_location (공부 장소: 센터·집·스카·학원·학교) | 적용됨 |
-| `add-booking-system.sql` | 컨설팅·코칭 예약 시스템: booking_* 테이블 10종(프로그램·교과·강사배정·오픈기간·배치·슬롯·예약·상담기록·알림·감사이력) + SECURITY DEFINER RPC 9종(예약/취소/변경/그룹배정/출결/슬롯편집/일괄상태/다이제스트) + 프로그램 3종 시드 + pg_cron `booking-daily-digest`(KST 00:05) | **미적용 — 예약 기능 배포 전 필수** |
+| `add-booking-system.sql` | 컨설팅·코칭 예약 시스템: booking_* 테이블 10종(프로그램·교과·강사배정·오픈기간·배치·슬롯·예약·상담기록·알림·감사이력) + SECURITY DEFINER RPC 9종(예약/취소/변경/그룹배정/출결/슬롯편집/일괄상태/다이제스트) + 프로그램 3종 시드 + pg_cron `booking-daily-digest`(KST 00:05) | **적용됨 (2026-07-18, Studio)** |
 
 ## 시드·일회성 유틸 (재실행 금지 또는 불필요)
 
@@ -59,3 +59,5 @@ DB 스키마 변경은 **Supabase Studio SQL Editor에서 수동 실행**한다 
 | `diagnose-quiz.sql` | 퀴즈 데이터 점검용 조회 (읽기 전용) |
 | `patch-quiz-rls.sql` / `migrate-remaining-todo-items.sql` / `unify-learning-records.sql` | 과거 일회성 보정 (완료) |
 | `delete-dummy-managers.sql` | 더미 매니저 m01~m04 삭제 + 실상담 1건 a-hwang 이관 — **적용됨 (2026-07-17, REST)**. 이후 실매니저 생성 시 assignments 재배정 필요 |
+| `seed-parents-from-students.sql` | 학부모 계정 일괄 생성 (학생 parent_password 기반, 전화번호 dedupe — 형제 1계정 다자녀 링크. 로그인 = 학부모 전화번호/전화번호) — **적용됨 (2026-07-18, REST, 학부모 135·링크 144)**. 멱등이라 신규 학생 반영 시 재실행 가능 |
+| `cleanup-booking-test-data.sql` | 예약 시스템 E2E 테스트 산출물 삭제 (기록·예약·알림·슬롯·배치·감사이력 전체 — 프로그램·교과·강사배정·오픈기간 설정은 유지). **⚠️ 실오픈 후 재실행 금지** |

@@ -118,7 +118,7 @@ function TimetableMenu() {
             onClick={() => bulkTransition(status)}
             className="px-2.5 h-8 rounded-lg bg-gray-100 text-gray-600 text-[11px] font-bold disabled:opacity-40"
           >
-            {SLOT_STATUS[status].label}로
+            {SLOT_STATUS[status].label}(으)로
           </button>
         ))}
       </div>
