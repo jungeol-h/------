@@ -108,7 +108,7 @@ export default function StatisticsSection() {
       {counselingReportOpen && (
         <MonthlyReportModal
           educators={data.educators.filter((e) =>
-            ['admin', 'manager', 'instructor', 'consultant'].includes(e.role),
+            ['admin', 'manager', 'instructor', 'consultant'].includes(e.role) && e.status !== 'inactive',
           )}
           loadRecords={loadCounselingRecords}
           reportLabel="컨설팅보고서"

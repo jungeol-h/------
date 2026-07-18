@@ -3,7 +3,7 @@
 // 지표는 getStudentIndicatorMap으로 1-pass 계산. viewer의 /viewer/students에서 readOnly로 재사용.
 
 import { useState, useMemo, useCallback } from 'react'
-import { User, AlertCircle, Plus, Upload, MoreVertical, Pencil, UserX, UserCheck, Search, ArrowUp, ArrowDown } from 'lucide-react'
+import { User, AlertCircle, Plus, Upload, MoreVertical, Pencil, UserX, UserCheck, Search, ArrowUp, ArrowDown, Trash2 } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
 import { getMindStatus } from '../../context/selectors/riskDetection.js'
 import { getStudentIndicatorMap } from '../../context/selectors/studentIndicators.js'
@@ -15,6 +15,8 @@ import { useNavigate } from 'react-router-dom'
 import StudentFormModal from '../../components/admin/StudentFormModal.jsx'
 import ParentManagementModal from '../../components/admin/ParentManagementModal.jsx'
 import EducatorGroupModal from '../../components/admin/EducatorGroupModal.jsx'
+import EducatorFormModal from '../../components/admin/EducatorFormModal.jsx'
+import ModalShell from '../../components/common/ModalShell.jsx'
 import BulkStudentUploadModal from '../../components/admin/BulkStudentUploadModal.jsx'
 import { GROUP_OPTIONS } from '../../data/groups.js'
 import { STUDENT_STATUS_OPTIONS, STUDENT_STATUS_LABELS, isActiveStudent } from '../../data/studentStatus.js'
@@ -35,7 +37,10 @@ const MIND_BADGES = {
 const LIST_GRID = 'grid-cols-[minmax(130px,1fr)_60px_100px_100px_48px_48px_52px_52px_44px_48px_32px]'
 
 export default function UserManagementTab({ readOnly = false }) {
-  const { data, createStudent, updateStudent, updateEducatorGroups, setStudentStatus } = useData()
+  const {
+    data, createStudent, updateStudent, updateEducatorGroups, setStudentStatus,
+    createEducator, updateEducator, setEducatorStatus, deleteEducator,
+  } = useData()
   const { currentUser } = useAuth()
   const navigate = useNavigate()
 
@@ -47,13 +52,17 @@ export default function UserManagementTab({ readOnly = false }) {
   const [query, setQuery] = useState('')
   const [filterGroup, setFilterGroup] = useState('all') // 'all' | GROUP_OPTIONS 값
   const [groupEditTarget, setGroupEditTarget] = useState(null) // 소속 편집 대상 교육자
+  const [educatorModal, setEducatorModal] = useState(null) // { mode: 'create' } | { mode: 'edit', educator }
+  const [educatorMenuId, setEducatorMenuId] = useState(null)
+  const [showInactiveEducators, setShowInactiveEducators] = useState(false)
+  const [educatorDeleteTarget, setEducatorDeleteTarget] = useState(null) // 완전 삭제 확인 대상
   const [sortKey, setSortKey] = useState('name') // 'name' | 'grade' | 'manager' | 'risk' | 'selfIndex'
   const [sortDir, setSortDir] = useState('asc')  // 'asc' | 'desc'
 
   // 열람 전용(viewer) 경로에서는 학생 상세도 viewer 경로로 이동한다.
   const detailBase = currentUser?.role === 'viewer' ? '/viewer/student' : '/admin/student'
 
-  const managers = data.educators.filter((e) => e.role === 'manager')
+  const managers = data.educators.filter((e) => e.role === 'manager' && e.status !== 'inactive')
   const allStudents = data.students
   const activeStudents = allStudents.filter(isActiveStudent)
   const nonActiveStudents = allStudents.filter((s) => !isActiveStudent(s))
@@ -155,6 +164,32 @@ export default function UserManagementTab({ readOnly = false }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visibleStudents, showInactive, query, sortKey, sortDir, currentUser])
+
+  // ── 교육자 CRUD 핸들러 ──
+  const activeEducators = data.educators.filter((e) => e.status !== 'inactive')
+  const inactiveEducators = data.educators.filter((e) => e.status === 'inactive')
+  const visibleEducators = showInactiveEducators ? data.educators : activeEducators
+
+  const handleEducatorSubmit = async (form) => {
+    if (educatorModal?.mode === 'edit') {
+      await updateEducator(educatorModal.educator.id, form)
+    } else {
+      await createEducator(form)
+    }
+  }
+
+  const handleEducatorStatus = async (educator, next) => {
+    const confirmMsg = next === 'active'
+      ? `${educator.name} 계정을 다시 활성화할까요? 로그인이 가능해집니다.`
+      : `${educator.name} 계정을 비활성화할까요? 로그인이 차단되고 강사 배정 목록에서 빠집니다. 작성한 기록은 보존됩니다.`
+    if (!window.confirm(confirmMsg)) return
+    try {
+      await setEducatorStatus(educator.id, next)
+      setEducatorMenuId(null)
+    } catch {
+      alert('상태 변경 중 오류가 발생했습니다.')
+    }
+  }
 
   const handleChangeStatus = async (student, next) => {
     const label = STUDENT_STATUS_LABELS[next]
@@ -427,26 +462,70 @@ export default function UserManagementTab({ readOnly = false }) {
         </div>
       </section>
 
-      {/* ── 교육자 목록 (소속 편집 외 읽기 전용) ── */}
+      {/* ── 교육자 목록 (추가/수정/비활성/완전삭제 — admin 계정은 보호) ── */}
       <section>
-        <h3 className="text-sm font-bold text-gray-500 mb-3">교육자 ({data.educators.length}명)</h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-bold text-gray-500">
+            교육자 ({activeEducators.length}명{inactiveEducators.length > 0 ? ` / 비활성 ${inactiveEducators.length}명` : ''})
+          </h3>
+          <div className="flex items-center gap-2">
+            {inactiveEducators.length > 0 && (
+              <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={showInactiveEducators}
+                  onChange={(e) => setShowInactiveEducators(e.target.checked)}
+                  className="w-3.5 h-3.5"
+                />
+                비활성 포함
+              </label>
+            )}
+            {!readOnly && (
+              <button
+                onClick={() => setEducatorModal({ mode: 'create' })}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700"
+              >
+                <Plus size={14} />
+                교육자 추가
+              </button>
+            )}
+          </div>
+        </div>
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-          <div className="grid grid-cols-[1fr_auto_auto_auto] text-xs text-gray-400 font-semibold px-3 py-2 border-b border-gray-100 bg-gray-50">
+          <div className="grid grid-cols-[1fr_auto_auto_auto_auto] text-xs text-gray-400 font-semibold px-3 py-2 border-b border-gray-100 bg-gray-50">
             <span>이름</span>
             <span className="w-28 text-center">소속</span>
             <span className="w-20 text-center">역할</span>
             <span className="w-14 text-right">담당</span>
+            <span className="w-8"> </span>
           </div>
-          {data.educators.map((e) => {
+          {visibleEducators.map((e) => {
             const assignedCount = data.assignments.filter((a) => a.educatorId === e.id).length
             const groupLabel = e.groups?.length ? e.groups.join(', ') : '전체'
+            const isInactive = e.status === 'inactive'
+            const canManage = !readOnly && e.role !== 'admin'
             return (
-              <div key={e.id} className="grid grid-cols-[1fr_auto_auto_auto] items-center px-3 py-2.5 border-b border-gray-50 last:border-0">
-                <div className="flex items-center gap-2">
+              <div
+                key={e.id}
+                className={`grid grid-cols-[1fr_auto_auto_auto_auto] items-center px-3 py-2.5 border-b border-gray-50 last:border-0 ${
+                  isInactive ? 'bg-gray-50/60 opacity-70' : ''
+                }`}
+              >
+                <div className="flex items-center gap-2 min-w-0">
                   <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
                     <User size={13} className="text-gray-400" />
                   </div>
-                  <span className="font-semibold text-sm text-gray-800">{e.name}</span>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1 flex-wrap">
+                      <span className="font-semibold text-sm text-gray-800 truncate">{e.name}</span>
+                      {isInactive && (
+                        <span className="text-[10px] font-bold px-1 rounded text-gray-500 bg-gray-200">비활성</span>
+                      )}
+                    </div>
+                    {e.role === 'instructor' && e.subject && (
+                      <span className="text-xs text-gray-400 truncate block">{e.subject}</span>
+                    )}
+                  </div>
                 </div>
                 {readOnly ? (
                   <span className="w-28 text-center text-xs text-gray-500 truncate" title={groupLabel}>
@@ -466,6 +545,53 @@ export default function UserManagementTab({ readOnly = false }) {
                 <span className="w-14 text-right text-sm font-bold text-emerald-600">
                   {e.role === 'manager' ? `${assignedCount}명` : '-'}
                 </span>
+                {canManage ? (
+                  <div className="w-8 flex justify-end relative">
+                    <button
+                      onClick={() => setEducatorMenuId(educatorMenuId === e.id ? null : e.id)}
+                      className="p-1 rounded hover:bg-gray-200 text-gray-500"
+                      aria-label="교육자 메뉴"
+                    >
+                      <MoreVertical size={14} />
+                    </button>
+                    {educatorMenuId === e.id && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setEducatorMenuId(null)} />
+                        <div className="absolute right-0 top-7 z-50 bg-white rounded-lg shadow-lg border border-gray-100 py-1 min-w-[130px]">
+                          <button
+                            onClick={() => {
+                              setEducatorModal({ mode: 'edit', educator: e })
+                              setEducatorMenuId(null)
+                            }}
+                            className="w-full px-3 py-1.5 text-left text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                          >
+                            <Pencil size={12} /> 수정
+                          </button>
+                          <button
+                            onClick={() => handleEducatorStatus(e, isInactive ? 'active' : 'inactive')}
+                            className="w-full px-3 py-1.5 text-left text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                          >
+                            {isInactive ? <UserCheck size={12} /> : <UserX size={12} />}
+                            {isInactive ? '활성화' : '비활성화'}
+                          </button>
+                          <div className="border-t border-gray-100 mt-1 pt-1">
+                            <button
+                              onClick={() => {
+                                setEducatorDeleteTarget(e)
+                                setEducatorMenuId(null)
+                              }}
+                              className="w-full px-3 py-1.5 text-left text-xs text-red-600 hover:bg-red-50 flex items-center gap-2"
+                            >
+                              <Trash2 size={12} /> 완전 삭제
+                            </button>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <span className="w-8" aria-hidden />
+                )}
               </div>
             )
           })}
@@ -498,6 +624,83 @@ export default function UserManagementTab({ readOnly = false }) {
           onClose={() => setGroupEditTarget(null)}
         />
       )}
+
+      {!readOnly && educatorModal && (
+        <EducatorFormModal
+          mode={educatorModal.mode}
+          initial={educatorModal.mode === 'edit' ? educatorModal.educator : undefined}
+          onSubmit={handleEducatorSubmit}
+          onClose={() => setEducatorModal(null)}
+        />
+      )}
+
+      {!readOnly && educatorDeleteTarget && (
+        <EducatorDeleteConfirmModal
+          educator={educatorDeleteTarget}
+          onConfirm={() => deleteEducator(educatorDeleteTarget.id)}
+          onClose={() => setEducatorDeleteTarget(null)}
+        />
+      )}
     </div>
+  )
+}
+
+// 교육자 완전 삭제 확인 모달 — users 행 삭제는 FK CASCADE로 그 계정이 작성한
+// 상담·수업 기록까지 지우므로, 이름을 직접 입력해야 삭제 버튼이 활성화된다.
+function EducatorDeleteConfirmModal({ educator, onConfirm, onClose }) {
+  const [typed, setTyped] = useState('')
+  const [busy, setBusy] = useState(false)
+  const matched = typed.trim() === educator.name
+
+  const handleDelete = async () => {
+    setBusy(true)
+    try {
+      await onConfirm()
+      onClose()
+    } catch (err) {
+      alert(err?.message ?? '삭제 중 오류가 발생했습니다.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <ModalShell title="교육자 완전 삭제" onClose={onClose} maxWidth="max-w-md">
+      <div className="bg-red-50 border border-red-100 rounded-xl px-3 py-2.5 text-xs text-red-700 leading-relaxed">
+        <p className="font-bold mb-1">이 작업은 되돌릴 수 없습니다.</p>
+        <p>
+          <b>{educator.name}</b>({ROLE_LABELS[educator.role] || educator.role}) 계정과 함께
+          이 계정이 작성한 <b>상담·수업 기록이 모두 삭제</b>됩니다.
+          기록을 보존하려면 삭제 대신 '비활성화'를 사용하세요.
+        </p>
+      </div>
+      <div>
+        <label className="block text-[11px] font-bold text-gray-500 mb-1">
+          삭제하려면 이름(<span className="text-red-600">{educator.name}</span>)을 입력하세요
+        </label>
+        <input
+          type="text"
+          value={typed}
+          onChange={(e) => setTyped(e.target.value)}
+          className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
+          placeholder={educator.name}
+        />
+      </div>
+      <div className="flex gap-2">
+        <button
+          onClick={onClose}
+          className="flex-1 py-2.5 rounded-xl bg-gray-100 text-sm font-semibold text-gray-700"
+        >
+          취소
+        </button>
+        <button
+          onClick={handleDelete}
+          disabled={!matched || busy}
+          className="flex-1 py-2.5 rounded-xl bg-red-600 text-sm font-semibold text-white disabled:opacity-40"
+        >
+          {busy ? '삭제 중…' : '완전 삭제'}
+        </button>
+      </div>
+    </ModalShell>
   )
 }
