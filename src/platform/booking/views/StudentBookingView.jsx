@@ -11,14 +11,7 @@ import { validateReserve, validateChange, deadlineOk, isTargetGroup, changeDeadl
 import { bookingMessage, immediateLockWarning } from '../bookingMessages.js'
 import BookingNotificationsBell from '../components/BookingNotificationsBell.jsx'
 import MyReservationList from '../components/MyReservationList.jsx'
-
-const WEEKDAY = ['일', '월', '화', '수', '목', '금', '토']
-
-function dateLabel(dateStr) {
-  const [y, m, d] = dateStr.split('-').map(Number)
-  const dow = new Date(y, m - 1, d).getDay()
-  return { md: `${m}/${d}`, dow: WEEKDAY[dow], isSunday: dow === 0 }
-}
+import WeeklySlotPicker from '../components/WeeklySlotPicker.jsx'
 
 export default function StudentBookingView({ student }) {
   const booking = useBooking()
@@ -28,7 +21,7 @@ export default function StudentBookingView({ student }) {
   const [programId, setProgramId] = useState(null)
   const [subjectId, setSubjectId] = useState(null)
   const [educatorId, setEducatorId] = useState(null) // 담당 강사 필터 (명세 21.1)
-  const [date, setDate] = useState(null)
+  const [chooser, setChooser] = useState(null) // 같은 시간 복수 강사 선택 시트
   const [confirmSlot, setConfirmSlot] = useState(null)
   const [withNext, setWithNext] = useState(false) // 연속 2블록 예약 (명세 4.2)
   const [changing, setChanging] = useState(null) // 변경 중인 기존 예약
@@ -73,20 +66,6 @@ export default function StudentBookingView({ student }) {
   const filteredSlots = useMemo(
     () => (educatorId ? programSlots.filter((s) => s.educatorId === educatorId) : programSlots),
     [programSlots, educatorId],
-  )
-
-  const dates = useMemo(
-    () => [...new Set(filteredSlots.map((s) => s.date))].sort(),
-    [filteredSlots],
-  )
-  const activeDate = date && dates.includes(date) ? date : dates[0] ?? null
-  const daySlots = useMemo(
-    () => filteredSlots
-      .filter((s) => s.date === activeDate)
-      .sort((a, b) => (a.startTime === b.startTime
-        ? String(a.educatorId).localeCompare(String(b.educatorId))
-        : a.startTime < b.startTime ? -1 : 1)),
-    [filteredSlots, activeDate],
   )
 
   // 연속 2블록 후보 — 같은 강사·교과의 바로 다음 블록 (연속 허용 프로그램만, 명세 4.2)
@@ -148,7 +127,6 @@ export default function StudentBookingView({ student }) {
     setChanging(reservation)
     setProgramId(reservation.programId)
     setSubjectId(reservation.slot?.subjectId ?? null)
-    setDate(null)
     setFailCode(null)
     setTab('book')
   }
@@ -157,6 +135,7 @@ export default function StudentBookingView({ student }) {
     setFailCode(null)
     setNotice(null)
     setWithNext(false)
+    setChooser(null)
     const check = changing
       ? validateChange({
           oldProgram: config.programs.find((p) => p.id === changing.programId) ?? program,
@@ -232,7 +211,7 @@ export default function StudentBookingView({ student }) {
                 <button
                   key={p.id}
                   type="button"
-                  onClick={() => { setProgramId(p.id); setSubjectId(null); setEducatorId(null); setDate(null); setFailCode(null) }}
+                  onClick={() => { setProgramId(p.id); setSubjectId(null); setEducatorId(null); setFailCode(null) }}
                   className={`px-3 h-9 rounded-full text-xs font-bold border ${
                     program?.id === p.id
                       ? 'bg-blue-600 text-white border-blue-600'
@@ -249,7 +228,7 @@ export default function StudentBookingView({ student }) {
                   <button
                     key={s.id}
                     type="button"
-                    onClick={() => { setSubjectId(subjectId === s.id ? null : s.id); setDate(null) }}
+                    onClick={() => setSubjectId(subjectId === s.id ? null : s.id)}
                     className={`px-3 h-8 rounded-full text-xs font-bold border ${
                       subjectId === s.id
                         ? 'bg-emerald-600 text-white border-emerald-600'
@@ -266,7 +245,7 @@ export default function StudentBookingView({ student }) {
               <div className="flex gap-2 flex-wrap">
                 <button
                   type="button"
-                  onClick={() => { setEducatorId(null); setDate(null) }}
+                  onClick={() => setEducatorId(null)}
                   className={`px-3 h-8 rounded-full text-xs font-bold border ${
                     educatorId === null
                       ? 'bg-gray-700 text-white border-gray-700'
@@ -279,7 +258,7 @@ export default function StudentBookingView({ student }) {
                   <button
                     key={eid}
                     type="button"
-                    onClick={() => { setEducatorId(educatorId === eid ? null : eid); setDate(null) }}
+                    onClick={() => setEducatorId(educatorId === eid ? null : eid)}
                     className={`px-3 h-8 rounded-full text-xs font-bold border ${
                       educatorId === eid
                         ? 'bg-gray-700 text-white border-gray-700'
@@ -293,86 +272,62 @@ export default function StudentBookingView({ student }) {
             )}
           </div>
 
-          {/* 날짜 선택 */}
-          {program && (
-            dates.length === 0 ? (
-              <p className="py-10 text-center text-sm text-gray-400">
-                예약 가능한 일정이 아직 공개되지 않았습니다.
-              </p>
-            ) : (
-              <div className="flex gap-2 overflow-x-auto pb-1">
-                {dates.map((d) => {
-                  const { md, dow, isSunday } = dateLabel(d)
-                  const active = d === activeDate
-                  return (
-                    <button
-                      key={d}
-                      type="button"
-                      onClick={() => setDate(d)}
-                      className={`flex-shrink-0 w-14 py-2 rounded-xl border text-center ${
-                        active ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-200'
-                      }`}
-                    >
-                      <p className={`text-[11px] ${active ? 'text-blue-100' : isSunday ? 'text-red-400' : 'text-gray-400'}`}>{dow}</p>
-                      <p className="text-sm font-bold">{md}</p>
-                    </button>
-                  )
-                })}
-              </div>
-            )
-          )}
-
           {failCode && (
             <div className="rounded-xl bg-red-50 border border-red-100 p-3 text-xs text-red-600">
               {bookingMessage(failCode, { program, subjectName: subjectName(subjectId) })}
             </div>
           )}
 
-          {/* 슬롯 목록 */}
-          {program && activeDate && (
-            <div className="space-y-2">
-              {daySlots.map((slot) => {
-                const remaining = slot.capacity - (slotCounts[slot.id] ?? 0)
-                const full = remaining <= 0
-                const mine = myReservations.some((r) => r.slotId === slot.id && r.status === 'confirmed')
-                const disabled = full || mine
-                return (
-                  <button
-                    key={slot.id}
-                    type="button"
-                    disabled={disabled}
-                    onClick={() => pickSlot(slot)}
-                    className={`w-full rounded-xl border p-3 flex items-center justify-between text-left ${
-                      disabled ? 'bg-gray-50 border-gray-100 text-gray-400' : 'bg-white border-gray-200'
-                    }`}
-                  >
-                    <div>
-                      <p className="text-sm font-bold">
-                        {slot.startTime} ~ {slot.endTime}
-                        {slot.subjectId && (
-                          <span className="ml-1.5 text-[11px] font-semibold text-emerald-600">{subjectName(slot.subjectId)}</span>
-                        )}
-                        {slot.capacity > 1 && (
-                          <span className="ml-1.5 text-[10px] font-bold text-purple-500">그룹 {slot.capacity}인</span>
-                        )}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        {educatorName(slot.educatorId) || '담당 미정'}
-                        {slot.note ? ` · ${slot.note}` : ''}
-                      </p>
-                    </div>
-                    <span className={`text-xs font-bold ${mine ? 'text-blue-500' : full ? 'text-gray-400' : 'text-emerald-600'}`}>
-                      {mine ? '예약 완료' : full ? '마감' : `잔여 ${remaining}`}
-                    </span>
-                  </button>
-                )
-              })}
-              {daySlots.length === 0 && (
-                <p className="py-8 text-center text-sm text-gray-400">이 날짜에는 예약 가능한 시간이 없습니다.</p>
-              )}
-            </div>
+          {/* 주간 타임테이블 — 셀 한 번 탭으로 예약 (되는시간식 그리드) */}
+          {program && (
+            filteredSlots.length === 0 ? (
+              <p className="py-10 text-center text-sm text-gray-400 bg-white rounded-2xl shadow-sm">
+                예약 가능한 일정이 아직 공개되지 않았습니다.
+              </p>
+            ) : (
+              <WeeklySlotPicker
+                slots={filteredSlots}
+                slotCounts={slotCounts}
+                myReservations={myReservations}
+                onPick={pickSlot}
+                onPickMany={setChooser}
+              />
+            )
           )}
         </>
+      )}
+
+      {/* 같은 시간 복수 강사 — 강사 선택 시트 */}
+      {chooser && (
+        <ModalShell title="선생님 선택" onClose={() => setChooser(null)}>
+          <p className="text-xs text-gray-500">
+            {chooser[0].date} {chooser[0].startTime}~{chooser[0].endTime} — 같은 시간에 여러 선생님이 있습니다.
+          </p>
+          <div className="space-y-1.5">
+            {chooser.map((slot) => {
+              const remaining = slot.capacity - (slotCounts[slot.id] ?? 0)
+              return (
+                <button
+                  key={slot.id}
+                  type="button"
+                  onClick={() => pickSlot(slot)}
+                  className="w-full rounded-xl border border-gray-200 bg-white p-3 flex items-center justify-between text-left"
+                >
+                  <span className="text-sm font-bold text-gray-900">
+                    {educatorName(slot.educatorId) || '담당 미정'}
+                    {slot.subjectId && (
+                      <span className="ml-1.5 text-[11px] font-semibold text-emerald-600">{subjectName(slot.subjectId)}</span>
+                    )}
+                    {slot.capacity > 1 && (
+                      <span className="ml-1.5 text-[10px] font-bold text-purple-500">그룹</span>
+                    )}
+                  </span>
+                  <span className="text-xs font-bold text-emerald-600">잔여 {remaining}</span>
+                </button>
+              )
+            })}
+          </div>
+        </ModalShell>
       )}
 
       {/* 예약 확정 모달 */}

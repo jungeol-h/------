@@ -10,39 +10,57 @@ import { todayStr } from '../../utils/dateUtils.js'
 import { addDaysStr } from '../bookingRules.js'
 import { bookingMessage } from '../bookingMessages.js'
 import { reservationDisplayStatus, ATTENDANCE_STATUS } from '../bookingStatus.js'
+import WeeklySlotPicker from './WeeklySlotPicker.jsx'
 import { isActiveStudent } from '../../data/studentStatus.js'
 
 const FIELD = 'h-10 px-3 rounded-lg border border-gray-200 text-sm'
 
-// 관리자 슬롯 선택 목록 (대리 예약·변경 공용) — draft 포함 전 상태 노출
-function SlotSelectList({ slots, slotCounts, programId, userNames, onPick }) {
+// 관리자 슬롯 선택 그리드 (대리 예약·변경 공용) — 학생 화면과 같은 주간 그리드.
+// 마감 셀도 탭 가능(정원 초과는 예외 처리 토글 + RPC 판단), 같은 시간 복수 강사는
+// 인라인 목록으로 고른다. studentReservations로 대상 학생의 '내예약' 셀도 표시.
+function AdminSlotGrid({ slots, slotCounts, programId, studentReservations, userNames, onPick }) {
+  const [chooser, setChooser] = useState(null)
   const candidates = useMemo(
-    () => slots
-      .filter((s) => s.programId === programId && s.date >= todayStr() && s.status !== 'cancelled')
-      .sort((a, b) => (a.date === b.date ? (a.startTime < b.startTime ? -1 : 1) : a.date < b.date ? -1 : 1)),
+    () => slots.filter((s) =>
+      s.programId === programId && s.date >= todayStr() && s.status !== 'cancelled'),
     [slots, programId],
   )
   if (candidates.length === 0) {
     return <p className="py-6 text-center text-sm text-gray-400">선택 가능한 슬롯이 없습니다.</p>
   }
   return (
-    <div className="max-h-64 overflow-y-auto space-y-1">
-      {candidates.map((s) => {
-        const count = slotCounts[s.id] ?? 0
-        return (
-          <button
-            key={s.id}
-            type="button"
-            onClick={() => onPick(s)}
-            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-left text-xs flex justify-between"
-          >
-            <span>{s.date} {s.startTime}~{s.endTime} · {userNames[s.educatorId]?.name ?? '미지정'}</span>
-            <span className={count >= s.capacity ? 'text-red-500 font-bold' : 'text-gray-400'}>
-              {count}/{s.capacity} {s.status !== 'open' ? `· ${s.status}` : ''}
-            </span>
-          </button>
-        )
-      })}
+    <div className="space-y-2">
+      <WeeklySlotPicker
+        slots={candidates}
+        slotCounts={slotCounts}
+        myReservations={studentReservations}
+        onPick={(s) => { setChooser(null); onPick(s) }}
+        onPickMany={setChooser}
+        adminMode
+      />
+      {chooser && (
+        <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-2 space-y-1">
+          <p className="text-[11px] font-bold text-blue-600 px-1">
+            {chooser[0].date} {chooser[0].startTime} — 강사 선택
+          </p>
+          {chooser.map((s) => {
+            const count = slotCounts[s.id] ?? 0
+            return (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => { setChooser(null); onPick(s) }}
+                className="w-full rounded-lg bg-white border border-gray-200 px-3 py-2 text-left text-xs flex justify-between"
+              >
+                <span>{userNames[s.educatorId]?.name ?? '미지정'}{s.status !== 'open' ? ` · ${s.status}` : ''}</span>
+                <span className={count >= s.capacity ? 'text-red-500 font-bold' : 'text-gray-400'}>
+                  {count}/{s.capacity}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
@@ -236,6 +254,7 @@ export default function ReservationSearch() {
           config={config}
           slots={slots}
           slotCounts={slotCounts}
+          reservations={reservations}
           userNames={userNames}
           reserve={reserve}
           onClose={() => setProxyOpen(false)}
@@ -255,6 +274,7 @@ export default function ReservationSearch() {
           studentName={studentName(changeTarget.studentId)}
           slots={slots}
           slotCounts={slotCounts}
+          reservations={reservations}
           userNames={userNames}
           change={change}
           onClose={() => setChangeTarget(null)}
@@ -264,7 +284,7 @@ export default function ReservationSearch() {
   )
 }
 
-function ProxyReserveModal({ students, config, slots, slotCounts, userNames, reserve, onClose }) {
+function ProxyReserveModal({ students, config, slots, slotCounts, reservations, userNames, reserve, onClose }) {
   const [studentId, setStudentId] = useState('')
   const [programId, setProgramId] = useState(config.programs[0]?.id ?? '')
   const [override, setOverride] = useState(false)
@@ -315,7 +335,16 @@ function ProxyReserveModal({ students, config, slots, slotCounts, userNames, res
         <p className="text-xs text-red-500 bg-red-50 rounded-lg p-2">{bookingMessage(failCode, { program })}</p>
       )}
       {studentId
-        ? <SlotSelectList slots={slots} slotCounts={slotCounts} programId={programId} userNames={userNames} onPick={pick} />
+        ? (
+          <AdminSlotGrid
+            slots={slots}
+            slotCounts={slotCounts}
+            programId={programId}
+            studentReservations={reservations.filter((r) => r.studentId === studentId)}
+            userNames={userNames}
+            onPick={pick}
+          />
+        )
         : <p className="py-4 text-center text-xs text-gray-400">학생을 먼저 선택하세요.</p>}
     </ModalShell>
   )
@@ -365,7 +394,7 @@ function AdminCancelModal({ reservation, studentName, cancel, onClose }) {
   )
 }
 
-function AdminChangeModal({ reservation, studentName, slots, slotCounts, userNames, change, onClose }) {
+function AdminChangeModal({ reservation, studentName, slots, slotCounts, reservations, userNames, change, onClose }) {
   const [override, setOverride] = useState(false)
   const [reason, setReason] = useState('')
   const [failCode, setFailCode] = useState(null)
@@ -396,10 +425,11 @@ function AdminChangeModal({ reservation, studentName, slots, slotCounts, userNam
       </p>
       <OverrideFields override={override} setOverride={setOverride} reason={reason} setReason={setReason} reasonRequired />
       {failCode && <p className="text-xs text-red-500 bg-red-50 rounded-lg p-2">{bookingMessage(failCode)}</p>}
-      <SlotSelectList
+      <AdminSlotGrid
         slots={slots}
         slotCounts={slotCounts}
         programId={reservation.programId}
+        studentReservations={reservations.filter((r) => r.studentId === reservation.studentId)}
         userNames={userNames}
         onPick={pick}
       />
