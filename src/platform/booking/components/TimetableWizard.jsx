@@ -32,6 +32,7 @@ export default function TimetableWizard({ onClose }) {
     capacity: null,
     breakStart: '',
     breakEnd: '',
+    excludeDates: '', // 휴무일 (쉼표 구분, 명세 5.2)
   })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
@@ -45,6 +46,11 @@ export default function TimetableWizard({ onClose }) {
     ...f,
     weekdays: f.weekdays.includes(d) ? f.weekdays.filter((x) => x !== d) : [...f.weekdays, d],
   }))
+
+  const excludeDates = useMemo(
+    () => form.excludeDates.split(',').map((s) => s.trim()).filter((s) => /^\d{4}-\d{2}-\d{2}$/.test(s)),
+    [form.excludeDates],
+  )
 
   const preview = useMemo(() => {
     if (!program) return []
@@ -61,8 +67,9 @@ export default function TimetableWizard({ onClose }) {
       breaks: form.breakStart && form.breakEnd
         ? [{ start: form.breakStart, end: form.breakEnd }]
         : [],
+      excludeDates,
     })
-  }, [program, form])
+  }, [program, form, excludeDates])
 
   const previewDays = useMemo(() => new Set(preview.map((s) => s.date)).size, [preview])
 
@@ -82,6 +89,7 @@ export default function TimetableWizard({ onClose }) {
           slot_minutes: program.slotMinutes,
           educator_id: form.educatorId || null,
           subject_id: form.subjectId || null,
+          exclude_dates: excludeDates,
         },
         slots: preview,
       })
@@ -147,6 +155,16 @@ export default function TimetableWizard({ onClose }) {
         <label className="text-xs text-gray-500">
           슬롯 정원 (기본 {program?.defaultCapacity ?? 1})
           <input type="number" min="1" value={form.capacity ?? ''} onChange={set('capacity')} className={`${FIELD} w-full mt-1`} />
+        </label>
+        <label className="text-xs text-gray-500 col-span-2">
+          휴무일 (선택 — 쉼표로 구분)
+          <input
+            type="text"
+            value={form.excludeDates}
+            onChange={set('excludeDates')}
+            placeholder="예: 2026-07-30, 2026-08-14"
+            className={`${FIELD} w-full mt-1`}
+          />
         </label>
       </div>
 

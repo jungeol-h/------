@@ -6,6 +6,7 @@ import {
   addDaysStr, overlaps, isAdjacent, deadlineOk, isTargetGroup,
   inOpenPeriod, inBookingWindow, dailyCount, validateReserve,
   validateCancel, validateChange, slotStartDate, minutesToTime,
+  changeDeadlineLabel,
 } from './bookingRules.js'
 import { generateSlots } from './slotGeneration.js'
 
@@ -409,6 +410,12 @@ describe('헬퍼', () => {
     const d = slotStartDate({ date: '2026-08-04', startTime: '16:00' })
     expect(d.getHours()).toBe(16)
     expect(d.getDate()).toBe(4)
+  })
+  it('changeDeadlineLabel — 기한 표시 문자열 (명세 7.4)', () => {
+    expect(changeDeadlineLabel(CAREER, slot(CAREER, '2026-07-10', '16:00', '16:40')))
+      .toBe('2026-07-08 23:59까지')
+    expect(changeDeadlineLabel(SUBJECT, slot(SUBJECT, '2026-08-04', '16:00', '16:20')))
+      .toBe('2026-08-04 15:00까지')
   })
   it('dailyCount — moved·cancelled 예약은 세지 않는다', () => {
     const s1 = slot(COACHING, NEXT_DAY, '16:00', '16:20')

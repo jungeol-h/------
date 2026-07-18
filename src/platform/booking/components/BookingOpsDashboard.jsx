@@ -16,19 +16,27 @@ export default function BookingOpsDashboard() {
   const educatorName = (id) => userNames[id]?.name ?? (id ? id : '미지정')
   const programName = (id) => config.programs.find((p) => p.id === id)?.name ?? id
 
-  // ─── 당일 운영현황 ──────────────────────────────────────────
+  // ─── 당일 운영현황 (명세 15.1) ──────────────────────────────
   const todayStats = (() => {
     const todays = reservations.filter((r) => r.slot?.date === today)
     const confirmed = todays.filter((r) => r.status === 'confirmed')
     const perProgram = {}
+    const perEducator = {}
+    const countBySlot = {}
     for (const r of confirmed) {
       perProgram[r.programId] = (perProgram[r.programId] ?? 0) + 1
+      const eid = r.slot?.educatorId
+      if (eid) perEducator[eid] = (perEducator[eid] ?? 0) + 1
+      countBySlot[r.slotId] = (countBySlot[r.slotId] ?? 0) + 1
     }
     const openSlots = slots.filter((s) => s.date === today && s.status === 'open')
     const seatTotal = openSlots.reduce((sum, s) => sum + s.capacity, 0)
+    const fullSlots = openSlots.filter((s) => (countBySlot[s.id] ?? 0) >= s.capacity).length
     return {
       total: confirmed.length,
       perProgram,
+      perEducator,
+      fullSlots,
       cancelled: todays.filter((r) => r.status === 'cancelled').length,
       moved: todays.filter((r) => r.status === 'moved').length,
       absent: confirmed.filter((r) => r.attendanceStatus === 'absent').length,
@@ -45,13 +53,15 @@ export default function BookingOpsDashboard() {
   const recordIssues = (() => {
     const dueSoon = []
     const overdue = []
+    let unwritten = 0 // 상담기록 미작성 전체 건수 (명세 15.1)
     for (const r of reservations) {
       if (r.status !== 'confirmed' || r.attendanceStatus !== 'attended' || !r.slot) continue
       const state = recordState(r, records.find((x) => x.reservationId === r.id), r.slot.date)
+      if (state !== 'done' && state !== 'done_overdue' && state !== 'not_required') unwritten += 1
       if (state === 'due_soon' || state === 'draft') dueSoon.push(r)
       else if (state === 'overdue') overdue.push(r)
     }
-    return { dueSoon, overdue }
+    return { dueSoon, overdue, unwritten }
   })()
 
   // ─── 일정 이상 (명세 15.2) ──────────────────────────────────
@@ -141,10 +151,17 @@ export default function BookingOpsDashboard() {
     </section>
   )
 
+  // 경과일수 (명세 13.4)
+  const daysSince = (dateStr) => {
+    const [y, m, d] = dateStr.split('-').map(Number)
+    const [ty, tm, td] = today.split('-').map(Number)
+    return Math.round((new Date(ty, tm - 1, td) - new Date(y, m - 1, d)) / 86_400_000)
+  }
+
   const resLine = (r) => (
     <div key={r.id} className="bg-white rounded-lg shadow-sm px-3 py-2 text-xs text-gray-600 flex justify-between">
       <span>{r.slot.date} {r.slot.startTime} · {studentName(r.studentId)} · {programName(r.programId)}</span>
-      <span className="text-gray-400">{educatorName(r.slot.educatorId)}</span>
+      <span className="text-gray-400">{educatorName(r.slot.educatorId)} · {daysSince(r.slot.date)}일 경과</span>
     </div>
   )
 
@@ -152,19 +169,26 @@ export default function BookingOpsDashboard() {
     <div className="space-y-5">
       <section>
         <h4 className="text-xs font-bold text-gray-400 mb-2">오늘 운영현황 ({today})</h4>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-4 gap-2">
           {statCard('오늘 예약', todayStats.total)}
           {statCard('잔여 좌석', todayStats.remaining)}
+          {statCard('마감 슬롯', todayStats.fullSlots)}
           {statCard('취소', todayStats.cancelled, todayStats.cancelled > 0 ? 'text-orange-500' : 'text-gray-900')}
           {statCard('변경', todayStats.moved)}
           {statCard('미참석', todayStats.absent, todayStats.absent > 0 ? 'text-red-500' : 'text-gray-900')}
           {statCard('출결 미처리', pendingAttendance.length, pendingAttendance.length > 0 ? 'text-red-500' : 'text-gray-900')}
+          {statCard('기록 미작성', recordIssues.unwritten, recordIssues.unwritten > 0 ? 'text-orange-500' : 'text-gray-900')}
         </div>
-        {Object.keys(todayStats.perProgram).length > 0 && (
+        {(Object.keys(todayStats.perProgram).length > 0 || Object.keys(todayStats.perEducator).length > 0) && (
           <div className="mt-2 flex gap-2 flex-wrap">
             {Object.entries(todayStats.perProgram).map(([pid, n]) => (
               <span key={pid} className="text-[11px] font-bold px-2 py-1 rounded-full bg-blue-50 text-blue-600">
                 {programName(pid)} {n}건
+              </span>
+            ))}
+            {Object.entries(todayStats.perEducator).map(([eid, n]) => (
+              <span key={eid} className="text-[11px] font-bold px-2 py-1 rounded-full bg-emerald-50 text-emerald-600">
+                {educatorName(eid)} {n}건
               </span>
             ))}
           </div>

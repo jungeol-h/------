@@ -199,7 +199,7 @@ CREATE TABLE IF NOT EXISTS booking_notifications (
   recipient_id   TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   type           TEXT NOT NULL,
     -- reserved | changed | cancelled | slot_changed | group_assigned
-    -- attendance_pending | attendance_overdue | record_due | record_overdue
+    -- attendance_pending | attendance_overdue | record_due | record_overdue | today_schedule
   reservation_id TEXT,
   slot_id        TEXT,
   message        TEXT NOT NULL,
@@ -308,10 +308,13 @@ END $$;
 
 -- 예약 검증 본체 — reserve / change / assign_group 이 공유.
 -- 호출측이 먼저 학생 advisory lock + 슬롯 FOR UPDATE를 잡아야 한다.
+-- p_is_staff: 강사·관리자 경유(그룹 편성·대리 예약)는 접수기간·접수창을 적용하지
+--   않는다 (명세 6.2·11 — 학생·학부모의 온라인 접수에만 해당하는 규칙).
 -- 반환: 'OK' 또는 실패 코드 (bookingMessages.js 안내문 키와 1:1).
 CREATE OR REPLACE FUNCTION _booking_validate(
   p_slot booking_slots, p_program booking_programs,
-  p_student_id TEXT, p_exclude_id TEXT DEFAULT NULL
+  p_student_id TEXT, p_exclude_id TEXT DEFAULT NULL,
+  p_is_staff BOOLEAN DEFAULT FALSE
 ) RETURNS TEXT LANGUAGE plpgsql SECURITY DEFINER AS $$
 DECLARE
   kst_now      TIMESTAMP := now() AT TIME ZONE 'Asia/Seoul';
@@ -336,7 +339,9 @@ BEGIN
     END IF;
   END IF;
 
-  IF p_program.requires_open_period THEN
+  IF p_is_staff THEN
+    NULL;  -- 강사·관리자: 접수기간·당일 접수창 미적용
+  ELSIF p_program.requires_open_period THEN
     -- 사전예약형: 접수기간 안이고 상담일이 기간 범위여야 신규 예약 가능 (명세 6.2)
     IF NOT EXISTS (
       SELECT 1 FROM booking_open_periods op
@@ -492,7 +497,8 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'code', 'SLOT_NOT_OPEN');
   END IF;
 
-  v_code := _booking_validate(slot, prog, p_student_id, NULL);
+  v_code := _booking_validate(slot, prog, p_student_id, NULL,
+                              p_actor_role NOT IN ('student', 'parent'));
   IF v_code = 'ALREADY_BOOKED' OR (NOT p_override AND v_code <> 'OK') THEN
     RETURN jsonb_build_object('ok', false, 'code', v_code);
   END IF;
@@ -665,7 +671,8 @@ BEGIN
   END IF;
 
   -- 새 슬롯 검증 — 기존 예약은 겹침·횟수·정원 count에서 제외(p_exclude)
-  v_code := _booking_validate(new_slot, new_prog, res.student_id, res.id);
+  v_code := _booking_validate(new_slot, new_prog, res.student_id, res.id,
+                              p_actor_role NOT IN ('student', 'parent'));
   IF v_code = 'ALREADY_BOOKED' OR (NOT p_override AND v_code <> 'OK') THEN
     RETURN jsonb_build_object('ok', false, 'code', v_code);
   END IF;
@@ -762,7 +769,8 @@ BEGIN
   END IF;
 
   FOREACH v_sid IN ARRAY v_sorted LOOP
-    v_code := _booking_validate(slot, prog, v_sid, NULL);
+    -- 강사 편성은 접수기간·접수창 미적용 (겹침·횟수·연속·정원은 검증)
+    v_code := _booking_validate(slot, prog, v_sid, NULL, TRUE);
     IF v_code = 'OK' OR (p_override AND v_code <> 'ALREADY_BOOKED') THEN
       v_id := 'bkr-' || gen_random_uuid();
       -- is_override는 reserve/change와 동일하게 p_override 그대로 저장 —
@@ -1098,6 +1106,18 @@ BEGIN
         END LOOP;
       END IF;
     END;
+  END LOOP;
+
+  -- 3) 강사 당일 상담 일정 알림 (명세 17.2) — 강사·날짜당 1회
+  FOR r IN
+    SELECT s.educator_id, count(*) AS cnt
+    FROM booking_reservations res
+    JOIN booking_slots s ON s.id = res.slot_id
+    WHERE res.status = 'confirmed' AND s.date = kst_date AND s.educator_id IS NOT NULL
+    GROUP BY s.educator_id
+  LOOP
+    PERFORM _booking_notify_once(r.educator_id, 'today_schedule', 'today-' || kst_date,
+      '오늘 예약된 상담이 ' || r.cnt || '건 있습니다. 타임테이블을 확인해 주세요.');
   END LOOP;
 END $$;
 

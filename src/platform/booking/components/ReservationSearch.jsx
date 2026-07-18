@@ -9,7 +9,7 @@ import { useBooking } from '../BookingContext.jsx'
 import { todayStr } from '../../utils/dateUtils.js'
 import { addDaysStr } from '../bookingRules.js'
 import { bookingMessage } from '../bookingMessages.js'
-import { reservationDisplayStatus } from '../bookingStatus.js'
+import { reservationDisplayStatus, ATTENDANCE_STATUS } from '../bookingStatus.js'
 import { isActiveStudent } from '../../data/studentStatus.js'
 
 const FIELD = 'h-10 px-3 rounded-lg border border-gray-200 text-sm'
@@ -77,9 +77,13 @@ export default function ReservationSearch() {
     from: addDaysStr(todayStr(), -7),
     to: addDaysStr(todayStr(), 30),
     programId: '',
+    educatorId: '',
+    subjectId: '',
     status: '',
+    attendance: '',
     query: '',
     overrideOnly: false,
+    overdueOnly: false,
   })
   const [proxyOpen, setProxyOpen] = useState(false)
   const [cancelTarget, setCancelTarget] = useState(null)
@@ -89,6 +93,11 @@ export default function ReservationSearch() {
   const studentName = (id) => userNames[id]?.name ?? data.students?.find((u) => u.id === id)?.name ?? id
   const programName = (id) => config.programs.find((p) => p.id === id)?.name ?? id
 
+  const educatorOptions = useMemo(
+    () => [...new Set(config.educators.map((e) => e.educatorId))],
+    [config.educators],
+  )
+
   const filtered = useMemo(
     () => reservations
       .filter((r) => {
@@ -96,8 +105,12 @@ export default function ReservationSearch() {
         if (filters.from && r.slot.date < filters.from) return false
         if (filters.to && r.slot.date > filters.to) return false
         if (filters.programId && r.programId !== filters.programId) return false
+        if (filters.educatorId && r.slot.educatorId !== filters.educatorId) return false
+        if (filters.subjectId && r.slot.subjectId !== filters.subjectId) return false
         if (filters.status && r.status !== filters.status) return false
+        if (filters.attendance && r.attendanceStatus !== filters.attendance) return false
         if (filters.overrideOnly && !r.isOverride) return false
+        if (filters.overdueOnly && !r.attendanceOverdue) return false
         if (filters.query && !studentName(r.studentId).includes(filters.query)) return false
         return true
       })
@@ -130,6 +143,20 @@ export default function ReservationSearch() {
           <option value="cancelled">취소</option>
           <option value="moved">변경완료</option>
         </select>
+        <select value={filters.educatorId} onChange={setF('educatorId')} className={FIELD}>
+          <option value="">전체 강사</option>
+          {educatorOptions.map((eid) => (
+            <option key={eid} value={eid}>{userNames[eid]?.name ?? eid}</option>
+          ))}
+        </select>
+        <select value={filters.subjectId} onChange={setF('subjectId')} className={FIELD}>
+          <option value="">전체 교과</option>
+          {config.subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+        </select>
+        <select value={filters.attendance} onChange={setF('attendance')} className={`${FIELD} col-span-2`}>
+          <option value="">전체 출결상태</option>
+          {Object.entries(ATTENDANCE_STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+        </select>
         <input
           type="text"
           value={filters.query}
@@ -137,13 +164,21 @@ export default function ReservationSearch() {
           placeholder="학생 이름 검색"
           className={`${FIELD} col-span-2`}
         />
-        <label className="flex items-center gap-2 text-xs text-gray-600 col-span-2">
+        <label className="flex items-center gap-2 text-xs text-gray-600">
           <input
             type="checkbox"
             checked={filters.overrideOnly}
             onChange={(e) => setFilters((f) => ({ ...f, overrideOnly: e.target.checked }))}
           />
-          예외 처리 건만 보기
+          예외 처리 건만
+        </label>
+        <label className="flex items-center gap-2 text-xs text-gray-600">
+          <input
+            type="checkbox"
+            checked={filters.overdueOnly}
+            onChange={(e) => setFilters((f) => ({ ...f, overdueOnly: e.target.checked }))}
+          />
+          출결 기한초과 건만
         </label>
       </div>
 

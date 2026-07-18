@@ -57,6 +57,15 @@ export function deadlineOk(program, slot, now = new Date()) {
   return now.getTime() < slotStartDate(slot).getTime() - program.changeDeadlineValue * 60_000
 }
 
+// 온라인 변경·취소 가능기한 표시 문자열 (명세 7.4 — 예약 확정·내 예약에 노출)
+export function changeDeadlineLabel(program, slot) {
+  if (program.changeDeadlineType === 'days_before') {
+    return `${addDaysStr(slot.date, -program.changeDeadlineValue)} 23:59까지`
+  }
+  const d = new Date(slotStartDate(slot).getTime() - program.changeDeadlineValue * 60_000)
+  return `${toDateStr(d)} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}까지`
+}
+
 // ─── 그룹 대상 (groupScope.js 규약: 무소속 = 전체) ─────────────
 export function isTargetGroup(studentGroups, program) {
   const target = program.targetGroupNames ?? []

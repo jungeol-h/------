@@ -10,7 +10,7 @@ import { RECORD_DEADLINE_DAYS } from '../bookingStatus.js'
 
 const FIELD = 'h-10 px-3 rounded-lg border border-gray-200 text-sm'
 
-export default function RecordFormModal({ reservation, record, studentName, programName, onClose }) {
+export default function RecordFormModal({ reservation, record, studentName, programName, groupMembers = [], onClose }) {
   const { saveRecord } = useBooking()
   const slotDate = reservation.slot?.date ?? reservation.createdAt?.slice(0, 10)
   const deadline = addDaysStr(slotDate, RECORD_DEADLINE_DAYS)
@@ -24,25 +24,33 @@ export default function RecordFormModal({ reservation, record, studentName, prog
     note: record?.note ?? '',
     nextAppointment: record?.nextAppointment ?? '',
   })
+  const [copyToGroup, setCopyToGroup] = useState(false) // 공통내용 전원 복사 (명세 11.5)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
+
+  const saveOne = (target, targetRecord, status) => saveRecord({
+    id: targetRecord?.id,
+    createdAt: targetRecord?.createdAt,
+    reservationId: target.id,
+    studentId: target.studentId,
+    programId: target.programId,
+    educatorId: target.slot?.educatorId ?? undefined,
+    date: target.slot?.date ?? slotDate,
+    status,
+    ...fields,
+  })
 
   const submit = async (status) => {
     if (busy) return
     setBusy(true)
     setError(null)
     try {
-      await saveRecord({
-        id: record?.id,
-        createdAt: record?.createdAt,
-        reservationId: reservation.id,
-        studentId: reservation.studentId,
-        programId: reservation.programId,
-        educatorId: reservation.slot?.educatorId ?? undefined,
-        date: slotDate,
-        status,
-        ...fields,
-      })
+      await saveOne(reservation, record, status)
+      if (copyToGroup) {
+        for (const m of groupMembers) {
+          await saveOne(m.reservation, m.record, status)
+        }
+      }
       onClose()
     } catch (e) {
       setError(e)
@@ -61,6 +69,21 @@ export default function RecordFormModal({ reservation, record, studentName, prog
       </div>
 
       <CounselingContentFields value={fields} onChange={setFields} fieldClass={FIELD} />
+
+      {groupMembers.length > 0 && (
+        <label className="flex items-start gap-2 text-sm text-gray-700 rounded-xl bg-purple-50 p-3">
+          <input
+            type="checkbox"
+            checked={copyToGroup}
+            onChange={(e) => setCopyToGroup(e.target.checked)}
+            className="mt-0.5"
+          />
+          <span>
+            같은 그룹 {groupMembers.length}명({groupMembers.map((m) => m.name).join(', ')})의
+            기록에도 동일 내용을 저장 — 저장 후 학생별로 특이사항을 덧붙일 수 있습니다.
+          </span>
+        </label>
+      )}
 
       {error && (
         <p className="text-xs text-red-500 bg-red-50 rounded-lg p-2">저장에 실패했습니다. 다시 시도해 주세요.</p>

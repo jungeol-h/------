@@ -268,10 +268,32 @@ export default function EducatorBookingView({ isAdmin = false }) {
     [reservations, attDate],
   )
 
+  // 슬롯 단위 묶음 — 그룹상담은 일괄 출결 버튼 노출 (명세 11.5)
+  const attGroups = useMemo(() => {
+    const bySlot = new Map()
+    for (const r of attReservations) {
+      if (!bySlot.has(r.slotId)) bySlot.set(r.slotId, [])
+      bySlot.get(r.slotId).push(r)
+    }
+    return [...bySlot.values()]
+  }, [attReservations])
+
   const markAttendance = async (r, status) => {
     setAttFail(null)
     const result = await setAttendance({ reservationId: r.id, status })
     if (!result?.ok) setAttFail(result?.code ?? 'ERROR')
+  }
+
+  // 일괄 출결 후 개별 수정 가능 (명세 11.5)
+  const markAllAttendance = async (group, status) => {
+    setAttFail(null)
+    for (const r of group) {
+      const result = await setAttendance({ reservationId: r.id, status })
+      if (!result?.ok) {
+        setAttFail(result?.code ?? 'ERROR')
+        return
+      }
+    }
   }
 
   const renderAttendance = () => (
@@ -297,36 +319,54 @@ export default function EducatorBookingView({ isAdmin = false }) {
           이 날짜의 출결 처리기한(다음 날 자정)이 지났습니다. 지금 입력하면 기한 초과 처리로 기록됩니다.
         </p>
       )}
-      {attReservations.map((r) => {
-        const display = reservationDisplayStatus(r, r.slot)
-        return (
-          <div key={r.id} className="bg-white rounded-xl shadow-sm p-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-bold text-gray-900">
-                {r.slot.startTime}~{r.slot.endTime} {studentName(r.studentId)}
-                <span className="ml-1.5 text-xs font-semibold text-gray-500">{programOf(r.programId)?.name}</span>
+      {attGroups.map((group) => (
+        <div key={group[0].slotId} className="space-y-2">
+          {group.length > 1 && (
+            <div className="flex items-center justify-between rounded-xl bg-purple-50 px-3 py-2">
+              <p className="text-xs font-bold text-purple-600">
+                그룹상담 {group[0].slot.startTime}~{group[0].slot.endTime} · {group.length}명
               </p>
-              <span className="text-[11px] font-bold text-gray-500">{display.label}{r.attendanceOverdue ? ' · 기한초과' : ''}</span>
+              <button
+                type="button"
+                onClick={() => markAllAttendance(group, 'attended')}
+                className="px-2.5 h-8 rounded-lg bg-purple-600 text-white text-[11px] font-bold"
+              >
+                전원 참석 처리
+              </button>
             </div>
-            <div className="flex gap-1 flex-wrap">
-              {ATTENDANCE_CHOICES.map((key) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => markAttendance(r, key)}
-                  className={`px-2 h-8 rounded-lg text-[11px] font-bold border ${
-                    r.attendanceStatus === key
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'bg-white text-gray-500 border-gray-200'
-                  }`}
-                >
-                  {ATTENDANCE_STATUS[key].label}
-                </button>
-              ))}
-            </div>
-          </div>
-        )
-      })}
+          )}
+          {group.map((r) => {
+            const display = reservationDisplayStatus(r, r.slot)
+            return (
+              <div key={r.id} className="bg-white rounded-xl shadow-sm p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-bold text-gray-900">
+                    {r.slot.startTime}~{r.slot.endTime} {studentName(r.studentId)}
+                    <span className="ml-1.5 text-xs font-semibold text-gray-500">{programOf(r.programId)?.name}</span>
+                  </p>
+                  <span className="text-[11px] font-bold text-gray-500">{display.label}{r.attendanceOverdue ? ' · 기한초과' : ''}</span>
+                </div>
+                <div className="flex gap-1 flex-wrap">
+                  {ATTENDANCE_CHOICES.map((key) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => markAttendance(r, key)}
+                      className={`px-2 h-8 rounded-lg text-[11px] font-bold border ${
+                        r.attendanceStatus === key
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-white text-gray-500 border-gray-200'
+                      }`}
+                    >
+                      {ATTENDANCE_STATUS[key].label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      ))}
       {attReservations.length === 0 && (
         <p className="py-10 text-center text-sm text-gray-400 bg-white rounded-2xl shadow-sm">이 날짜에 예약이 없습니다.</p>
       )}
@@ -471,6 +511,13 @@ export default function EducatorBookingView({ isAdmin = false }) {
           record={records.find((x) => x.reservationId === recordTarget.id)}
           studentName={studentName(recordTarget.studentId)}
           programName={programOf(recordTarget.programId)?.name ?? ''}
+          groupMembers={recordTargets
+            .filter((x) => x.slotId === recordTarget.slotId && x.id !== recordTarget.id)
+            .map((x) => ({
+              reservation: x,
+              record: records.find((rr) => rr.reservationId === x.id),
+              name: studentName(x.studentId),
+            }))}
           onClose={() => setRecordTarget(null)}
         />
       )}

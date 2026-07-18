@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react'
 import ModalShell from '../../components/common/ModalShell.jsx'
 import { todayStr } from '../../utils/dateUtils.js'
 import { useBooking } from '../BookingContext.jsx'
-import { deadlineOk } from '../bookingRules.js'
+import { deadlineOk, changeDeadlineLabel } from '../bookingRules.js'
 import { bookingMessage } from '../bookingMessages.js'
 import { reservationDisplayStatus, recordState, RECORD_STATE } from '../bookingStatus.js'
 
@@ -87,6 +87,8 @@ export default function MyReservationList({ reservations, programs, subjects, us
 
         {withActions && (
           canOnline ? (
+            <>
+            <p className="text-[11px] text-gray-400">온라인 변경·취소: {changeDeadlineLabel(program, r.slot)}</p>
             <div className="flex gap-2">
               <button
                 type="button"
@@ -103,6 +105,7 @@ export default function MyReservationList({ reservations, programs, subjects, us
                 예약 취소
               </button>
             </div>
+            </>
           ) : (
             <p className="text-[11px] text-orange-500 bg-orange-50 rounded-lg p-2">
               {bookingMessage('DEADLINE_PASSED', { program: programOf(r) })}

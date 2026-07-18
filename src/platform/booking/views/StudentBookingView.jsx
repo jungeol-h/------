@@ -7,7 +7,7 @@ import { CalendarPlus, ListChecks } from 'lucide-react'
 import ModalShell from '../../components/common/ModalShell.jsx'
 import { todayStr } from '../../utils/dateUtils.js'
 import { useBooking } from '../BookingContext.jsx'
-import { validateReserve, validateChange, deadlineOk, isTargetGroup } from '../bookingRules.js'
+import { validateReserve, validateChange, deadlineOk, isTargetGroup, changeDeadlineLabel } from '../bookingRules.js'
 import { bookingMessage, immediateLockWarning } from '../bookingMessages.js'
 import BookingNotificationsBell from '../components/BookingNotificationsBell.jsx'
 import MyReservationList from '../components/MyReservationList.jsx'
@@ -27,10 +27,13 @@ export default function StudentBookingView({ student }) {
   const [tab, setTab] = useState('book') // 'book' | 'mine'
   const [programId, setProgramId] = useState(null)
   const [subjectId, setSubjectId] = useState(null)
+  const [educatorId, setEducatorId] = useState(null) // 담당 강사 필터 (명세 21.1)
   const [date, setDate] = useState(null)
   const [confirmSlot, setConfirmSlot] = useState(null)
+  const [withNext, setWithNext] = useState(false) // 연속 2블록 예약 (명세 4.2)
   const [changing, setChanging] = useState(null) // 변경 중인 기존 예약
   const [failCode, setFailCode] = useState(null)
+  const [notice, setNotice] = useState(null)
   const [busy, setBusy] = useState(false)
 
   const myReservations = useMemo(
@@ -62,19 +65,43 @@ export default function StudentBookingView({ student }) {
     )
   }, [slots, program, subjectId])
 
-  const dates = useMemo(
-    () => [...new Set(programSlots.map((s) => s.date))].sort(),
+  // 담당 강사 선택지 (명세 21.1) — 선택된 프로그램의 공개 슬롯에 등장하는 강사
+  const educatorOptions = useMemo(
+    () => [...new Set(programSlots.map((s) => s.educatorId).filter(Boolean))],
     [programSlots],
+  )
+  const filteredSlots = useMemo(
+    () => (educatorId ? programSlots.filter((s) => s.educatorId === educatorId) : programSlots),
+    [programSlots, educatorId],
+  )
+
+  const dates = useMemo(
+    () => [...new Set(filteredSlots.map((s) => s.date))].sort(),
+    [filteredSlots],
   )
   const activeDate = date && dates.includes(date) ? date : dates[0] ?? null
   const daySlots = useMemo(
-    () => programSlots
+    () => filteredSlots
       .filter((s) => s.date === activeDate)
       .sort((a, b) => (a.startTime === b.startTime
         ? String(a.educatorId).localeCompare(String(b.educatorId))
         : a.startTime < b.startTime ? -1 : 1)),
-    [programSlots, activeDate],
+    [filteredSlots, activeDate],
   )
+
+  // 연속 2블록 후보 — 같은 강사·교과의 바로 다음 블록 (연속 허용 프로그램만, 명세 4.2)
+  const nextSlot = useMemo(() => {
+    if (!confirmSlot || !program?.allowConsecutive || program.dailyLimit < 2 || changing) return null
+    const cand = programSlots.find((s) =>
+      s.date === confirmSlot.date &&
+      s.startTime === confirmSlot.endTime &&
+      (s.educatorId ?? null) === (confirmSlot.educatorId ?? null) &&
+      (s.subjectId ?? null) === (confirmSlot.subjectId ?? null))
+    if (!cand) return null
+    if ((slotCounts[cand.id] ?? 0) >= cand.capacity) return null
+    if (myReservations.some((r) => r.slotId === cand.id && r.status === 'confirmed')) return null
+    return cand
+  }, [confirmSlot, program, changing, programSlots, slotCounts, myReservations])
 
   const ruleCtx = (slot) => ({
     program, slot,
@@ -93,7 +120,19 @@ export default function StudentBookingView({ student }) {
         ? await change({ reservationId: changing.id, newSlotId: confirmSlot.id })
         : await reserve({ slotId: confirmSlot.id, studentId: student.id })
       if (result?.ok) {
+        // 연속 2블록 선택 시 다음 블록도 이어서 예약 (실패해도 첫 블록은 유지 — 안내만)
+        if (withNext && nextSlot) {
+          const second = await reserve({ slotId: nextSlot.id, studentId: student.id })
+          if (!second?.ok) {
+            setNotice(`첫 블록만 예약되었습니다 — 연속 블록(${nextSlot.startTime}~${nextSlot.endTime})은 예약하지 못했습니다: ${bookingMessage(second?.code, { program })}`)
+          } else {
+            setNotice(null)
+          }
+        } else {
+          setNotice(null)
+        }
         setConfirmSlot(null)
+        setWithNext(false)
         setChanging(null)
         setFailCode(null)
         setTab('mine')
@@ -116,6 +155,8 @@ export default function StudentBookingView({ student }) {
 
   const pickSlot = (slot) => {
     setFailCode(null)
+    setNotice(null)
+    setWithNext(false)
     const check = changing
       ? validateChange({
           oldProgram: config.programs.find((p) => p.id === changing.programId) ?? program,
@@ -164,6 +205,13 @@ export default function StudentBookingView({ student }) {
         </div>
       )}
 
+      {notice && (
+        <div className="rounded-xl bg-orange-50 border border-orange-100 p-3 text-xs text-orange-600 flex items-start justify-between gap-2">
+          <span>{notice}</span>
+          <button type="button" className="font-bold flex-shrink-0" onClick={() => setNotice(null)}>닫기</button>
+        </div>
+      )}
+
       {tab === 'mine' ? (
         <MyReservationList
           reservations={myReservations}
@@ -184,7 +232,7 @@ export default function StudentBookingView({ student }) {
                 <button
                   key={p.id}
                   type="button"
-                  onClick={() => { setProgramId(p.id); setSubjectId(null); setDate(null); setFailCode(null) }}
+                  onClick={() => { setProgramId(p.id); setSubjectId(null); setEducatorId(null); setDate(null); setFailCode(null) }}
                   className={`px-3 h-9 rounded-full text-xs font-bold border ${
                     program?.id === p.id
                       ? 'bg-blue-600 text-white border-blue-600'
@@ -209,6 +257,36 @@ export default function StudentBookingView({ student }) {
                     }`}
                   >
                     {s.name}
+                  </button>
+                ))}
+              </div>
+            )}
+            {/* 담당 강사 선택 (명세 21.1) — 강사가 2명 이상일 때만 노출 */}
+            {program && educatorOptions.length > 1 && (
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => { setEducatorId(null); setDate(null) }}
+                  className={`px-3 h-8 rounded-full text-xs font-bold border ${
+                    educatorId === null
+                      ? 'bg-gray-700 text-white border-gray-700'
+                      : 'bg-white text-gray-600 border-gray-200'
+                  }`}
+                >
+                  전체 강사
+                </button>
+                {educatorOptions.map((eid) => (
+                  <button
+                    key={eid}
+                    type="button"
+                    onClick={() => { setEducatorId(educatorId === eid ? null : eid); setDate(null) }}
+                    className={`px-3 h-8 rounded-full text-xs font-bold border ${
+                      educatorId === eid
+                        ? 'bg-gray-700 text-white border-gray-700'
+                        : 'bg-white text-gray-600 border-gray-200'
+                    }`}
+                  >
+                    {educatorName(eid) || eid}
                   </button>
                 ))}
               </div>
@@ -274,6 +352,9 @@ export default function StudentBookingView({ student }) {
                         {slot.subjectId && (
                           <span className="ml-1.5 text-[11px] font-semibold text-emerald-600">{subjectName(slot.subjectId)}</span>
                         )}
+                        {slot.capacity > 1 && (
+                          <span className="ml-1.5 text-[10px] font-bold text-purple-500">그룹 {slot.capacity}인</span>
+                        )}
                       </p>
                       <p className="text-xs text-gray-500 mt-0.5">
                         {educatorName(slot.educatorId) || '담당 미정'}
@@ -301,10 +382,22 @@ export default function StudentBookingView({ student }) {
             <p className="font-bold text-gray-900">{program.name}
               {confirmSlot.subjectId && ` · ${subjectName(confirmSlot.subjectId)}`}
             </p>
-            <p className="text-gray-600">{confirmSlot.date} {confirmSlot.startTime} ~ {confirmSlot.endTime}</p>
+            <p className="text-gray-600">
+              {confirmSlot.date} {confirmSlot.startTime} ~ {withNext && nextSlot ? nextSlot.endTime : confirmSlot.endTime}
+              {withNext && nextSlot && <span className="ml-1 text-xs text-blue-600">(연속 2블록)</span>}
+            </p>
             <p className="text-gray-600">담당: {educatorName(confirmSlot.educatorId) || '미정'}</p>
             <p className="text-gray-600">학생: {student.name}</p>
+            {deadlineOk(program, confirmSlot) && (
+              <p className="text-gray-500 text-xs">온라인 변경·취소: {changeDeadlineLabel(program, confirmSlot)}</p>
+            )}
           </div>
+          {nextSlot && (
+            <label className="flex items-center gap-2 text-sm text-gray-700 rounded-xl bg-blue-50 p-3">
+              <input type="checkbox" checked={withNext} onChange={(e) => setWithNext(e.target.checked)} />
+              다음 블록까지 연속 예약 ({confirmSlot.startTime}~{nextSlot.endTime}, 총 {program.slotMinutes * 2}분)
+            </label>
+          )}
           {!deadlineOk(program, confirmSlot) && (
             <div className="rounded-xl bg-orange-50 border border-orange-100 p-3 text-xs text-orange-600">
               {immediateLockWarning(program)}
