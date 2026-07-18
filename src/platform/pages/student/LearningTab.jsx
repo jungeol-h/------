@@ -766,6 +766,8 @@ function StudyPlanCard({
   running,
   elapsed,
   saved,
+  saving,
+  saveError,
   canSave,
   onSelect,
   onToggleTimer,
@@ -874,10 +876,11 @@ function StudyPlanCard({
               <button
                 type="button"
                 onClick={onSave}
-                className="flex-1 h-11 rounded-lg bg-emerald-600 text-white text-sm font-bold active:scale-95 flex items-center justify-center gap-1.5"
+                disabled={saving}
+                className="flex-1 h-11 rounded-lg bg-emerald-600 text-white text-sm font-bold active:scale-95 flex items-center justify-center gap-1.5 disabled:bg-emerald-400"
               >
                 <Save size={15} />
-                {saved ? '저장됨' : '누적 저장'}
+                {saving ? '저장 중…' : saved ? '저장됨' : '누적 저장'}
               </button>
             )}
             {elapsed > 0 && (
@@ -891,6 +894,11 @@ function StudyPlanCard({
               </button>
             )}
           </div>
+          {saveError && (
+            <p className="text-[11px] font-bold text-red-500">
+              저장에 실패했어요. 기록된 시간은 남아 있어요 — 인터넷 연결을 확인하고 누적 저장을 다시 눌러주세요.
+            </p>
+          )}
         </div>
       )}
     </div>
@@ -994,17 +1002,21 @@ function loadTimerState() {
 }
 
 function StudyTab({ records, todayPlans }) {
-  const { updateLearningRecord, completeLearningPlan } = useData()
+  const { updateLearningRecord, completeLearningPlan, data, dataReady } = useData()
   const [running, setRunning] = useState(false)
   const [elapsed, setElapsed] = useState(0)
   const [selectedPlanId, setSelectedPlanId] = useState(null)
   const [saved, setSaved] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState(false)
   const [completionWarning, setCompletionWarning] = useState(null)
   const intervalRef = useRef(null)
   // timestamp 기반 측정값. running 동안 startedAt이 set되고, 일시정지하면
   // 경과분이 accumulatedMs로 합산된 뒤 startedAt이 null이 된다.
   const timerRef = useRef({ accumulatedMs: 0, startedAt: null })
   const restoredRef = useRef(false)
+  // localStorage 타이머 복구가 아직 결론(반영/폐기)나지 않은 동안 true.
+  const restorePendingRef = useRef(true)
 
   // 마운트 시 localStorage에서 진행 중이던 타이머 복구 (새로고침/탭 닫힘 대응).
   if (!restoredRef.current) {
@@ -1042,22 +1054,28 @@ function StudyTab({ records, todayPlans }) {
     }
   }
 
-  // 복구된 selectedPlanId가 오늘 계획에 아직 존재하면 한 번 반영.
+  // 복구된 selectedPlanId가 오늘 계획에 존재하면 반영. 계획 목록이 아직 로드 전이거나
+  // fetch가 실패한 상태(오프라인 재접속 등)에서는 판단을 보류한다 — 빈 목록만 보고
+  // 지워버리면 진행 중이던 학습시간이 영구 유실된다(오프라인 누적저장 실패 → 새로고침 시나리오).
   useEffect(() => {
-    const saved = loadTimerState()
-    if (!saved || !saved.selectedPlanId) return
-    const planExists = todayPlans.some((plan) => plan.id === saved.selectedPlanId)
-    if (planExists) {
-      setSelectedPlanId(saved.selectedPlanId)
-      setRunning(Boolean(saved.running))
+    if (!restorePendingRef.current) return
+    const savedState = loadTimerState()
+    if (!savedState || !savedState.selectedPlanId) {
+      restorePendingRef.current = false
+      return
+    }
+    if (todayPlans.some((plan) => plan.id === savedState.selectedPlanId)) {
+      setSelectedPlanId(savedState.selectedPlanId)
+      setRunning(Boolean(savedState.running))
       setElapsed(computeElapsedSeconds(timerRef.current))
-    } else {
+      restorePendingRef.current = false
+    } else if (dataReady && !data._fetchErrors?.length) {
+      // 로드가 정상 완료됐는데도 계획이 없음 → 삭제됐거나 날짜가 지난 것. 이때만 폐기.
       timerRef.current = { accumulatedMs: 0, startedAt: null }
       clearTimerState()
+      restorePendingRef.current = false
     }
-    // 마운트 시 1회만 복구.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [todayPlans, dataReady, data._fetchErrors])
 
   // running 동안 1초마다 timestamp diff로 elapsed를 재계산 (값을 직접 +1 하지 않음).
   // 화면 꺼짐으로 인터벌이 throttle돼도 다음 tick이 정확한 절대값을 찍어 drift가 없다.
@@ -1094,11 +1112,13 @@ function StudyTab({ records, todayPlans }) {
 
   const selectTimerPlan = (planId) => {
     if (running) return
+    restorePendingRef.current = false
     const nextPlanId = selectedPlanId === planId ? null : planId
     setSelectedPlanId(nextPlanId)
     timerRef.current = { accumulatedMs: 0, startedAt: null }
     setElapsed(0)
     setSaved(false)
+    setSaveError(false)
     if (nextPlanId) {
       persistTimerState({ selectedPlanId: nextPlanId, running: false })
     } else {
@@ -1125,9 +1145,12 @@ function StudyTab({ records, todayPlans }) {
   }
 
   const handleTimerSave = async () => {
+    if (saving) return
     const totalSeconds = computeElapsedSeconds(timerRef.current)
     if (totalSeconds < 10 || !selectedPlan) return
     const minutes = Math.max(1, Math.round(totalSeconds / 60))
+    setSaving(true)
+    setSaveError(false)
     try {
       await updateLearningRecord(selectedPlan.id, {
         actualDuration: actualMinutes(selectedPlan) + minutes,
@@ -1137,7 +1160,12 @@ function StudyTab({ records, todayPlans }) {
       setSaved(true)
       setTimeout(() => setSaved(false), 1800)
     } catch {
-      // 저장 실패는 전역 Toast가 표면화한다.
+      // 저장 실패(오프라인 등): 타이머·localStorage는 그대로 보존된다.
+      // 전역 Toast에 더해 카드 안에도 안내를 띄운다 — "눌러도 반응 없음"으로 보이면
+      // 학생이 새로고침해 버려서 유실 경로로 이어졌던 문제.
+      setSaveError(true)
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -1206,6 +1234,8 @@ function StudyTab({ records, todayPlans }) {
                 running={running && plan.id === selectedPlanId}
                 elapsed={plan.id === selectedPlanId ? elapsed : 0}
                 saved={saved && plan.id === selectedPlanId}
+                saving={saving && plan.id === selectedPlanId}
+                saveError={saveError && plan.id === selectedPlanId}
                 canSave={elapsed >= 10 && plan.id === selectedPlanId}
                 onSelect={selectTimerPlan}
                 onToggleTimer={toggleTimer}
@@ -1213,6 +1243,7 @@ function StudyTab({ records, todayPlans }) {
                 onReset={() => {
                   resetTimer()
                   clearTimerState()
+                  setSaveError(false)
                 }}
                 onComplete={requestComplete}
                 onChangeLocation={changeLocation}
