@@ -44,12 +44,17 @@ export default function ViewerDashboard() {
       <Route path="student/:studentId" element={
         <StudentDetailWrapper tabs={TABS} back="/viewer/students" />
       } />
+      {/* 학생 탭 — 목록이 min-w-[760px]라 데스크톱에선 wide 풀폭으로 (관리자 학생 탭과 동일) */}
+      <Route path="students" element={
+        <PageLayout title="열람자" tabs={TABS} wide>
+          <UserManagementTab readOnly />
+        </PageLayout>
+      } />
       <Route path="*" element={
         <PageLayout title="열람자" tabs={TABS}>
           <Routes>
             <Route index element={<Navigate to="stats" replace />} />
             <Route path="stats" element={<StatisticsTab />} />
-            <Route path="students" element={<UserManagementTab readOnly />} />
             <Route path="counseling" element={<WorkRecordsTab />} />
           </Routes>
         </PageLayout>

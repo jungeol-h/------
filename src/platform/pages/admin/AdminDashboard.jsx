@@ -63,6 +63,12 @@ export default function AdminDashboard() {
           <QuizMonitorTab />
         </PageLayout>
       } />
+      {/* 학생 탭 — 목록이 min-w-[760px]라 데스크톱에선 wide 풀폭으로 */}
+      <Route path="users" element={
+        <PageLayout title="관리자" tabs={TABS} wide>
+          <UserManagementTab />
+        </PageLayout>
+      } />
       <Route path="*" element={
         <PageLayout title="관리자" tabs={TABS}>
           <Routes>
@@ -71,7 +77,6 @@ export default function AdminDashboard() {
             <Route path="attendance" element={<AttendanceTab />} />
             <Route path="statistics" element={<Navigate to="/admin/home" replace />} />
             <Route path="plans" element={<Navigate to="/admin/counseling?menu=plans" replace />} />
-            <Route path="users" element={<UserManagementTab />} />
             <Route path="booking" element={<AdminBookingTab />} />
             <Route path="counseling" element={<WorkRecordsTab />} />
             <Route path="external" element={<ExternalCounselingTab />} />
