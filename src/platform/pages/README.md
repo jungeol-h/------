@@ -5,8 +5,8 @@
 
 | 경로 | 역할 | 대시보드 | 탭 구성 |
 |---|---|---|---|
-| `/student/*` | student | `student/StudentDashboard` | 홈·학습·과제·예약·마인드·진단(학습진단/진로설계/확인평가) |
-| `/manager/*` | manager | `manager/ManagerDashboard` | 홈·출결·학생·업무기록·예약·확인평가 (+ `/manager/kiosk` 등하원 키오스크) |
+| `/student/*` | student | `student/StudentDashboard` | 홈·학습·과제·예약(상담 예약/센터 이용시간 세그먼트)·마인드·진단(학습진단/진로설계/확인평가) |
+| `/manager/*` | manager | `manager/ManagerDashboard` | 홈·출결·학생·업무기록·예약·확인평가 (+ `/manager/kiosk` 등하원 키오스크, 출결 탭에 센터 이용시간·시간대별 명단 섹션 — `centerHours/`) |
 | `/admin/*` | admin | `admin/AdminDashboard` | 홈·출결·학생·예약·업무기록·확인평가·외부상담 (+ `/admin/kiosk` — 출결 탭·키오스크는 `manager/`의 화면 재사용, 전체 학생 대상) |
 | `/instructor/*` `/consultant/*` | instructor·consultant | `educator/EducatorDashboard` 공용 | 학생·업무기록·예약관리·과제 + 강사만 확인평가, 컨설턴트만 외부상담 |
 | `/viewer/*` | viewer(공무원·열람) | `viewer/ViewerDashboard` | 통계·학생·업무기록 (열람 전용 + 출력 버튼) |

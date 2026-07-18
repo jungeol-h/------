@@ -6,11 +6,13 @@ import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Siren, X, CheckCheck, MonitorSmartphone, CalendarClock, Pencil, Copy, FileSpreadsheet,
+  CalendarRange, ChevronDown, ChevronUp,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
 import { supabase } from '../../lib/supabase.js'
 import AttendanceExcelModal from '../../components/attendance/AttendanceExcelModal.jsx'
+import CenterHoursSection from '../../centerHours/CenterHoursSection.jsx'
 import {
   getTodayAttendanceBoard,
   getUnresolvedAttendanceNotifications,
@@ -85,6 +87,7 @@ export default function AttendanceTab() {
   const [editModal, setEditModal] = useState(null) // { student, record }
   const [scheduleStudentId, setScheduleStudentId] = useState('')
   const [excelOpen, setExcelOpen] = useState(false)
+  const [centerHoursOpen, setCenterHoursOpen] = useState(false) // 펼칠 때만 fetch
 
   return (
     <div className="py-6 space-y-6">
@@ -134,6 +137,33 @@ export default function AttendanceTab() {
       </button>
 
       <AttendanceExcelModal open={excelOpen} onClose={() => setExcelOpen(false)} />
+
+      {/* 센터 이용시간 — 시간대별 등록 명단·출석부 엑셀·등원시간 반영 */}
+      <div>
+        <button
+          onClick={() => setCenterHoursOpen((v) => !v)}
+          className="w-full bg-white rounded-2xl shadow-sm p-4 flex items-center gap-2 active:scale-[0.99] transition-all"
+        >
+          <CalendarRange size={16} className="text-indigo-400" />
+          <span className="text-sm font-bold text-gray-700 flex-1 text-left">
+            센터 이용시간 · 시간대별 명단
+          </span>
+          {centerHoursOpen ? (
+            <ChevronUp size={16} className="text-gray-300" />
+          ) : (
+            <ChevronDown size={16} className="text-gray-300" />
+          )}
+        </button>
+        {centerHoursOpen && (
+          <div className="mt-3">
+            <CenterHoursSection
+              role={currentUser?.role}
+              allStudents={data.students}
+              editableStudents={myStudents}
+            />
+          </div>
+        )}
+      </div>
 
       {/* 오늘 현황판 */}
       <div>

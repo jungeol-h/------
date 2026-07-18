@@ -47,6 +47,7 @@ DB 스키마 변경은 **Supabase Studio SQL Editor에서 수동 실행**한다 
 | `add-user-groups.sql` | users.group_names(소속 그룹, 복수) + 관리보고·재정·긴급보고 group_name + 역할별 백필 (add-2607-work-records 선행 필요) | 적용됨 |
 | `add-study-location.sql` | learning_records.study_location (공부 장소: 센터·집·스카·학원·학교) | 적용됨 |
 | `add-booking-system.sql` | 컨설팅·코칭 예약 시스템: booking_* 테이블 10종(프로그램·교과·강사배정·오픈기간·배치·슬롯·예약·상담기록·알림·감사이력) + SECURITY DEFINER RPC 9종(예약/취소/변경/그룹배정/출결/슬롯편집/일괄상태/다이제스트) + 프로그램 3종 시드 + pg_cron `booking-daily-digest`(KST 00:05) | **적용됨 (2026-07-18, Studio)** |
+| `add-center-hours.sql` | 센터 이용시간 등록: center_hour_registrations(학생×요일×1시간 단위) + admin_config('center_hours') 설정 + RPC 2종(center_save_hours 정원·잠금 검증 저장 / center_sync_attendance_schedules 등·하원 시간표 일괄 반영) | 미적용 |
 
 ## 시드·일회성 유틸 (재실행 금지 또는 불필요)
 
@@ -61,3 +62,4 @@ DB 스키마 변경은 **Supabase Studio SQL Editor에서 수동 실행**한다 
 | `delete-dummy-managers.sql` | 더미 매니저 m01~m04 삭제 + 실상담 1건 a-hwang 이관 — **적용됨 (2026-07-17, REST)**. 이후 실매니저 생성 시 assignments 재배정 필요 |
 | `seed-parents-from-students.sql` | 학부모 계정 일괄 생성 (학생 parent_password 기반, 전화번호 dedupe — 형제 1계정 다자녀 링크. 로그인 = 학부모 전화번호/전화번호) — **적용됨 (2026-07-18, REST, 학부모 135·링크 144)**. 멱등이라 신규 학생 반영 시 재실행 가능 |
 | `cleanup-booking-test-data.sql` | 예약 시스템 E2E 테스트 산출물 삭제 (기록·예약·알림·슬롯·배치·감사이력 전체 — 프로그램·교과·강사배정·오픈기간 설정은 유지). **⚠️ 실오픈 후 재실행 금지** |
+| `seed-center-hours.sql` | 센터 이용시간 초기 시드 — NAVI 4기 신청서(7.17) 블록 선택을 1시간 단위로 전개 (60명·639행, 생성 규칙·이름 정규화는 파일 헤더 참조). 이름 기준 매칭, 동명이인·미매칭은 말미 리포트 쿼리로 표시. **⚠️ 학생 등록 오픈 후 재실행 금지** (지운 시간이 되살아남) — 미적용 |
