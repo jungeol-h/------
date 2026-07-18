@@ -28,7 +28,8 @@ const MENUS = [
 ]
 
 const FIELD = 'h-10 px-3 rounded-lg border border-gray-200 text-sm'
-const EDUCATOR_ROLES = ['manager', 'instructor', 'consultant']
+// admin도 강사로 배정될 수 있다 (예: 황광희 원장이 직접 상담 진행)
+const EDUCATOR_ROLES = ['manager', 'instructor', 'consultant', 'admin']
 
 // ─── 타임테이블 메뉴: 슬롯 목록 + 일괄 상태 전환 ────────────────
 function TimetableMenu() {
