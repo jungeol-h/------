@@ -12,8 +12,10 @@
 --    컬럼 없음 — 마감은 등록 행 count 파생. 저장 전 전역 advisory lock으로
 --    직렬화한다 (수십 명 규모라 전역 락으로 충분).
 --  - 설정(등록 열림/정원)은 admin_config('center_hours') jsonb 한 행.
---  - 등·하원 시간표(attendance_schedules) 동기화는 별도 RPC — 관리자가
---    명시적으로 실행할 때만 반영한다 (라이브 키오스크 판정에 쓰이므로).
+--  - 등·하원 시간표(attendance_schedules)는 이용시간의 파생물이다(첫 단위
+--    시작=등원, 마지막 단위 끝=하원). center_save_hours가 저장 시 그 학생의
+--    운영요일 시간표를 자동 갱신하고(v2, 2026-07-18), 일괄 동기화 RPC는
+--    시드 직후 등 보정용으로만 남는다. 별도 시간표 편집 UI는 없다.
 -- ================================================================
 
 -- ----------------------------------------------------------------
@@ -93,12 +95,24 @@ BEGIN
          (x->>'day')::int, (x->>'start')::time, (x->>'end')::time
   FROM jsonb_array_elements(p_entries) x;
 
+  -- 등·하원 시간표 자동 파생 (v2) — 운영요일(일0·월1·화2·금5·토6)만 교체.
+  -- 키오스크 지각·결석 판정 기준이 저장 즉시 따라온다. 비운영 요일 행은 보존.
+  DELETE FROM attendance_schedules
+  WHERE student_id = p_student_id AND day_of_week IN (0, 1, 2, 5, 6);
+  INSERT INTO attendance_schedules (id, student_id, day_of_week, arrival_time, departure_time)
+  SELECT 'sch-' || gen_random_uuid(), student_id, day_of_week,
+         min(start_time), max(end_time)
+  FROM center_hour_registrations
+  WHERE student_id = p_student_id
+  GROUP BY student_id, day_of_week;
+
   RETURN jsonb_build_object('ok', true);
 END $$;
 
 -- ----------------------------------------------------------------
 -- 4. RPC — 등·하원 시간표(attendance_schedules) 일괄 동기화 (관리자 전용)
---    등록이 1건 이상 있는 학생만 대상: 센터 운영요일(일0·월1·화2·금5·토6)의
+--    v2부터 저장 시 자동 파생되므로 평상시엔 불필요 — 시드 SQL을 직접 넣은
+--    직후 등 보정용. 등록이 1건 이상 있는 학생만 대상: 센터 운영요일의
 --    기존 행을 지우고 첫 시작=등원, 마지막 끝=하원으로 재생성한다.
 --    수(3)·목(4) 등 비운영 요일 행과 등록 없는 학생은 건드리지 않는다.
 -- ----------------------------------------------------------------

@@ -15,7 +15,8 @@ import {
   toUser, toMindRecord, toDiaryRecord, toLearningRecord, toTask,
   toCounselingRecord, toAlert, toCareerDesignResult,
   toLearningDiagnosisResult, toAssignment, toQuizSet, toQuizQuestion,
-  toQuizAttempt, toParentChild, toAttendanceRecord, toWorkPlan,
+  toQuizAttempt, toParentChild, toAttendanceRecord, toAttendanceSchedule,
+  toAttendanceNotification, toWorkPlan,
   toUrgentReport, toManagementReport, toFinanceRecord, toLessonReport,
   collectRows,
 } from '../../lib/supabaseHelpers.js'
@@ -69,8 +70,9 @@ export async function fetchForAdmin(scope = null) {
 
   // 출결은 최근 60일 윈도 — 대시보드 출결 주의 지표·학생 목록 출결 컬럼용 (fetchForManager와 동일)
   const attendanceSince = daysAgoStr(60)
+  const notificationsSince = new Date(Date.now() - 7 * 86400000).toISOString()
 
-  const [mindRes, learningRes, tasksRes, diaryRes, careerRes, diagRes, attemptsRes, attendanceRes] = studentIds.length > 0
+  const [mindRes, learningRes, tasksRes, diaryRes, careerRes, diagRes, attemptsRes, attendanceRes, schedulesRes, attNotiRes] = studentIds.length > 0
     ? await Promise.all([
         supabase.from('mind_records').select('*', { count: 'exact' }).in('student_id', studentIds).order('date', { ascending: false }).limit(3000),
         supabase.from('learning_records').select('*', { count: 'exact' }).in('student_id', studentIds).order('date', { ascending: false }).limit(5000),
@@ -80,8 +82,11 @@ export async function fetchForAdmin(scope = null) {
         supabase.from('diagnosis_results').select('*').in('student_id', studentIds),
         supabase.from('quiz_attempts').select('*').in('student_id', studentIds).order('submitted_at', { ascending: false }),
         supabase.from('attendance_records').select('*').in('student_id', studentIds).gte('date', attendanceSince).order('date', { ascending: false }),
+        // 출결 탭(관리자도 매니저 화면 재사용) — 시간표·긴급 알림 (fetchForManager와 동일 윈도)
+        supabase.from('attendance_schedules').select('*').in('student_id', studentIds),
+        supabase.from('attendance_notifications').select('*').in('student_id', studentIds).or(`resolved.eq.false,created_at.gte.${notificationsSince}`).order('created_at', { ascending: false }),
       ])
-    : [{ data: [] }, { data: [] }, { data: [] }, { data: [] }, { data: [] }, { data: [] }, { data: [] }, { data: [] }]
+    : [{ data: [] }, { data: [] }, { data: [] }, { data: [] }, { data: [] }, { data: [] }, { data: [] }, { data: [] }, { data: [] }, { data: [] }]
 
   const recordMeta = (res, table) => {
     if (res?.error || res?.count == null) return
@@ -125,6 +130,8 @@ export async function fetchForAdmin(scope = null) {
     quizQuestions: collectRows(questionsRes, 'quiz_questions', errors).map(toQuizQuestion),
     quizAttempts: collectRows(attemptsRes, 'quiz_attempts', errors).map(toQuizAttempt),
     attendanceRecords: collectRows(attendanceRes, 'attendance_records', errors).map(toAttendanceRecord),
+    attendanceSchedules: collectRows(schedulesRes, 'attendance_schedules', errors).map(toAttendanceSchedule),
+    attendanceNotifications: collectRows(attNotiRes, 'attendance_notifications', errors).map(toAttendanceNotification),
     workPlans: collectRows(workPlansRes, 'work_plans', errors).filter(byStudentIdList).map(toWorkPlan),
     urgentReports: collectRows(urgentReportsRes, 'urgent_reports', errors).filter(byRecordGroup).map(toUrgentReport),
     managementReports: collectRows(managementReportsRes, 'management_reports', errors).filter(byRecordGroup).map(toManagementReport),

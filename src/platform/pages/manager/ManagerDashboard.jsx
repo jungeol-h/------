@@ -58,12 +58,17 @@ export default function ManagerDashboard() {
       } />
       {/* 키오스크 — 센터 공용 태블릿용 전체화면 (Header/TabBar 없음) */}
       <Route path="kiosk" element={<KioskPage />} />
+      {/* 출결 탭 — LMS식 명단 테이블·타임라인이라 데스크톱 풀폭 */}
+      <Route path="attendance" element={
+        <PageLayout title="학습매니저" badge={unresolved} tabs={TABS} wide>
+          <AttendanceTab />
+        </PageLayout>
+      } />
       <Route path="*" element={
         <PageLayout title="학습매니저" badge={unresolved} tabs={TABS}>
           <Routes>
             <Route index element={<Navigate to="home" replace />} />
             <Route path="home" element={<ManagerHomeTab />} />
-            <Route path="attendance" element={<AttendanceTab />} />
             <Route path="students" element={<StudentListTab />} />
             <Route path="counseling" element={<WorkRecordsTab />} />
             <Route path="booking" element={<EducatorBookingTab />} />

@@ -71,7 +71,7 @@ export default function StudentCenterHoursView({ student }) {
         entries: selectionToEntries(selected),
       })
       if (result?.ok) {
-        setNotice({ kind: 'ok', text: '이용시간이 저장되었습니다.' })
+        setNotice({ kind: 'ok', text: '이용시간이 저장되었습니다. 등·하원 시간에도 자동 반영돼요.' })
         await load()
       } else if (result?.code === 'SLOT_FULL') {
         const full = (result.full ?? [])

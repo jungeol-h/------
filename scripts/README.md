@@ -47,7 +47,7 @@ DB 스키마 변경은 **Supabase Studio SQL Editor에서 수동 실행**한다 
 | `add-user-groups.sql` | users.group_names(소속 그룹, 복수) + 관리보고·재정·긴급보고 group_name + 역할별 백필 (add-2607-work-records 선행 필요) | 적용됨 |
 | `add-study-location.sql` | learning_records.study_location (공부 장소: 센터·집·스카·학원·학교) | 적용됨 |
 | `add-booking-system.sql` | 컨설팅·코칭 예약 시스템: booking_* 테이블 10종(프로그램·교과·강사배정·오픈기간·배치·슬롯·예약·상담기록·알림·감사이력) + SECURITY DEFINER RPC 9종(예약/취소/변경/그룹배정/출결/슬롯편집/일괄상태/다이제스트) + 프로그램 3종 시드 + pg_cron `booking-daily-digest`(KST 00:05) | **적용됨 (2026-07-18, Studio)** |
-| `add-center-hours.sql` | 센터 이용시간 등록: center_hour_registrations(학생×요일×1시간 단위) + admin_config('center_hours') 설정 + RPC 2종(center_save_hours 정원·잠금 검증 저장 / center_sync_attendance_schedules 등·하원 시간표 일괄 반영) | 미적용 |
+| `add-center-hours.sql` | 센터 이용시간 등록: center_hour_registrations(학생×요일×1시간 단위) + admin_config('center_hours') 설정 + RPC 2종(center_save_hours 정원·잠금 검증 저장 / center_sync_attendance_schedules 일괄 보정). **v2(2026-07-18): center_save_hours가 저장 시 등·하원 시간표 자동 파생** — v1 적용분 위에 재실행 필요 | v1 적용됨 (2026-07-18) · **v2 재실행 필요** |
 
 ## 시드·일회성 유틸 (재실행 금지 또는 불필요)
 

@@ -1,17 +1,15 @@
 // 출결 탭에 내장되는 센터 이용시간 관리 섹션 (매니저·관리자 공용).
-// 시간대별 등록 명단(출석부) 조회 · 엑셀 추출은 공용, 등록 열기/잠금과
-// 등·하원 시간표 일괄 반영은 관리자 전용. 학생 대리 수정은 정원을 무시한다
-// (RPC가 admin/manager 역할이면 정원·잠금 검증을 건너뛴다).
+// 데이터(registrations/config)는 부모(AttendanceTab)의 useCenterHours 훅에서
+// props로 받는다 — 타임라인과 fetch를 공유하기 위함. 쓰기 후엔 reload 호출.
+// 주간 명단은 종이 출석부처럼 시간 단위=열 테이블로 보여준다 (데스크톱 기준,
+// 모바일은 가로 스크롤). 등록 열기/잠금·등·하원 시간표 반영은 관리자 전용.
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
-  CalendarRange, CheckCheck, FileSpreadsheet, Loader2, Lock, LockOpen, RefreshCw, UserPen,
+  CalendarRange, CheckCheck, FileSpreadsheet, Loader2, Lock, LockOpen, UserPen,
 } from 'lucide-react'
 import { CENTER_HOUR_UNITS, CENTER_DAY_ORDER, unitKey, unitLabel } from '../data/centerHours.js'
-import {
-  fetchCenterHours, saveCenterHours, updateCenterHoursConfig,
-  syncAttendanceSchedules, isMigrationMissing,
-} from './centerHoursApi.js'
+import { saveCenterHours, updateCenterHoursConfig, syncAttendanceSchedules } from './centerHoursApi.js'
 import { buildCenterHoursSheets, downloadCenterHoursWorkbook } from './centerHoursExcel.js'
 import { selectionToEntries } from './centerHoursSelection.js'
 import CenterHourGrid from './CenterHourGrid.jsx'
@@ -19,32 +17,16 @@ import { todayStr } from '../utils/dateUtils.js'
 
 const DAY_LABEL = { 0: '일', 1: '월', 2: '화', 5: '금', 6: '토' }
 
-// allStudents: 명단 표시용 전체 학생, editableStudents: 대리 수정 대상(매니저는 담당만)
-export default function CenterHoursSection({ role, allStudents, editableStudents }) {
+export default function CenterHoursSection({
+  role, allStudents, editableStudents, registrations, config, reload,
+}) {
   const isAdmin = role === 'admin'
-  const [state, setState] = useState({ loading: true, error: null, migrationNeeded: false })
-  const [config, setConfig] = useState({ isOpen: false, capacity: 40 })
-  const [registrations, setRegistrations] = useState([])
   const [day, setDay] = useState(() => {
     const dow = new Date().getDay()
     return CENTER_HOUR_UNITS[dow] ? dow : CENTER_DAY_ORDER[0]
   })
-  const [busy, setBusy] = useState(null) // 'toggle' | 'sync' | 'excel' | 'save'
+  const [busy, setBusy] = useState(null) // 'toggle' | 'sync' | 'excel'
   const [notice, setNotice] = useState(null) // { kind, text }
-
-  const load = useCallback(async () => {
-    setState({ loading: true, error: null, migrationNeeded: false })
-    try {
-      const { registrations: regs, config: cfg } = await fetchCenterHours()
-      setRegistrations(regs)
-      setConfig(cfg)
-      setState({ loading: false, error: null, migrationNeeded: false })
-    } catch (e) {
-      setState({ loading: false, error: e, migrationNeeded: isMigrationMissing(e) })
-    }
-  }, [])
-
-  useEffect(() => { load() }, [load])
 
   const studentById = useMemo(
     () => new Map(allStudents.map((s) => [s.id, s])),
@@ -79,8 +61,8 @@ export default function CenterHoursSection({ role, allStudents, editableStudents
     setNotice(null)
     try {
       const next = await updateCenterHoursConfig({ isOpen: !config.isOpen })
-      setConfig((prev) => ({ ...prev, ...next }))
       setNotice({ kind: 'ok', text: next.isOpen ? '학생 등록을 열었습니다.' : '학생 등록을 잠갔습니다.' })
+      await reload()
     } catch {
       setNotice({ kind: 'error', text: '설정 변경에 실패했습니다.' })
     } finally {
@@ -94,7 +76,7 @@ export default function CenterHoursSection({ role, allStudents, editableStudents
     try {
       const result = await syncAttendanceSchedules(role)
       if (result?.ok) {
-        setNotice({ kind: 'ok', text: `등록 학생 ${result.students}명의 등·하원 시간표에 반영했습니다. 키오스크 지각 판정에 바로 적용됩니다.` })
+        setNotice({ kind: 'ok', text: `등록 학생 ${result.students}명의 등·하원 시간표에 반영했습니다.` })
       } else {
         setNotice({ kind: 'error', text: '시간표 반영에 실패했습니다.' })
       }
@@ -119,81 +101,54 @@ export default function CenterHoursSection({ role, allStudents, editableStudents
     }
   }
 
-  if (state.loading) {
-    return (
-      <div className="py-10 flex justify-center text-gray-400">
-        <Loader2 size={22} className="animate-spin" />
-      </div>
-    )
-  }
-
-  if (state.migrationNeeded) {
-    return (
-      <div className="py-8 text-center text-sm text-gray-400 bg-white rounded-2xl shadow-sm px-4">
-        센터 이용시간 마이그레이션(scripts/add-center-hours.sql)이 아직 적용되지 않았습니다.
-      </div>
-    )
-  }
-
-  if (state.error) {
-    return (
-      <div className="py-8 text-center text-sm text-gray-400 bg-white rounded-2xl shadow-sm">
-        이용시간 데이터를 불러오지 못했습니다.
-        <button onClick={load} className="ml-2 text-indigo-500 font-bold">다시 시도</button>
-      </div>
-    )
-  }
-
   return (
     <div className="space-y-4">
-      {/* 상태 요약 + 새로고침 */}
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-gray-400">
+      {/* 상태 요약 + 조작 버튼 한 줄 */}
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="text-xs text-gray-400 mr-auto">
           등록 학생 {registeredCount}명 · 시간당 정원 {config.capacity}명 ·{' '}
           <span className={config.isOpen ? 'text-emerald-500 font-bold' : 'text-amber-500 font-bold'}>
             {config.isOpen ? '학생 등록 열림' : '학생 등록 잠김'}
           </span>
         </p>
-        <button onClick={load} className="p-2 text-gray-300 hover:text-gray-500" aria-label="새로고침">
-          <RefreshCw size={14} />
-        </button>
-      </div>
-
-      {/* 관리자 조작 + 엑셀 */}
-      <div className="grid grid-cols-2 gap-2">
         <button
           onClick={handleExcel}
           disabled={busy !== null}
-          className="py-3 bg-emerald-500 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all disabled:opacity-40"
+          className="px-4 py-2 bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-all disabled:opacity-40"
         >
-          {busy === 'excel' ? <Loader2 size={14} className="animate-spin" /> : <FileSpreadsheet size={14} />}
+          {busy === 'excel' ? <Loader2 size={13} className="animate-spin" /> : <FileSpreadsheet size={13} />}
           출석부 엑셀
         </button>
-        {isAdmin ? (
-          <button
-            onClick={handleToggleOpen}
-            disabled={busy !== null}
-            className={`py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all disabled:opacity-40 ${
-              config.isOpen ? 'bg-amber-500 text-white' : 'bg-indigo-500 text-white'
-            }`}
-          >
-            {busy === 'toggle' ? <Loader2 size={14} className="animate-spin" />
-              : config.isOpen ? <Lock size={14} /> : <LockOpen size={14} />}
-            {config.isOpen ? '등록 잠그기' : '등록 열기'}
-          </button>
-        ) : (
-          <div />
+        {isAdmin && (
+          <>
+            <button
+              onClick={handleToggleOpen}
+              disabled={busy !== null}
+              className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-all disabled:opacity-40 text-white ${
+                config.isOpen ? 'bg-amber-500' : 'bg-indigo-500'
+              }`}
+            >
+              {busy === 'toggle' ? <Loader2 size={13} className="animate-spin" />
+                : config.isOpen ? <Lock size={13} /> : <LockOpen size={13} />}
+              {config.isOpen ? '등록 잠그기' : '등록 열기'}
+            </button>
+            <button
+              onClick={handleSync}
+              disabled={busy !== null}
+              className="px-4 py-2 border-2 border-indigo-200 text-indigo-600 rounded-xl text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-all disabled:opacity-40"
+            >
+              {busy === 'sync' ? <Loader2 size={13} className="animate-spin" /> : <CalendarRange size={13} />}
+              시간표 일괄 보정
+            </button>
+          </>
         )}
       </div>
       {isAdmin && (
-        <button
-          onClick={handleSync}
-          disabled={busy !== null}
-          className="w-full py-3 border-2 border-indigo-200 text-indigo-600 rounded-xl text-sm font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all disabled:opacity-40"
-        >
-          {busy === 'sync' ? <Loader2 size={14} className="animate-spin" /> : <CalendarRange size={14} />}
-          등·하원 시간표에 일괄 반영
-        </button>
+        <p className="text-[11px] text-gray-400 -mt-2">
+          이용시간을 저장하면 그 학생의 등·하원 시간표(키오스크 지각·결석 판정 기준)가 자동
+          갱신됩니다. &lsquo;일괄 반영&rsquo;은 시드 SQL을 직접 넣은 직후 등 보정용이며, 오늘 이미 지난
+          시간대가 새로 생기면 해당 학생들의 미등원 알림이 일괄 생성될 수 있어요.
+        </p>
       )}
 
       {notice && (
@@ -205,13 +160,13 @@ export default function CenterHoursSection({ role, allStudents, editableStudents
         </p>
       )}
 
-      {/* 요일 선택 + 시간대별 명단 */}
+      {/* 요일 선택 */}
       <div className="flex gap-1.5">
         {CENTER_DAY_ORDER.map((d) => (
           <button
             key={d}
             onClick={() => setDay(d)}
-            className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${
+            className={`px-5 py-2 rounded-xl text-sm font-bold transition-all ${
               day === d ? 'bg-indigo-500 text-white' : 'bg-white text-gray-400 shadow-sm'
             }`}
           >
@@ -220,33 +175,38 @@ export default function CenterHoursSection({ role, allStudents, editableStudents
         ))}
       </div>
 
-      <div className="space-y-2">
-        {CENTER_HOUR_UNITS[day].map((unit) => {
-          const students = roster.get(unitKey(day, unit.start)) ?? []
-          const over = students.length >= config.capacity
-          return (
-            <div key={unit.start} className="bg-white rounded-2xl shadow-sm p-3">
-              <div className="flex items-center gap-2 mb-1.5">
-                <span className="text-xs font-bold text-gray-700">{unitLabel(unit)}</span>
-                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                  over ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500'
-                }`}>
-                  {students.length}/{config.capacity}명
-                </span>
+      {/* 시간대별 명단 — 종이 출석부처럼 단위=열 */}
+      <div className="bg-white rounded-2xl shadow-sm overflow-x-auto">
+        <div className="min-w-[860px] grid" style={{ gridTemplateColumns: `repeat(${CENTER_HOUR_UNITS[day].length}, 1fr)` }}>
+          {CENTER_HOUR_UNITS[day].map((unit) => {
+            const students = roster.get(unitKey(day, unit.start)) ?? []
+            const over = students.length >= config.capacity
+            return (
+              <div key={unit.start} className="border-r border-gray-100 last:border-r-0">
+                <div className="px-3 py-2.5 border-b border-gray-100 bg-gray-50/60 sticky top-0">
+                  <p className="text-xs font-bold text-gray-700">{unitLabel(unit)}</p>
+                  <p className={`text-[11px] font-bold ${over ? 'text-red-500' : 'text-gray-400'}`}>
+                    {students.length}/{config.capacity}명{over && ' · 정원 초과'}
+                  </p>
+                </div>
+                <ul className="px-3 py-2 space-y-1">
+                  {students.length === 0 && (
+                    <li className="text-[11px] text-gray-300 py-1">등록 없음</li>
+                  )}
+                  {students.map((s, i) => (
+                    <li key={s.id} className="text-xs text-gray-700 flex items-baseline gap-1.5">
+                      <span className="text-[10px] text-gray-300 w-4 text-right flex-shrink-0">{i + 1}</span>
+                      <span className="font-medium">{s.name}</span>
+                      <span className="text-[10px] text-gray-400 truncate">
+                        {[s.school, s.grade].filter(Boolean).join(' ')}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
               </div>
-              {students.length === 0 ? (
-                <p className="text-xs text-gray-300">등록 학생 없음</p>
-              ) : (
-                <p className="text-xs text-gray-600 leading-relaxed">
-                  {students.map((s) => {
-                    const meta = [s.school, s.grade].filter(Boolean).join(' ')
-                    return meta ? `${s.name}(${meta})` : s.name
-                  }).join(', ')}
-                </p>
-              )}
-            </div>
-          )
-        })}
+            )
+          })}
+        </div>
       </div>
 
       {/* 학생 대리 수정 */}
@@ -255,7 +215,7 @@ export default function CenterHoursSection({ role, allStudents, editableStudents
         students={editableStudents}
         registrations={registrations}
         capacity={config.capacity}
-        onSaved={load}
+        onSaved={reload}
         busyGlobal={busy}
       />
     </div>
@@ -318,10 +278,11 @@ function StudentHoursEditor({ role, students, registrations, capacity, onSaved, 
   }
 
   return (
-    <div>
+    <div className="max-w-lg">
       <div className="flex items-center gap-2 mb-2 mt-2">
         <UserPen size={16} className="text-indigo-400" />
-        <h4 className="text-sm font-bold text-gray-700">학생 이용시간 수정 (정원 무시)</h4>
+        <h4 className="text-sm font-bold text-gray-700">학생 이용시간 수정</h4>
+        <span className="text-[11px] text-gray-400">정원 무시 · 저장 시 등·하원 시간표 자동 반영</span>
       </div>
       <select
         value={studentId}

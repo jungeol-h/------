@@ -1,68 +1,21 @@
-// [Write] 출결 도메인. 시간표 CRUD + 키오스크 등·하원 + 수동 정정 + 알림 확인.
+// [Write] 출결 도메인. 키오스크 등·하원 + 수동 정정 + 알림 확인.
 //
 // 시각 "판정"(지각/조퇴/결석)은 전부 DB에서 한다 — 키오스크 단말 시계를 믿지
 // 않기 위해 등·하원은 RPC(kiosk_check_in/out)가 DB now() 기준으로 판정하고,
 // 10분/30분 경과 판정은 pg_cron(judge_attendance)이 담당한다.
 // 클라이언트는 입력과 표시만 한다. (supabase_attendance_migration.sql 참고)
+//
+// 시간표(attendance_schedules) 쓰기는 여기 없다 — 센터 이용시간의 파생물이라
+// center_save_hours RPC가 저장 시 자동 갱신한다 (centerHours/README.md).
 
 import { useCallback } from 'react'
 import { supabase } from '../../lib/supabase.js'
 import {
-  toAttendanceRecord, toAttendanceSchedule, toAttendanceNotification,
+  toAttendanceRecord, toAttendanceNotification,
 } from '../../lib/supabaseHelpers.js'
-import { makeId } from '../dataModel.js'
 import { withWriteRetry } from '../../lib/supabaseRetry.js'
 
 export function useAttendanceDomain(setData) {
-  // 한 학생의 주간 시간표 전체 교체. days = [{ dayOfWeek, arrivalTime, departureTime }]
-  // — 포함 안 된 요일은 "안 오는 날"이므로 행을 삭제한다.
-  const saveSchedule = useCallback(
-    async ({ studentId, days }) => {
-      const rows = days.map((d) => ({
-        id: makeId('sch'),
-        student_id: studentId,
-        day_of_week: d.dayOfWeek,
-        arrival_time: d.arrivalTime,
-        departure_time: d.departureTime,
-      }))
-
-      const keptDays = rows.map((r) => r.day_of_week)
-      const { error: delError } = await withWriteRetry(
-        () => {
-          let q = supabase.from('attendance_schedules').delete().eq('student_id', studentId)
-          if (keptDays.length > 0) q = q.not('day_of_week', 'in', `(${keptDays.join(',')})`)
-          return q
-        },
-        { label: 'saveSchedule:delete' }
-      )
-      if (delError) throw delError
-
-      if (rows.length > 0) {
-        // 같은 요일 기존 행은 유지·갱신 (id 충돌 대신 student_id+day_of_week upsert)
-        const { error: upsertError } = await withWriteRetry(
-          () => supabase.from('attendance_schedules')
-            .upsert(rows, { onConflict: 'student_id,day_of_week', ignoreDuplicates: false }),
-          { label: 'saveSchedule:upsert' }
-        )
-        if (upsertError) throw upsertError
-      }
-
-      // 서버가 기존 id를 유지했을 수 있으므로 저장 후 재조회로 동기화
-      const { data: fresh } = await supabase
-        .from('attendance_schedules').select('*').eq('student_id', studentId)
-      const freshSchedules = (fresh ?? []).map(toAttendanceSchedule)
-
-      setData((prev) => ({
-        ...prev,
-        attendanceSchedules: [
-          ...prev.attendanceSchedules.filter((s) => s.studentId !== studentId),
-          ...freshSchedules,
-        ],
-      }))
-    },
-    [setData]
-  )
-
   // 키오스크 번호(전화번호 뒷 4자리) 매칭 — 로컬 상태를 건드리지 않는 조회
   const kioskFindStudents = useCallback(async (digits) => {
     const { data, error } = await supabase.rpc('kiosk_find_students', { p_digits: digits })
@@ -169,6 +122,28 @@ export function useAttendanceDomain(setData) {
     [setData]
   )
 
+  // 긴급 알림 일괄 확인 — 시간표 일괄 반영 직후 등 알림이 수십 건 쌓였을 때
+  const resolveAllAttendanceNotifications = useCallback(
+    async (notificationIds) => {
+      if (notificationIds.length === 0) return
+      const { error } = await withWriteRetry(
+        () => supabase.from('attendance_notifications')
+          .update({ resolved: true }).in('id', notificationIds),
+        { label: 'resolveAllAttendanceNotifications' }
+      )
+      if (error) throw error
+
+      const ids = new Set(notificationIds)
+      setData((prev) => ({
+        ...prev,
+        attendanceNotifications: prev.attendanceNotifications.map((n) =>
+          ids.has(n.id) ? { ...n, resolved: true } : n
+        ),
+      }))
+    },
+    [setData]
+  )
+
   // Realtime INSERT 수신분을 로컬 상태에 주입 (중복 id는 무시)
   const ingestAttendanceNotification = useCallback(
     (row) => {
@@ -185,12 +160,12 @@ export function useAttendanceDomain(setData) {
   )
 
   return {
-    saveSchedule,
     kioskFindStudents,
     kioskCheckIn,
     kioskCheckOut,
     updateAttendance,
     resolveAttendanceNotification,
+    resolveAllAttendanceNotifications,
     ingestAttendanceNotification,
   }
 }

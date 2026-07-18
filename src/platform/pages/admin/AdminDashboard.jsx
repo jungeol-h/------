@@ -69,12 +69,17 @@ export default function AdminDashboard() {
           <UserManagementTab />
         </PageLayout>
       } />
+      {/* 출결 탭 — LMS식 명단 테이블·타임라인이라 데스크톱 풀폭 */}
+      <Route path="attendance" element={
+        <PageLayout title="관리자" tabs={TABS} wide>
+          <AttendanceTab />
+        </PageLayout>
+      } />
       <Route path="*" element={
         <PageLayout title="관리자" tabs={TABS}>
           <Routes>
             <Route index element={<Navigate to="home" replace />} />
             <Route path="home" element={<AdminHomeTab />} />
-            <Route path="attendance" element={<AttendanceTab />} />
             <Route path="statistics" element={<Navigate to="/admin/home" replace />} />
             <Route path="plans" element={<Navigate to="/admin/counseling?menu=plans" replace />} />
             <Route path="booking" element={<AdminBookingTab />} />

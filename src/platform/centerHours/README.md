@@ -21,9 +21,11 @@ data/centerHours.js              ★ 요일별 1시간 단위 정의의 단일 �
 centerHoursApi.js                fetch + RPC 래퍼 + admin_config('center_hours') 설정
 centerHoursSelection.js          선택 집합 → entries/등하원 요약 순수함수 (vitest)
 centerHoursExcel.js              출석부 엑셀 시트 빌더(순수) + exceljs 렌더(동적 import)
+useCenterHours.js                lazy fetch 훅 — AttendanceTab이 한 번 불러 하위에 props로 전달
 CenterHourGrid.jsx               요일×단위 토글 그리드 (프레젠테이션 전용)
-StudentCenterHoursView.jsx       학생 등록 화면 — pages/student/BookingTab의 세그먼트
-CenterHoursSection.jsx           관리자·매니저 섹션 — pages/manager/AttendanceTab 내장(접힘)
+StudentCenterHoursView.jsx       학생 등록 화면 — pages/student/BookingTab의 세그먼트 (자체 fetch)
+TodayTimeline.jsx                오늘 시간대별 현황 — 등록×출결 상태 결합 (AttendanceTab 우측)
+CenterHoursSection.jsx           관리자·매니저 명단·설정 섹션 — AttendanceTab 내장 (데이터는 props)
 ```
 
 ## 규약
@@ -32,10 +34,12 @@ CenterHoursSection.jsx           관리자·매니저 섹션 — pages/manager/A
   admin/manager 역할이면 정원·잠금을 건너뛴다(대리 수정). 저장은 학생 단위
   전면 교체 + 전역 advisory lock 직렬화.
 - 설정은 `admin_config('center_hours')` = `{"isOpen", "capacity"}`. 잠그면 학생은 읽기 전용.
-- **등·하원 시간표 반영은 자동이 아니다** — 관리자가 '일괄 반영' 버튼으로
-  `center_sync_attendance_schedules` RPC를 명시 실행할 때만 attendance_schedules를
-  덮어쓴다(키오스크 지각 판정에 즉시 영향, 첫 단위 시작=등원·마지막 끝=하원).
+- **등·하원 시간표(attendance_schedules)는 이용시간의 파생물이다** — 별도 편집
+  UI가 없고, `center_save_hours`가 저장 시 그 학생의 운영요일 행을 자동 교체한다
+  (첫 단위 시작=등원·마지막 끝=하원, 키오스크 지각·결석 판정 기준. v2, 2026-07-18).
   비운영 요일(수·목) 행과 등록 없는 학생은 건드리지 않는다.
+  `center_sync_attendance_schedules`(일괄 보정)는 시드 SQL을 RPC 없이 직접 넣은
+  직후 등 보정용으로만 남아 있다.
 
 ## 배포 순서
 

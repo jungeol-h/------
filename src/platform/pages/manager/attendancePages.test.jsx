@@ -1,4 +1,6 @@
-// 출결 화면 렌더 스모크 — AttendanceTab(알림/현황판/시간표) · KioskPage(입력→조회→등원)
+// 출결 화면 렌더 스모크 — AttendanceTab(알림/오늘 현황) · KioskPage(입력→조회→등원)
+// 등·하원 시간표 편집기는 제거됨 — 시간표는 센터 이용시간 저장 시
+// center_save_hours RPC가 자동 파생한다 (편집 UI 단일화, 2026-07-18).
 import React from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
@@ -6,9 +8,9 @@ import { MemoryRouter } from 'react-router-dom'
 import AttendanceTab from './AttendanceTab.jsx'
 import KioskPage from './KioskPage.jsx'
 
-const saveSchedule = vi.fn()
 const updateAttendance = vi.fn()
 const resolveAttendanceNotification = vi.fn()
+const resolveAllAttendanceNotifications = vi.fn()
 const ingestAttendanceNotification = vi.fn()
 const kioskFindStudents = vi.fn()
 const kioskCheckIn = vi.fn()
@@ -59,9 +61,9 @@ vi.mock('../../context/AuthContext.jsx', () => ({
 vi.mock('../../context/DataContext.jsx', () => ({
   useData: () => ({
     data,
-    saveSchedule,
     updateAttendance,
     resolveAttendanceNotification,
+    resolveAllAttendanceNotifications,
     ingestAttendanceNotification,
     kioskFindStudents,
     kioskCheckIn,
@@ -100,19 +102,11 @@ describe('AttendanceTab', () => {
     expect(resolveAttendanceNotification).toHaveBeenCalledWith('an1')
   })
 
-  it('학생 선택 시 시간표 편집기가 열리고 저장 시 요일 배열을 넘긴다', async () => {
-    saveSchedule.mockResolvedValue()
+  it('전체 확인 버튼이 미해결 알림 id 전부로 일괄 확인을 호출한다', () => {
+    resolveAllAttendanceNotifications.mockResolvedValue()
     renderTab()
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: 's1' } })
-    expect(screen.getByText('시간표 저장')).toBeTruthy()
-
-    fireEvent.click(screen.getByText('시간표 저장'))
-    await waitFor(() => expect(saveSchedule).toHaveBeenCalledTimes(1))
-    const { studentId, days } = saveSchedule.mock.calls[0][0]
-    expect(studentId).toBe('s1')
-    expect(days).toContainEqual({
-      dayOfWeek: todayDow, arrivalTime: '09:00', departureTime: '19:00',
-    })
+    fireEvent.click(screen.getByText('전체 확인 (1건)'))
+    expect(resolveAllAttendanceNotifications).toHaveBeenCalledWith(['an1'])
   })
 })
 
