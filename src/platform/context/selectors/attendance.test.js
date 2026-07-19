@@ -3,7 +3,9 @@ import {
   timeToMinutes,
   getWeeklySchedule,
   classifyToday,
+  classifyForDate,
   getTodayAttendanceBoard,
+  getDailyAttendanceBoard,
   getUnresolvedAttendanceNotifications,
 } from './attendance.js'
 
@@ -124,6 +126,89 @@ describe('getTodayAttendanceBoard — 담당 학생 현황판', () => {
     const allIds = Object.values(board).flat().map((e) => e.student.id)
     expect(allIds).toContain('s9')
     expect(allIds).not.toContain('s10')
+  })
+})
+
+describe('classifyForDate — 지난·미래 날짜 분류', () => {
+  const schedule = { arrivalTime: '15:00', departureTime: '19:00' }
+
+  it('지난 날짜: 기록 없는 예정자는 시각 무관 not_arrived', () => {
+    expect(classifyForDate({ record: null, schedule, dateStr: '2026-07-03', now: MONDAY_15H }))
+      .toBe('not_arrived')
+  })
+  it('지난 날짜: cron 결석 기록은 absent, 등원 기록은 그대로 따른다', () => {
+    expect(classifyForDate({
+      record: { checkInAt: null, checkOutAt: null, status: 'absent' },
+      schedule, dateStr: '2026-07-03', now: MONDAY_15H,
+    })).toBe('absent')
+    expect(classifyForDate({
+      record: { checkInAt: 'x', checkOutAt: 'y', status: 'late', checkoutStatus: 'normal' },
+      schedule, dateStr: '2026-07-03', now: MONDAY_15H,
+    })).toBe('checked_out')
+  })
+  it('지난 날짜: 예정 없는 학생은 no_schedule', () => {
+    expect(classifyForDate({ record: null, schedule: null, dateStr: '2026-07-03', now: MONDAY_15H }))
+      .toBe('no_schedule')
+  })
+  it('미래 날짜: 기록 없는 예정자는 waiting', () => {
+    expect(classifyForDate({ record: null, schedule, dateStr: '2026-07-08', now: MONDAY_15H }))
+      .toBe('waiting')
+  })
+})
+
+describe('getDailyAttendanceBoard — 날짜별 현황판 (등록명단 기준)', () => {
+  // 2026-07-03 은 금요일 (dow=5)
+  const data = {
+    students: [
+      { id: 's1', name: '가' },
+      { id: 's2', name: '나' },
+      { id: 's3', name: '다' },
+    ],
+    assignments: [
+      { educatorId: 'm01', studentId: 's1' },
+      { educatorId: 'm01', studentId: 's2' },
+      { educatorId: 'm01', studentId: 's3' },
+    ],
+    attendanceRecords: [
+      { studentId: 's1', date: '2026-07-03', status: 'absent', checkInAt: null, checkOutAt: null },
+    ],
+    attendanceSchedules: [
+      { studentId: 's3', dayOfWeek: 5, arrivalTime: '10:00', departureTime: '12:00' },
+    ],
+  }
+  const registrations = [
+    // s2 는 금요일 두 블록 — pseudo-schedule 은 첫 시작~마지막 종료로 합쳐진다
+    { studentId: 's2', dayOfWeek: 5, startTime: '16:00', endTime: '17:00' },
+    { studentId: 's2', dayOfWeek: 5, startTime: '19:00', endTime: '20:00' },
+    { studentId: 's1', dayOfWeek: 5, startTime: '16:00', endTime: '17:00' },
+    // 다른 요일 등록은 무시
+    { studentId: 's3', dayOfWeek: 1, startTime: '16:00', endTime: '17:00' },
+  ]
+
+  it('지난 날짜: 등록명단에 있는데 기록 없으면 not_arrived, 결석 기록은 absent', () => {
+    const board = getDailyAttendanceBoard(data, {
+      educatorId: 'm01', dateStr: '2026-07-03', registrations, now: MONDAY_15H,
+    })
+    expect(board.absent.map((e) => e.student.id)).toEqual(['s1'])
+    expect(board.not_arrived.map((e) => e.student.id)).toEqual(['s2'])
+    // 등록명단 기준이므로 시간표만 있는 s3는 no_schedule
+    expect(board.no_schedule.map((e) => e.student.id)).toEqual(['s3'])
+  })
+
+  it('여러 시간 블록은 첫 시작~마지막 종료로 합쳐 예정 시간을 만든다', () => {
+    const board = getDailyAttendanceBoard(data, {
+      educatorId: 'm01', dateStr: '2026-07-03', registrations, now: MONDAY_15H,
+    })
+    const s2 = board.not_arrived.find((e) => e.student.id === 's2')
+    expect(s2.schedule).toEqual({ arrivalTime: '16:00', departureTime: '20:00' })
+  })
+
+  it('registrations가 null이면 attendance_schedules로 대체한다', () => {
+    const board = getDailyAttendanceBoard(data, {
+      educatorId: 'm01', dateStr: '2026-07-03', registrations: null, now: MONDAY_15H,
+    })
+    expect(board.not_arrived.map((e) => e.student.id)).toEqual(['s3'])
+    expect(board.no_schedule.map((e) => e.student.id)).toEqual(['s2'])
   })
 })
 

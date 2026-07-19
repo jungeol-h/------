@@ -1,11 +1,13 @@
-// 오늘 시간대별 현황 — 센터 이용시간 등록(registrations)과 오늘 출결 상태(board)를
-// 결합해 "이 시간대에 있어야 할 학생 중 누가 와 있나"를 단위별로 보여준다.
-// 현재 시간대는 강조 + 자동 펼침. 상태색은 항상 그룹 라벨과 함께 쓴다.
+// 날짜별 시간대 현황 — 센터 이용시간 등록(registrations)과 해당 날짜 출결
+// 상태(board)를 결합해 "이 시간대에 있어야 할 학생 중 누가 와 있나"를 단위별로
+// 보여준다. dateStr이 오늘이면 현재 시간대 강조 + 자동 펼침, 지난 시간대는
+// 흐리게. 지난 날짜는 강조 없이 명단만. 상태색은 항상 그룹 라벨과 함께 쓴다.
 
 import { useMemo, useState } from 'react'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { CENTER_HOUR_UNITS, unitKey, unitLabel } from '../data/centerHours.js'
 import { timeToMinutes } from '../context/selectors/attendance.js'
+import { toDateStr } from '../utils/dateUtils.js'
 
 // board 상태 → 타임라인 그룹
 const GROUP_OF = {
@@ -21,8 +23,11 @@ const GROUPS = [
   { key: 'wait', label: '등원 전', bar: 'bg-gray-300', text: 'text-gray-500', chip: 'bg-gray-50' },
 ]
 
-export default function TodayTimeline({ registrations, board, now = new Date() }) {
-  const dow = now.getDay()
+export default function TodayTimeline({ registrations, board, dateStr, now = new Date() }) {
+  const viewDateStr = dateStr ?? toDateStr(now)
+  const isToday = viewDateStr === toDateStr(now)
+  const [y, m, d] = viewDateStr.split('-').map(Number)
+  const dow = new Date(y, m - 1, d).getDay()
   const units = CENTER_HOUR_UNITS[dow]
   const [expanded, setExpanded] = useState(null) // unit.start | null(=현재 시간대 자동)
 
@@ -54,16 +59,16 @@ export default function TodayTimeline({ registrations, board, now = new Date() }
         key: unitKey(dow, unit.start),
         expected,
         byGroup,
-        isCurrent: nowMin >= startMin && nowMin < endMin,
-        isPast: nowMin >= endMin,
+        isCurrent: isToday && nowMin >= startMin && nowMin < endMin,
+        isPast: isToday && nowMin >= endMin,
       }
     })
-  }, [units, registrations, dow, statusById, nowMin])
+  }, [units, registrations, dow, statusById, nowMin, isToday])
 
   if (!units) {
     return (
       <div className="bg-white rounded-2xl shadow-sm p-5 text-center text-sm text-gray-400">
-        오늘은 센터 운영 요일이 아닙니다 (운영: 월·화·금·토·일)
+        {isToday ? '오늘은' : '이 날은'} 센터 운영 요일이 아닙니다 (운영: 월·화·금·토·일)
       </div>
     )
   }

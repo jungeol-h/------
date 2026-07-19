@@ -108,6 +108,20 @@ describe('AttendanceTab', () => {
     fireEvent.click(screen.getByText('전체 확인 (1건)'))
     expect(resolveAllAttendanceNotifications).toHaveBeenCalledWith(['an1'])
   })
+
+  it('◀로 지난 날짜를 조회하고 오늘 버튼으로 복귀한다', () => {
+    renderTab()
+    const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1)
+    const yLabel = `${yesterday.getMonth() + 1}월 ${yesterday.getDate()}일`
+    const tLabel = `${now.getMonth() + 1}월 ${now.getDate()}일`
+
+    fireEvent.click(screen.getByLabelText('이전 날짜'))
+    expect(screen.getByRole('heading', { level: 2 }).textContent).toContain(yLabel)
+    expect(screen.getByText(/지난 날짜 조회/)).toBeTruthy()
+
+    fireEvent.click(screen.getByText('오늘'))
+    expect(screen.getByRole('heading', { level: 2 }).textContent).toContain(tLabel)
+  })
 })
 
 describe('KioskPage', () => {

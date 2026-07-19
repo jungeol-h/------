@@ -1,6 +1,8 @@
 // 출결 탭 (매니저·관리자 공용, wide 레이아웃) — LMS식 구성:
-// 긴급 알림 → 오늘 현황(요약 타일·필터·명단 테이블) + 오늘 시간대별 현황(타임라인)
+// 긴급 알림 → 날짜별 현황(◀▶ 이동, 요약 타일·필터·명단 테이블) + 시간대별 현황(타임라인)
 // → 센터 이용시간 관리(명단·엑셀·설정·학생 수정).
+// 지난 날짜의 미등원(등록명단에 있는데 기록 없음)은 센터 이용시간 등록 기준으로
+// 분류한다 — 클라이언트 확정(2026-07-19). 기록 조회 윈도는 fetcher의 최근 60일.
 // 등·하원 시간표는 이용시간의 파생물이라 별도 편집 UI가 없다 — 이용시간 저장 시
 // RPC가 자동 갱신한다 (scripts/add-center-hours.sql v2).
 // 판정(지각/조퇴/결석)은 서버가 하고, 여기서는 결과 표시와 수동 정정만 한다.
@@ -10,7 +12,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Siren, X, MonitorSmartphone, FileSpreadsheet,
-  CalendarRange, ChevronDown, ChevronUp, Clock3,
+  CalendarRange, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Clock3,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
@@ -21,10 +23,11 @@ import TodayTimeline from '../../centerHours/TodayTimeline.jsx'
 import CenterHoursSection from '../../centerHours/CenterHoursSection.jsx'
 import { useCenterHours } from '../../centerHours/useCenterHours.js'
 import {
-  getTodayAttendanceBoard,
+  getDailyAttendanceBoard,
   getUnresolvedAttendanceNotifications,
   dayLabel,
 } from '../../context/selectors/attendance.js'
+import { todayStr, toDateStr, daysAgoStr } from '../../utils/dateUtils.js'
 
 const STATUS_OPTIONS = [
   { value: 'present', label: '등원' },
@@ -64,9 +67,29 @@ export default function AttendanceTab() {
     () => getUnresolvedAttendanceNotifications(data, { educatorId: currentUser?.id, all: isAdmin }),
     [data, currentUser?.id, isAdmin]
   )
+
+  // 조회 날짜 — 기본 오늘, ◀▶로 과거 이동 (기록 fetch 윈도인 60일까지)
+  const [dateStr, setDateStr] = useState(todayStr)
+  const isToday = dateStr === todayStr()
+  const minDateStr = daysAgoStr(60)
+  const shiftDate = (delta) => {
+    const [y, m, d] = dateStr.split('-').map(Number)
+    const next = toDateStr(new Date(y, m - 1, d + delta))
+    if (next > todayStr() || next < minDateStr) return
+    setDateStr(next)
+  }
+
+  // 예정 기준 = 센터 이용시간 등록명단. 아직 못 불러왔으면 시간표로 대체(null)
+  const centerHoursReady =
+    !centerHours.state.loading && !centerHours.state.error && !centerHours.state.migrationNeeded
   const board = useMemo(
-    () => getTodayAttendanceBoard(data, { educatorId: currentUser?.id, all: isAdmin }),
-    [data, currentUser?.id, isAdmin]
+    () => getDailyAttendanceBoard(data, {
+      educatorId: currentUser?.id,
+      all: isAdmin,
+      dateStr,
+      registrations: centerHoursReady ? centerHours.registrations : null,
+    }),
+    [data, currentUser?.id, isAdmin, dateStr, centerHoursReady, centerHours.registrations]
   )
 
   const myStudents = useMemo(() => {
@@ -87,7 +110,8 @@ export default function AttendanceTab() {
   const [notiExpanded, setNotiExpanded] = useState(false)
   const [notiBusy, setNotiBusy] = useState(false)
 
-  const today = new Date()
+  const [vy, vm, vd] = dateStr.split('-').map(Number)
+  const viewDow = new Date(vy, vm - 1, vd).getDay()
   const visibleNotis = notiExpanded ? notifications : notifications.slice(0, NOTI_PREVIEW)
 
   const handleResolveAll = async () => {
@@ -149,11 +173,46 @@ export default function AttendanceTab() {
         </div>
       )}
 
-      {/* 헤더: 오늘 날짜 + 상단 액션 */}
+      {/* 헤더: 조회 날짜 이동(◀▶·달력·오늘 복귀) + 상단 액션 */}
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-lg font-bold text-gray-900 mr-auto">
-          {today.getMonth() + 1}월 {today.getDate()}일 ({dayLabel(today.getDay())}) 출결
-        </h2>
+        <div className="flex items-center gap-1 mr-auto">
+          <button
+            onClick={() => shiftDate(-1)}
+            disabled={dateStr <= minDateStr}
+            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-white active:scale-95 transition-all disabled:opacity-30"
+            aria-label="이전 날짜"
+          >
+            <ChevronLeft size={18} />
+          </button>
+          <h2 className="text-lg font-bold text-gray-900 whitespace-nowrap">
+            {vm}월 {vd}일 ({dayLabel(viewDow)}) 출결
+          </h2>
+          <button
+            onClick={() => shiftDate(1)}
+            disabled={isToday}
+            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-white active:scale-95 transition-all disabled:opacity-30"
+            aria-label="다음 날짜"
+          >
+            <ChevronRight size={18} />
+          </button>
+          <input
+            type="date"
+            value={dateStr}
+            min={minDateStr}
+            max={todayStr()}
+            onChange={(e) => { if (e.target.value) setDateStr(e.target.value) }}
+            className="ml-1 border border-gray-200 rounded-lg px-2 py-1 text-xs text-gray-500 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            aria-label="조회 날짜 선택"
+          />
+          {!isToday && (
+            <button
+              onClick={() => setDateStr(todayStr())}
+              className="ml-1 px-2.5 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-bold active:scale-95 transition-all"
+            >
+              오늘
+            </button>
+          )}
+        </div>
         <button
           onClick={() => setExcelOpen(true)}
           className="px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-600 flex items-center gap-1.5 active:scale-95 transition-all"
@@ -172,18 +231,26 @@ export default function AttendanceTab() {
 
       <AttendanceExcelModal open={excelOpen} onClose={() => setExcelOpen(false)} />
 
-      {/* 오늘 현황 (명단 테이블) + 시간대별 타임라인 */}
+      {/* 날짜별 현황 (명단 테이블) + 시간대별 타임라인 */}
       <div className="grid gap-6 lg:grid-cols-3 items-start">
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 space-y-2">
+          {!isToday && (
+            <p className="text-[11px] text-gray-400">
+              지난 날짜 조회 — 미등원은 센터 이용시간 등록명단 기준(기록 없는 예정 학생)입니다.
+            </p>
+          )}
           <TodayAttendancePanel
             board={board}
+            isToday={isToday}
             onEditRecord={(payload) => setEditModal(payload)}
           />
         </div>
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <Clock3 size={15} className="text-indigo-400" />
-            <h3 className="text-sm font-bold text-gray-700">오늘 시간대별 현황</h3>
+            <h3 className="text-sm font-bold text-gray-700">
+              {isToday ? '오늘 시간대별 현황' : '시간대별 현황'}
+            </h3>
           </div>
           {centerHours.state.loading ? (
             <CenterHoursLoading />
@@ -194,7 +261,11 @@ export default function AttendanceTab() {
           ) : centerHours.state.error ? (
             <CenterHoursError onRetry={centerHours.reload} />
           ) : (
-            <TodayTimeline registrations={centerHours.registrations} board={board} />
+            <TodayTimeline
+              registrations={centerHours.registrations}
+              board={board}
+              dateStr={dateStr}
+            />
           )}
         </div>
       </div>

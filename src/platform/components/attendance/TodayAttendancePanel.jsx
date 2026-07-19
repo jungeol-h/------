@@ -1,5 +1,6 @@
-// 오늘 출결 현황 패널 (LMS식) — 상태 요약 타일 + 필터 칩 + 명단 테이블.
-// 데이터는 getTodayAttendanceBoard 결과(board)를 그대로 받는 프레젠테이션 계층.
+// 날짜별 출결 현황 패널 (LMS식) — 상태 요약 타일 + 필터 칩 + 명단 테이블.
+// 데이터는 getDailyAttendanceBoard 결과(board)를 그대로 받는 프레젠테이션 계층.
+// isToday=false(지난 날짜)면 '오늘' 문구만 중립화한다 — 분류는 셀렉터 책임.
 // 상태색은 항상 라벨과 함께 쓴다(색 단독 식별 금지).
 
 import { useMemo, useState } from 'react'
@@ -18,7 +19,7 @@ function StatusChip({ status }) {
   )
 }
 
-export default function TodayAttendancePanel({ board, onEditRecord }) {
+export default function TodayAttendancePanel({ board, onEditRecord, isToday = true }) {
   const [filter, setFilter] = useState('scheduled') // 'scheduled' | status key
   const [query, setQuery] = useState('')
 
@@ -36,9 +37,10 @@ export default function TodayAttendancePanel({ board, onEditRecord }) {
 
   const countOf = (status) => (board[status] ?? []).length
   const scheduledTotal = rows.length - countOf('no_schedule')
+  const scheduledLabel = isToday ? '오늘 예정' : '등원 예정'
   const tiles = [
-    { label: '오늘 예정', value: scheduledTotal, accent: 'border-indigo-200' },
-    { label: '등원 중', value: countOf('present') + countOf('late'), accent: 'border-emerald-200' },
+    { label: scheduledLabel, value: scheduledTotal, accent: 'border-indigo-200' },
+    { label: isToday ? '등원 중' : '등원', value: countOf('present') + countOf('late'), accent: 'border-emerald-200' },
     { label: '미등원·결석', value: countOf('not_arrived') + countOf('absent'), accent: 'border-red-200' },
     { label: '하원 완료', value: countOf('checked_out') + countOf('early_leave'), accent: 'border-blue-200' },
   ]
@@ -72,7 +74,7 @@ export default function TodayAttendancePanel({ board, onEditRecord }) {
             filter === 'scheduled' ? 'bg-gray-800 text-white' : 'bg-white text-gray-500 shadow-sm'
           }`}
         >
-          오늘 예정 {scheduledTotal}
+          {scheduledLabel} {scheduledTotal}
         </button>
         {ATTENDANCE_STATUS_ORDER.map((status) => {
           const n = countOf(status)

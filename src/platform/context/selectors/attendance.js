@@ -3,6 +3,12 @@
 // 시각 "판정"(지각/조퇴/결석 확정)은 서버(RPC·pg_cron)가 한다. 여기서는
 // 이미 판정된 기록과 시간표를 화면용으로 분류·정리만 한다. now 파라미터의
 // 용도는 "예정 시간이 지났는데 아직 기록이 없는 학생" 강조 표시뿐이다.
+//
+// "예정" 기준은 센터 이용시간 등록명단(registrations)이 1순위다 — 클라이언트
+// 확정(2026-07-19): 출결은 학생이 등록한 센터 이용시간 기준. registrations가
+// 없을 때(로드 실패·마이그레이션 미적용)만 attendance_schedules로 대체한다.
+
+import { toDateStr } from '../../utils/dateUtils.js'
 
 const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토']
 
@@ -29,15 +35,15 @@ export function dayLabel(dayOfWeek) {
   return DAY_LABELS[dayOfWeek] ?? ''
 }
 
-// 학생 1명의 오늘 출결 상태 분류. record/schedule은 오늘 것만 넘긴다.
+// 학생 1명의 날짜별 출결 상태 분류. record/schedule은 해당 날짜 것만 넘긴다.
 //  - checked_out   하원 완료 (정상)
 //  - early_leave   조퇴 (하원했으나 예정보다 이름)
 //  - present/late  등원 중
 //  - absent        무단 결석 확정 (cron) 또는 수동 결석
-//  - not_arrived   예정 시간 경과했는데 미등원 (강조 대상)
-//  - waiting       예정 시간 전
-//  - no_schedule   오늘 등원 예정 없음
-export function classifyToday({ record, schedule, now }) {
+//  - not_arrived   예정 시간 경과했는데 미등원 — 지난 날짜는 기록 없는 예정자 전부
+//  - waiting       예정 시간 전 (미래 날짜 포함)
+//  - no_schedule   해당 날짜 등원 예정 없음
+export function classifyForDate({ record, schedule, dateStr, now }) {
   if (record) {
     if (record.checkOutAt) {
       return record.checkoutStatus === 'early_leave' ? 'early_leave' : 'checked_out'
@@ -46,22 +52,31 @@ export function classifyToday({ record, schedule, now }) {
     if (record.status === 'absent') return 'absent'
   }
   if (!schedule) return 'no_schedule'
-
-  const nowMin = now.getHours() * 60 + now.getMinutes()
   const arrivalMin = timeToMinutes(schedule.arrivalTime)
   if (arrivalMin == null) return 'no_schedule'
+
+  const today = toDateStr(now)
+  if (dateStr < today) return 'not_arrived'
+  if (dateStr > today) return 'waiting'
+  const nowMin = now.getHours() * 60 + now.getMinutes()
   return nowMin > arrivalMin ? 'not_arrived' : 'waiting'
 }
 
-// 담당 학생들의 오늘 현황판. 반환: { [상태]: [{ student, record, schedule }] }
+// 오늘 기준 분류 (classifyForDate의 오늘 특수화 — 기존 호출부 호환용)
+export function classifyToday({ record, schedule, now }) {
+  return classifyForDate({ record, schedule, dateStr: toDateStr(now), now })
+}
+
+// 담당 학생들의 날짜별 현황판. 반환: { [상태]: [{ student, record, schedule }] }
 // all=true(관리자)면 배정과 무관하게 전체 active 학생을 대상으로 한다.
-export function getTodayAttendanceBoard(data, { educatorId, all = false, now = new Date() }) {
-  const todayStr = [
-    now.getFullYear(),
-    String(now.getMonth() + 1).padStart(2, '0'),
-    String(now.getDate()).padStart(2, '0'),
-  ].join('-')
-  const dow = now.getDay()
+// registrations(센터 이용시간 등록)가 있으면 그 요일 등록을 예정으로 삼는다 —
+// 한 학생의 여러 시간 블록은 첫 시작~마지막 종료로 합친 pseudo-schedule이 된다.
+// registrations가 null이면 attendance_schedules(등·하원 시간표)로 대체.
+export function getDailyAttendanceBoard(data, {
+  educatorId, all = false, dateStr, registrations = null, now = new Date(),
+}) {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const dow = new Date(y, m - 1, d).getDay()
 
   const myStudentIds = new Set(
     data.assignments.filter((a) => a.educatorId === educatorId).map((a) => a.studentId)
@@ -71,11 +86,26 @@ export function getTodayAttendanceBoard(data, { educatorId, all = false, now = n
     : data.students.filter((s) => myStudentIds.has(s.id))
 
   const recordByStudent = new Map(
-    data.attendanceRecords.filter((r) => r.date === todayStr).map((r) => [r.studentId, r])
+    data.attendanceRecords.filter((r) => r.date === dateStr).map((r) => [r.studentId, r])
   )
-  const scheduleByStudent = new Map(
-    data.attendanceSchedules.filter((s) => s.dayOfWeek === dow).map((s) => [s.studentId, s])
-  )
+
+  const scheduleByStudent = new Map()
+  if (registrations) {
+    for (const r of registrations) {
+      if (r.dayOfWeek !== dow) continue
+      const cur = scheduleByStudent.get(r.studentId)
+      if (!cur) {
+        scheduleByStudent.set(r.studentId, { arrivalTime: r.startTime, departureTime: r.endTime })
+      } else {
+        if (r.startTime < cur.arrivalTime) cur.arrivalTime = r.startTime
+        if (r.endTime > cur.departureTime) cur.departureTime = r.endTime
+      }
+    }
+  } else {
+    data.attendanceSchedules
+      .filter((s) => s.dayOfWeek === dow)
+      .forEach((s) => scheduleByStudent.set(s.studentId, s))
+  }
 
   const board = {
     not_arrived: [], absent: [], late: [], present: [],
@@ -84,10 +114,15 @@ export function getTodayAttendanceBoard(data, { educatorId, all = false, now = n
   students.forEach((student) => {
     const record = recordByStudent.get(student.id) ?? null
     const schedule = scheduleByStudent.get(student.id) ?? null
-    const status = classifyToday({ record, schedule, now })
+    const status = classifyForDate({ record, schedule, dateStr, now })
     board[status].push({ student, record, schedule })
   })
   return board
+}
+
+// 오늘 현황판 (getDailyAttendanceBoard의 오늘 특수화 — 시간표 기준, 기존 호출부 호환용)
+export function getTodayAttendanceBoard(data, { educatorId, all = false, now = new Date() }) {
+  return getDailyAttendanceBoard(data, { educatorId, all, dateStr: toDateStr(now), now })
 }
 
 // 미해결 출결 알림 (학생 이름 결합, 최신순)

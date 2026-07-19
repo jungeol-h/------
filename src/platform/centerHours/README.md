@@ -24,7 +24,7 @@ centerHoursExcel.js              출석부 엑셀 시트 빌더(순수) + excelj
 useCenterHours.js                lazy fetch 훅 — AttendanceTab이 한 번 불러 하위에 props로 전달
 CenterHourGrid.jsx               요일×단위 토글 그리드 (프레젠테이션 전용)
 StudentCenterHoursView.jsx       학생 등록 화면 — pages/student/BookingTab의 세그먼트 (자체 fetch)
-TodayTimeline.jsx                오늘 시간대별 현황 — 등록×출결 상태 결합 (AttendanceTab 우측)
+TodayTimeline.jsx                날짜별 시간대 현황 — 등록×출결 결합 (AttendanceTab 우측, 지난 날짜 지원)
 CenterHoursSection.jsx           관리자·매니저 명단·설정 섹션 — AttendanceTab 내장 (데이터는 props)
 ```
 
