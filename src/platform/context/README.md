@@ -34,7 +34,7 @@ fetch 실패는 죽이지 않고 `data._fetchErrors`에 수집 → 화면 상단
    (withWriteRetry → throw → setData 동기화)은 crudKit 헤더 주석대로 지킬 것
 6. `DataContext.jsx`에 훅 연결 (import → 호출 → value 스프레드 → useMemo deps)
 7. cross-domain 파생값이 필요하면 `selectors/`에 순수함수 추가 + vitest 단위테스트
-   (`*.test.js` — selector는 테스트가 이미 21파일 있음. 패턴 따라할 것)
+   (`*.test.js` — 기존 selector 테스트 패턴 따라할 것)
 
 ## 알림(위험 신호) 설계 — 두 방식이 공존한다
 

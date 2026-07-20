@@ -1,4 +1,4 @@
-// 학습매니저 라우트 셸 (/manager/*) — 5탭: 홈·출결·학생·업무기록·확인평가.
+// 학습매니저 라우트 셸 (/manager/*) — 탭 구성은 아래 탭 배열이 정본.
 // 탭 밖 전체화면 라우트: 키오스크(/manager/kiosk), 학생 상세(/manager/student/:studentId).
 // 헤더 badge = 담당 학생 중 마인드 위험 학생 수(getRiskStudents).
 

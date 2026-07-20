@@ -1,8 +1,12 @@
 # selectors/ — 지표·판정 도메인 지식
 
 전부 `(data, ...) => 결과` 순수함수. React 의존 없음 → vitest로 직접 테스트한다.
-아래 수치는 기획 문서(보관: `docs/99. 보관됨/기획 원본(2026-07 반영완료)/개념 정리/`)에서
-확정된 도메인 규칙이며, 임계값은 클라이언트 피드백에 따라 상수만 조정하면 되도록 분리돼 있다.
+
+이 문서는 **지표·판정의 비즈니스 규칙과 그 근거**를 남기는 곳이다 (기획 원본은
+`docs/99. 보관됨/기획 원본(2026-07 반영완료)/개념 정리/`에 보관, 핵심만 여기로 이관됨).
+임계값은 클라이언트 피드백에 따라 조정될 수 있게 이름 있는 상수로 분리돼 있다 —
+**현행 값은 코드의 상수가 정본**이고, 아래 수치는 클라이언트와 확정한 기준이므로
+상수를 바꿀 때는 클라이언트 합의와 이 문서 갱신이 함께 가야 한다.
 
 ## 자기주도지수 (indices.js)
 
@@ -31,19 +35,13 @@
   (`supabase_attendance_migration.sql`의 `judge_attendance()` — 등원예정 10분 경과 긴급알림,
   30분 경과 무단결석 확정).
 
-## 파일 지도
+## 파일 찾기
 
-| 파일 | 내용 |
-|---|---|
-| `learningRecords.js` | 학습기록 기본 유틸(actualMinutes 등) — selectors 중 최다 피참조 |
-| `weeklyLearning.js` | 최근 7일 학습시간·이행률 (+ 학습 주의) |
-| `indices.js` | 자기주도지수 |
-| `riskDetection.js` | 마인드 위험/주의 |
-| `attendance.js` / `attendanceStats.js` | 출결 요약·누적 통계 (+ 출결 주의) |
-| `studentIndicators.js` | 관리자 학생 탭 지표 컬럼 (1-pass Map — 학생 수×기록 수 이중루프 금지) |
-| `adminStats.js` | 관리자 통계 섹션 (누적 출결 60일·1인당 학습 30일·업무횟수) |
-| `homeMessages.js` | 학생 홈 코멘트 말풍선 (상담 followUp·과제 마감·업무계획 태그) |
-| `reflectionReport.js` | 종합 성장 리포트 데이터 조립 (getTaskSummary/getQuizSummary 포함) |
-| `report.js` / `studentView.js` / `learningRecords.js` | 일일 리포트·학생 화면 파생값 |
-| `reconciliation.js` | 출결-학습 대사(reconcile) |
-| `workPlans.js` | 업무계획 파생값 |
+파일명이 곧 도메인이다 (`attendance*` 출결, `indices` 자기주도지수, `riskDetection` 마인드,
+`weeklyLearning` 주간 학습, `*Report`/`report` 리포트 데이터 조립, `workPlans` 업무계획 …) —
+목록은 폴더를 직접 볼 것. 이름만으로 안 보이는 것만 적는다:
+
+- `learningRecords.js` — 학습기록 기본 유틸. **selectors 중 최다 피참조** — 수정 파급이 가장 크다.
+- `studentIndicators.js` — 관리자 학생 탭 지표. **1-pass Map 구조를 유지할 것**
+  (학생 수×기록 수 이중루프 금지).
+- `reconciliation.js` — 출결-학습 대사(reconcile): 두 도메인 기록의 모순 탐지.

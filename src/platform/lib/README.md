@@ -6,8 +6,8 @@
 | `supabaseHelpers.js` | **DB row(snake_case) → 앱 모델(camelCase) 변환기 전집.** 새 테이블 추가 시 여기에 `toXxx` 추가 |
 | `supabaseRetry.js` | `withWriteRetry(fn, {label})` — 쓰기 실패 시 재시도 + Sentry 보고. 모든 도메인 쓰기가 통과 |
 | `sentry.js` | Sentry 초기화·`reportError`·`setSentryUser`. 침묵 실패 방지의 최후 보루 |
-| `counselingFiles.js` | 상담 PDF 첨부 업로드/삭제 — Storage `counseling-files` 버킷 (PDF만, 개당 10MB, 최대 3개) |
-| `financeFiles.js` | 재정 영수증 첨부 — Storage `finance-receipts` 버킷 (이미지+PDF) |
+| `counselingFiles.js` | 상담 PDF 첨부 업로드/삭제 — Storage `counseling-files` 버킷 (형식·용량 제한은 파일 상수가 정본) |
+| `financeFiles.js` | 재정 영수증 첨부 — Storage `finance-receipts` 버킷 |
 
 ## ⚠️ 보안 부채 (미해결 — 전부 알려진 상태로 베타 운영 중)
 

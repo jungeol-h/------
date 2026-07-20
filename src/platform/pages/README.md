@@ -1,20 +1,20 @@
 # pages/ — 역할별 화면
 
 라우팅은 `src/App.jsx`: `/` 로그인 → `ProtectedRoute`로 역할별 대시보드.
-각 대시보드가 자기 탭(TabBar)을 정의하고 하위 라우팅한다.
+각 대시보드가 자기 탭(TabBar)을 정의하고 하위 라우팅한다 — **탭 구성·하위 경로의 정본은
+각 Dashboard 파일의 탭 배열이다** (여기 나열하지 않는다. 나열했다가 낡은 이력 있음).
 
-| 경로 | 역할 | 대시보드 | 탭 구성 |
-|---|---|---|---|
-| `/student/*` | student | `student/StudentDashboard` | 홈·학습·과제·예약(상담 예약/센터 이용시간 세그먼트)·마인드·진단(학습진단/진로설계/확인평가) |
-| `/manager/*` | manager | `manager/ManagerDashboard` | 홈·출결·학생·업무기록·예약·확인평가 (+ `/manager/kiosk` 등하원 키오스크, 출결 탭에 센터 이용시간·시간대별 명단 섹션 — `centerHours/`) |
-| `/admin/*` | admin | `admin/AdminDashboard` | 홈·출결·학생·예약·업무기록·확인평가·외부상담 (+ `/admin/kiosk` — 출결 탭·키오스크는 `manager/`의 화면 재사용, 전체 학생 대상) |
-| `/instructor/*` `/consultant/*` | instructor·consultant | `educator/EducatorDashboard` 공용 | 학생·업무기록·예약관리·과제 + 강사만 확인평가, 컨설턴트만 외부상담 |
-| `/viewer/*` | viewer(공무원·열람) | `viewer/ViewerDashboard` | 통계·학생·업무기록 (열람 전용 + 출력 버튼) |
-| `/parent/*` | parent | `parent/ParentDashboard` | 홈·학습·예약·코멘트 (예약만 쓰기 가능, 나머지 자녀 읽기 전용) |
+| 경로 | 역할 | 화면의 몫 (비즈니스 관점) |
+|---|---|---|
+| `/student/*` | student | 학생 본인의 기록 주체 화면 — 학습·과제·마인드·진단 기록, 상담 예약·센터 이용시간 등록 |
+| `/manager/*` | manager | 현장 운영 — 담당 학생 출결·코칭·업무기록. 등하원 키오스크(`/manager/kiosk`)와 센터 이용시간 명단(`centerHours/`)도 여기 |
+| `/admin/*` | admin | 전체 운영(센터장) — 전 학생 대상. 출결·키오스크는 `manager/` 화면 재사용, 외부상담 포함 |
+| `/instructor/*` `/consultant/*` | instructor·consultant | `educator/EducatorDashboard` 공용 — 담당 학생·업무기록·예약관리. 역할에 따라 탭 일부 차등 |
+| `/viewer/*` | viewer | 공무원·본부장 열람 전용 + 출력. 쓰기 없음 |
+| `/parent/*` | parent | 자녀 현황 읽기 전용 — 예외적으로 예약만 쓰기 가능 |
 
 `shared/`는 여러 역할이 같이 쓰는 화면: `StudentDetailPage`(학생 상세 — 역할별 진입),
-`WorkRecordsTab`(업무기록 통합 탭 5메뉴: 업무계획·관리보고·재정·상담보고·수업보고,
-`?menu=` 딥링크, 역할별 편집/잠금/열람 분기).
+`WorkRecordsTab`(업무기록 통합 탭 — `?menu=` 딥링크, 역할별 편집/잠금/열람 분기).
 
 ## 새 역할 추가 체크리스트 (과거 실수 기반 — 하나라도 빼먹으면 로그인 후 무한 튕김)
 
@@ -29,7 +29,7 @@
 
 - **[임시] 타이머 버그 보정 코드**: `student/tempBetaNotice.js` + StudentDashboard·LearningTab의
   `[임시]` 주석 블록. 타이머 상태 저장/복구 안정화가 확인되면 함께 철거할 것.
-- `student/LearningTab.jsx`(1,400줄+)는 이 앱의 최대 파일 — 타이머·계획·기록이 얽혀 있어
+- `student/LearningTab.jsx`는 이 앱의 최대 파일 — 타이머·계획·기록이 얽혀 있어
   분리는 보류된 상태 (UX 계획 문서 Tier 3). 손댈 때는 `learningTabLogic.js`(순수 로직,
   테스트 있음)부터 파악할 것.
 - 모달은 `components/common/ModalShell.jsx`(하단 시트형)을 쓸 것. z-index: Header/TabBar

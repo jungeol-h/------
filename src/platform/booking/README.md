@@ -15,7 +15,7 @@
 ## 데이터·검증 아키텍처
 
 ```
-scripts/add-booking-system.sql   테이블 10종 + SECURITY DEFINER RPC 9종 + pg_cron (최종심)
+scripts/add-booking-system.sql   테이블 + SECURITY DEFINER RPC + pg_cron 다이제스트 (검증 최종심)
 bookingApi.js                    조회 + RPC 래퍼 + 클라 직접 쓰기(설정·기록) + 감사 로그
 BookingContext.jsx               역할별 스코프 lazy fetch + Realtime 알림 구독 + 쓰기 액션
 bookingRules.js                  ★ RPC 검증의 순수함수 미러 (UX 사전검증) + vitest 전수 테스트
@@ -58,14 +58,10 @@ FOR UPDATE(id 정렬 순) → 부분 UNIQUE 인덱스.
 - §7.4 장소·진행방식 필드 — 슬롯 비고(note)로 대체.
 - §17 문자·카카오 알림톡 — 프로젝트 공통 백로그(대행사 계정 대기)와 함께.
 
-## 후속 정리 백로그 (코드리뷰에서 확인, 동작 무관)
+## 후속 정리 백로그 (2026-07-18 코드리뷰 시점 스냅샷 — 동작 무관, 착수 전 현행 코드 재확인)
 
-- 요일 배열(WEEKDAY)·'M/D HH:MM' 포맷터·시간 덧셈이 모듈 내 3~5곳 중복 —
-  `attendance.js`의 `dayLabel` 재사용 + 공용 포맷터로 추출.
-- 프로그램 camel↔snake 매핑이 `toBookingProgram`/`createProgram`/`PROGRAM_FIELD_MAP`
-  세 곳에 나열 — 단일 필드 매핑으로 통합. 폼 모달 5개의 busy/error/submit 골격도 훅 추출 후보.
-- ProxyReserveModal의 학생 검색을 `StudentCombobox` 재사용으로 교체.
-- SQL reserve/change의 override 가드·공개상태 검증 블록을 `_booking_*` 헬퍼로 추출.
+요일/시간 포맷터 중복, 프로그램 필드 매핑 다중 나열, ProxyReserveModal의 `StudentCombobox`
+미재사용, SQL reserve/change 검증 블록 중복 — 공용화·추출 후보.
 
 ## 수동 검수 체크리스트 (명세 23장 중 vitest 미커버분)
 
