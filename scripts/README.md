@@ -47,9 +47,9 @@ DB 스키마 변경은 **Supabase Studio SQL Editor에서 수동 실행**한다 
 | `add-user-groups.sql` | users.group_names(소속 그룹, 복수) + 관리보고·재정·긴급보고 group_name + 역할별 백필 (add-2607-work-records 선행 필요) | 적용됨 |
 | `add-study-location.sql` | learning_records.study_location (공부 장소: 센터·집·스카·학원·학교) | 적용됨 |
 | `add-booking-system.sql` | 컨설팅·코칭 예약 시스템: booking_* 테이블 10종(프로그램·교과·강사배정·오픈기간·배치·슬롯·예약·상담기록·알림·감사이력) + SECURITY DEFINER RPC 9종(예약/취소/변경/그룹배정/출결/슬롯편집/일괄상태/다이제스트) + 프로그램 3종 시드 + pg_cron `booking-daily-digest`(KST 00:05) | **적용됨 (2026-07-18, Studio)** |
-| `add-center-hours.sql` | 센터 이용시간 등록: center_hour_registrations(학생×요일×1시간 단위) + admin_config('center_hours') 설정 + RPC 2종(center_save_hours 정원·잠금 검증 저장 / center_sync_attendance_schedules 일괄 보정). **v2(2026-07-18): center_save_hours가 저장 시 등·하원 시간표 자동 파생** — v1 적용분 위에 재실행 필요 | v1 적용됨 (2026-07-18) · **v2 재실행 필요** |
-| `add-quiz-attachments-and-score-only.sql` | 확인평가 확장: quiz_questions.attachments(이미지/PDF 메타) + quiz_sets.is_score_only/max_score(외부시험 점수전용 회차) + 'quiz-attachments' 버킷 | **미적용 — 신코드 배포 전 실행 필요** |
-| `add-booking-science-educators.sql` | 예약 교과 컨설팅에 '과학' 교과 추가 + 최돈권(수학)·박영균(과학) 상담사 배정 (계정은 seed-staff-accounts로 기존재, 역할 변경 없음) | **미적용 — 실행 필요** |
+| `add-center-hours.sql` | 센터 이용시간 등록: center_hour_registrations(학생×요일×1시간 단위) + admin_config('center_hours') 설정 + RPC 2종(center_save_hours 정원·잠금 검증 저장 / center_sync_attendance_schedules 일괄 보정). v2(2026-07-18): center_save_hours가 저장 시 등·하원 시간표 자동 파생 | 적용됨 (v2 포함 — 2026-07-20 실DB 검증: 당일 저장 건이 즉시 파생됐고 59명·199건 시간표가 등록과 전건 일치) |
+| `add-quiz-attachments-and-score-only.sql` | 확인평가 확장: quiz_questions.attachments(이미지/PDF 메타) + quiz_sets.is_score_only/max_score(외부시험 점수전용 회차) + 'quiz-attachments' 버킷 | 적용됨 (2026-07-20) |
+| `add-booking-science-educators.sql` | 예약 교과 컨설팅에 '과학' 교과 추가 + 최돈권(수학)·박영균(과학) 상담사 배정 (계정은 seed-staff-accounts로 기존재, 역할 변경 없음) | 적용됨 (2026-07-20) |
 
 ## 시드·일회성 유틸 (재실행 금지 또는 불필요)
 
@@ -57,11 +57,11 @@ DB 스키마 변경은 **Supabase Studio SQL Editor에서 수동 실행**한다 
 |---|---|
 | `seed-test-accounts.sql` / `seed-staff-accounts.sql` | 베타 계정·교직원 7명 시드 (적용됨). 황광희(admin)는 FK CASCADE 때문에 delete-then-insert 금지 — 조건부 insert 유지 |
 | `seed-quiz-content.sql` | 확인평가 초기 문항 시드 (적용됨) |
-| `seed-external-program.sql` | 외부(외생) 상담 프로그램 시드 — **외부학생 명단 수령 후 실행 예정 (보류 중)** |
+| `seed-external-program.sql` | 외부(외생) 상담 프로그램 시드 — **외부학생 명단 수령 후 실행 예정 (보류 중, 2026-07-20 실DB 재확인: cp-2026-andong 없음)**. 클라이언트가 앱 UI로 프로그램("133 찾아가는 컨설팅")을 직접 생성해 운영 중(학생 0명) — 시드 실행 시 프로그램 중복 생성 주의, 명단은 기존 UI 프로그램에 등록하는 편이 자연스러움 |
 | `seed-navi4-students.sql` | 안동NAVI 4기 학생 77명 시드 (신청서 엑셀 기반, 신청취소 5명 status='cancelled') — **적용됨 (2026-07-17, REST로 삽입)**. 재실행해도 안전(on conflict do nothing). 이후 명단은 앱의 관리자 → 학생 → 일괄 등록으로 처리 가능 |
 | `diagnose-quiz.sql` | 퀴즈 데이터 점검용 조회 (읽기 전용) |
 | `patch-quiz-rls.sql` / `migrate-remaining-todo-items.sql` / `unify-learning-records.sql` | 과거 일회성 보정 (완료) |
 | `delete-dummy-managers.sql` | 더미 매니저 m01~m04 삭제 + 실상담 1건 a-hwang 이관 — **적용됨 (2026-07-17, REST)**. 이후 실매니저 생성 시 assignments 재배정 필요 |
 | `seed-parents-from-students.sql` | 학부모 계정 일괄 생성 (학생 parent_password 기반, 전화번호 dedupe — 형제 1계정 다자녀 링크. 로그인 = 학부모 전화번호/전화번호) — **적용됨 (2026-07-18, REST, 학부모 135·링크 144)**. 멱등이라 신규 학생 반영 시 재실행 가능 |
-| `cleanup-booking-test-data.sql` | 예약 시스템 E2E 테스트 산출물 삭제 (기록·예약·알림·슬롯·배치·감사이력 전체 — 프로그램·교과·강사배정·오픈기간 설정은 유지). **⚠️ 실오픈 후 재실행 금지** |
-| `seed-center-hours.sql` | 센터 이용시간 초기 시드 — NAVI 4기 신청서(7.17) 블록 선택을 1시간 단위로 전개 (60명·639행, 생성 규칙·이름 정규화는 파일 헤더 참조). 이름 기준 매칭, 동명이인·미매칭은 말미 리포트 쿼리로 표시. **⚠️ 학생 등록 오픈 후 재실행 금지** (지운 시간이 되살아남) — 미적용 |
+| `cleanup-booking-test-data.sql` | 예약 시스템 E2E 테스트 산출물 삭제 (기록·예약·알림·슬롯·배치·감사이력 전체 — 프로그램·교과·강사배정·오픈기간 설정은 유지). **⚠️ 예약 실오픈됨(2026-07-20 기준 실예약 다수) — 재실행 절대 금지** |
+| `seed-center-hours.sql` | 센터 이용시간 초기 시드 — NAVI 4기 신청서(7.17) 블록 선택을 1시간 단위로 전개 (60명·639행, 생성 규칙·이름 정규화는 파일 헤더 참조). 이름 기준 매칭, 동명이인·미매칭은 말미 리포트 쿼리로 표시 — **적용됨 (2026-07-18)**. 이후 학생 편집 반영 중(2026-07-20 실DB 기준 59명·612행), 등록 열림(isOpen: true) 상태. **⚠️ 재실행 금지** (학생이 지운 시간이 되살아남) |
