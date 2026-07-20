@@ -2,7 +2,7 @@
 // 예외(override) 처리는 반드시 사유를 입력해야 하며, RPC가 감사이력에 남긴다.
 
 import { useMemo, useState } from 'react'
-import { Plus } from 'lucide-react'
+import { Plus, FileSpreadsheet } from 'lucide-react'
 import ModalShell from '../../components/common/ModalShell.jsx'
 import { useData } from '../../context/DataContext.jsx'
 import { useBooking } from '../BookingContext.jsx'
@@ -12,6 +12,7 @@ import { bookingMessage } from '../bookingMessages.js'
 import { reservationDisplayStatus, ATTENDANCE_STATUS } from '../bookingStatus.js'
 import WeeklySlotPicker from './WeeklySlotPicker.jsx'
 import { isActiveStudent } from '../../data/studentStatus.js'
+import { buildReservationSheets, downloadReservationWorkbook } from '../reservationExcel.js'
 
 const FIELD = 'h-10 px-3 rounded-lg border border-gray-200 text-sm'
 
@@ -86,7 +87,8 @@ function OverrideFields({ override, setOverride, reason, setReason, reasonRequir
   )
 }
 
-export default function ReservationSearch() {
+// readOnly: viewer(감독관) 열람용 — 대리 예약·변경·취소 등 쓰기 액션 숨김 (엑셀 다운로드는 허용)
+export default function ReservationSearch({ readOnly = false }) {
   const { data } = useData()
   const booking = useBooking()
   const { config, slots, reservations, slotCounts, userNames, reserve, cancel, change } = booking
@@ -106,6 +108,7 @@ export default function ReservationSearch() {
   const [proxyOpen, setProxyOpen] = useState(false)
   const [cancelTarget, setCancelTarget] = useState(null)
   const [changeTarget, setChangeTarget] = useState(null)
+  const [exporting, setExporting] = useState(false)
 
   const setF = (key, cast = (v) => v) => (e) => setFilters((f) => ({ ...f, [key]: cast(e.target.value) }))
   const studentName = (id) => userNames[id]?.name ?? data.students?.find((u) => u.id === id)?.name ?? id
@@ -138,15 +141,44 @@ export default function ReservationSearch() {
     [reservations, filters], // eslint-disable-line react-hooks/exhaustive-deps
   )
 
+  // 현재 필터 결과를 그대로 상담사별 시트로 내보낸다
+  const exportExcel = async () => {
+    if (exporting || filtered.length === 0) return
+    setExporting(true)
+    try {
+      const sheets = buildReservationSheets({
+        reservations: filtered,
+        students: data.students ?? [],
+        userNames,
+        config,
+      })
+      await downloadReservationWorkbook(sheets, `${filters.from}_${filters.to}`)
+    } finally {
+      setExporting(false)
+    }
+  }
+
   return (
     <div className="space-y-3">
-      <button
-        type="button"
-        onClick={() => setProxyOpen(true)}
-        className="w-full h-10 rounded-xl border border-dashed border-blue-300 text-blue-600 text-xs font-bold flex items-center justify-center gap-1"
-      >
-        <Plus size={14} /> 학생 대리 예약
-      </button>
+      <div className="flex gap-2">
+        {!readOnly && (
+          <button
+            type="button"
+            onClick={() => setProxyOpen(true)}
+            className="flex-1 h-10 rounded-xl border border-dashed border-blue-300 text-blue-600 text-xs font-bold flex items-center justify-center gap-1"
+          >
+            <Plus size={14} /> 학생 대리 예약
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={exportExcel}
+          disabled={exporting || filtered.length === 0}
+          className="flex-1 h-10 rounded-xl border border-dashed border-emerald-300 text-emerald-600 text-xs font-bold flex items-center justify-center gap-1 disabled:opacity-40"
+        >
+          <FileSpreadsheet size={14} /> {exporting ? '생성 중...' : '엑셀 다운로드'}
+        </button>
+      </div>
 
       <div className="grid grid-cols-2 gap-2">
         <input type="date" value={filters.from} onChange={setF('from')} className={FIELD} />
@@ -222,7 +254,7 @@ export default function ReservationSearch() {
               </p>
               {r.cancelReason && <p className="text-[11px] text-gray-400">취소사유: {r.cancelReason}</p>}
               {r.overrideReason && <p className="text-[11px] text-purple-400">예외사유: {r.overrideReason}</p>}
-              {r.status === 'confirmed' && (
+              {!readOnly && r.status === 'confirmed' && (
                 <div className="flex gap-2">
                   <button
                     type="button"

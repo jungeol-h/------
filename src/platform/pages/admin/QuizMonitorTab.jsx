@@ -15,7 +15,8 @@ import { authorOf } from '../../pdf/config/meta.js'
 import { hasPendingGrading } from '../../utils/quizGrading.js'
 import { instructorQuizSubject } from '../../utils/quizSubjects.js'
 
-export default function QuizMonitorTab() {
+// readOnly: 감독관(viewer) 열람용 — 회차 관리 숨김·수동 채점 비활성 (요약·결과·PDF 보고서는 허용)
+export default function QuizMonitorTab({ readOnly = false }) {
   const { data, updateQuizAttemptGrading } = useData()
   const { currentUser } = useAuth()
 
@@ -112,14 +113,14 @@ export default function QuizMonitorTab() {
         </div>
       )}
 
-      <QuizSetManagement />
+      {!readOnly && <QuizSetManagement />}
 
       <QuizResultsTable
         attempts={scopedAttempts}
         students={data.students}
         quizSets={scopedSets}
         quizQuestions={data.quizQuestions}
-        onUpdateGrading={updateQuizAttemptGrading}
+        onUpdateGrading={readOnly ? undefined : updateQuizAttemptGrading}
       />
     </div>
   )

@@ -5,7 +5,8 @@ import { useAuth } from '../../context/AuthContext.jsx'
 import { educatorDisplayName } from '../../utils/educatorName.js'
 
 // 관리자용 긴급 보고 목록 모달 — 미확인 우선 표시, [확인] 처리.
-export default function UrgentReportListModal({ onClose }) {
+// readOnly: 감독관(viewer) 열람용 — 확인 처리 버튼 숨김.
+export default function UrgentReportListModal({ onClose, readOnly = false }) {
   const { data, confirmUrgentReport } = useData()
   const { currentUser } = useAuth()
   const [confirmingId, setConfirmingId] = useState(null)
@@ -71,6 +72,8 @@ export default function UrgentReportListModal({ onClose }) {
                     <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600">
                       <CheckCircle2 size={12} /> 확인됨
                     </span>
+                  ) : readOnly ? (
+                    <span className="text-[11px] font-bold text-red-400">미확인</span>
                   ) : (
                     <button
                       type="button"

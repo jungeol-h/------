@@ -15,6 +15,8 @@ export default function ExternalCounselingTab() {
   const { currentUser } = useAuth()
   const { data } = useData()
   const isAdmin = currentUser?.role === 'admin'
+  // 감독관(viewer)은 보고서 범위를 관리자와 동일하게(전체 강사 선택) — 쓰기(프로그램 추가·학생 등록)는 admin만
+  const isViewer = currentUser?.role === 'viewer'
 
   const [programs, setPrograms] = useState([])
   const [programsLoading, setProgramsLoading] = useState(true)
@@ -171,13 +173,13 @@ export default function ExternalCounselingTab() {
         {showMonthlyReport && (
           <MonthlyReportModal
             educators={
-              isAdmin
+              isAdmin || isViewer
                 ? data.educators.filter((e) =>
                     ['admin', 'manager', 'instructor', 'consultant'].includes(e.role),
                   )
                 : null
             }
-            fixedEducator={isAdmin ? null : currentUser}
+            fixedEducator={isAdmin || isViewer ? null : currentUser}
             loadRecords={loadMonthlyRecords}
             reportLabel="외부컨설팅보고서"
             onClose={() => setShowMonthlyReport(false)}

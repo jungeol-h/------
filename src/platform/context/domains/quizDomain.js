@@ -95,9 +95,54 @@ export function useQuizDomain(data, setData) {
     [data.quizAttempts, setData]
   )
 
-  // 회차 신규 생성
+  // 점수전용 회차의 점수 직접 입력 — 학생 응시 없이 강사/관리자가 기록.
+  // unique(student_id, quiz_set_id) 기준 upsert라 재입력이 곧 수정이다.
+  const upsertScoreOnlyAttempt = useCallback(
+    async (studentId, quizSetId, score) => {
+      const set = data.quizSets.find((s) => s.id === quizSetId)
+      if (!set?.isScoreOnly || !Number.isFinite(set.maxScore) || set.maxScore <= 0) {
+        throw new Error('점수전용 회차가 아니거나 만점이 설정되지 않았습니다.')
+      }
+      if (!Number.isFinite(score) || score < 0 || score > set.maxScore) {
+        throw new Error(`점수는 0~${set.maxScore} 사이여야 합니다.`)
+      }
+      const existing = data.quizAttempts.find(
+        (a) => a.studentId === studentId && a.quizSetId === quizSetId
+      )
+      const row = {
+        id: existing?.id ?? makeId('qa-'),
+        student_id: studentId,
+        quiz_set_id: quizSetId,
+        answers: [],
+        score,
+        total: set.maxScore,
+        submitted_at: new Date().toISOString(),
+      }
+      const { error } = await withWriteRetry(
+        () => supabase
+          .from('quiz_attempts')
+          .upsert(row, { onConflict: 'student_id,quiz_set_id' }),
+        { label: 'upsertScoreOnlyAttempt' }
+      )
+      if (error) throw error
+      const local = toQuizAttempt(row)
+      setData((prev) => ({
+        ...prev,
+        quizAttempts: [
+          local,
+          ...prev.quizAttempts.filter(
+            (a) => !(a.studentId === studentId && a.quizSetId === quizSetId)
+          ),
+        ],
+      }))
+      return local
+    },
+    [data.quizSets, data.quizAttempts, setData]
+  )
+
+  // 회차 신규 생성 — isScoreOnly: 외부시험 점수전용 회차 (문제 없이 max_score 만점 기준)
   const createQuizSet = useCallback(
-    async ({ title, grade, subject = '국어', round, source = '', description = '', isPublished = true }) => {
+    async ({ title, grade, subject = '국어', round, source = '', description = '', isPublished = true, isScoreOnly = false, maxScore = null }) => {
       const row = {
         id: makeId('qs-'),
         title,
@@ -107,6 +152,8 @@ export function useQuizDomain(data, setData) {
         source,
         description,
         is_published: isPublished,
+        is_score_only: isScoreOnly,
+        max_score: isScoreOnly ? maxScore : null,
         created_at: new Date().toISOString(),
       }
       const { error } = await withWriteRetry(
@@ -135,6 +182,8 @@ export function useQuizDomain(data, setData) {
       if (patch.source !== undefined) snake.source = patch.source
       if (patch.description !== undefined) snake.description = patch.description
       if (patch.isPublished !== undefined) snake.is_published = patch.isPublished
+      if (patch.isScoreOnly !== undefined) snake.is_score_only = patch.isScoreOnly
+      if (patch.maxScore !== undefined) snake.max_score = patch.maxScore
 
       const { error } = await withWriteRetry(
         () => supabase.from('quiz_sets').update(snake).eq('id', setId),
@@ -191,6 +240,8 @@ export function useQuizDomain(data, setData) {
         accepted_answers: q.acceptedAnswers,
         explanation: q.explanation ?? '',
         hint: q.hint ?? '',
+        // 첨부 메타는 복제하되 실파일은 원본과 path 공유 (삭제는 best-effort라 수용)
+        attachments: q.attachments ?? [],
       }))
 
       const { error: setErr } = await withWriteRetry(
@@ -244,7 +295,7 @@ export function useQuizDomain(data, setData) {
 
   // 문제 신규 생성
   const createQuizQuestion = useCallback(
-    async ({ quizSetId, orderNo, type = 'short', question, acceptedAnswers, explanation = '', hint = '' }) => {
+    async ({ quizSetId, orderNo, type = 'short', question, acceptedAnswers, explanation = '', hint = '', attachments = [] }) => {
       const row = {
         id: makeId('qq-'),
         quiz_set_id: quizSetId,
@@ -254,6 +305,7 @@ export function useQuizDomain(data, setData) {
         accepted_answers: acceptedAnswers,
         explanation,
         hint,
+        attachments,
       }
       const { error } = await withWriteRetry(
         () => supabase.from('quiz_questions').insert(row),
@@ -280,6 +332,7 @@ export function useQuizDomain(data, setData) {
       if (patch.acceptedAnswers !== undefined) snake.accepted_answers = patch.acceptedAnswers
       if (patch.explanation !== undefined) snake.explanation = patch.explanation
       if (patch.hint !== undefined) snake.hint = patch.hint
+      if (patch.attachments !== undefined) snake.attachments = patch.attachments
 
       const { error } = await withWriteRetry(
         () => supabase.from('quiz_questions').update(snake).eq('id', questionId),
@@ -315,6 +368,7 @@ export function useQuizDomain(data, setData) {
   return {
     submitQuizAttempt,
     updateQuizAttemptGrading,
+    upsertScoreOnlyAttempt,
     createQuizSet,
     updateQuizSet,
     duplicateQuizSetShuffled,

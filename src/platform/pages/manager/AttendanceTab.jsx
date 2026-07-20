@@ -43,6 +43,9 @@ export default function AttendanceTab() {
   const navigate = useNavigate()
   const { currentUser } = useAuth()
   const isAdmin = currentUser?.role === 'admin'
+  // 감독관(viewer)은 관리자와 같은 전체 범위를 열람하되 쓰기 액션은 숨긴다
+  const isViewer = currentUser?.role === 'viewer'
+  const seeAll = isAdmin || isViewer
   const {
     data, updateAttendance,
     resolveAttendanceNotification, resolveAllAttendanceNotifications,
@@ -64,8 +67,8 @@ export default function AttendanceTab() {
   }, [ingestAttendanceNotification])
 
   const notifications = useMemo(
-    () => getUnresolvedAttendanceNotifications(data, { educatorId: currentUser?.id, all: isAdmin }),
-    [data, currentUser?.id, isAdmin]
+    () => getUnresolvedAttendanceNotifications(data, { educatorId: currentUser?.id, all: seeAll }),
+    [data, currentUser?.id, seeAll]
   )
 
   // 조회 날짜 — 기본 오늘, ◀▶로 과거 이동 (기록 fetch 윈도인 60일까지)
@@ -85,15 +88,15 @@ export default function AttendanceTab() {
   const board = useMemo(
     () => getDailyAttendanceBoard(data, {
       educatorId: currentUser?.id,
-      all: isAdmin,
+      all: seeAll,
       dateStr,
       registrations: centerHoursReady ? centerHours.registrations : null,
     }),
-    [data, currentUser?.id, isAdmin, dateStr, centerHoursReady, centerHours.registrations]
+    [data, currentUser?.id, seeAll, dateStr, centerHoursReady, centerHours.registrations]
   )
 
   const myStudents = useMemo(() => {
-    if (isAdmin) {
+    if (seeAll) {
       return data.students
         .filter((s) => (s.status ?? 'active') === 'active')
         .slice()
@@ -103,7 +106,7 @@ export default function AttendanceTab() {
       data.assignments.filter((a) => a.educatorId === currentUser?.id).map((a) => a.studentId)
     )
     return data.students.filter((s) => ids.has(s.id))
-  }, [data.assignments, data.students, currentUser?.id, isAdmin])
+  }, [data.assignments, data.students, currentUser?.id, seeAll])
 
   const [editModal, setEditModal] = useState(null) // { student, record }
   const [excelOpen, setExcelOpen] = useState(false)
@@ -136,13 +139,15 @@ export default function AttendanceTab() {
             <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
               {notifications.length}
             </span>
-            <button
-              onClick={handleResolveAll}
-              disabled={notiBusy}
-              className="ml-auto px-3 py-1.5 bg-white border border-red-200 rounded-xl text-xs font-bold text-red-600 active:scale-95 transition-all disabled:opacity-40"
-            >
-              전체 확인 ({notifications.length}건)
-            </button>
+            {!isViewer && (
+              <button
+                onClick={handleResolveAll}
+                disabled={notiBusy}
+                className="ml-auto px-3 py-1.5 bg-white border border-red-200 rounded-xl text-xs font-bold text-red-600 active:scale-95 transition-all disabled:opacity-40"
+              >
+                전체 확인 ({notifications.length}건)
+              </button>
+            )}
           </div>
           <div className="grid gap-2 lg:grid-cols-2">
             {visibleNotis.map((n) => (
@@ -151,12 +156,14 @@ export default function AttendanceTab() {
                   <p className="text-sm font-bold text-red-700 truncate">{n.message}</p>
                   <p className="text-[11px] text-red-400 mt-0.5">{n.date} · {hhmm(n.createdAt)}</p>
                 </div>
-                <button
-                  onClick={() => resolveAttendanceNotification(n.id).catch(() => {})}
-                  className="flex-shrink-0 px-3 py-2 bg-white border border-red-200 rounded-xl text-xs font-bold text-red-600 active:scale-95 transition-all"
-                >
-                  확인
-                </button>
+                {!isViewer && (
+                  <button
+                    onClick={() => resolveAttendanceNotification(n.id).catch(() => {})}
+                    className="flex-shrink-0 px-3 py-2 bg-white border border-red-200 rounded-xl text-xs font-bold text-red-600 active:scale-95 transition-all"
+                  >
+                    확인
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -220,13 +227,15 @@ export default function AttendanceTab() {
           <FileSpreadsheet size={15} className="text-emerald-500" />
           출결 엑셀
         </button>
-        <button
-          onClick={() => navigate(isAdmin ? '/admin/kiosk' : '/manager/kiosk')}
-          className="px-4 py-2.5 bg-indigo-500 text-white rounded-xl text-sm font-bold flex items-center gap-1.5 active:scale-95 transition-all"
-        >
-          <MonitorSmartphone size={15} />
-          키오스크 열기
-        </button>
+        {!isViewer && (
+          <button
+            onClick={() => navigate(isAdmin ? '/admin/kiosk' : '/manager/kiosk')}
+            className="px-4 py-2.5 bg-indigo-500 text-white rounded-xl text-sm font-bold flex items-center gap-1.5 active:scale-95 transition-all"
+          >
+            <MonitorSmartphone size={15} />
+            키오스크 열기
+          </button>
+        )}
       </div>
 
       <AttendanceExcelModal open={excelOpen} onClose={() => setExcelOpen(false)} />
@@ -242,7 +251,7 @@ export default function AttendanceTab() {
           <TodayAttendancePanel
             board={board}
             isToday={isToday}
-            onEditRecord={(payload) => setEditModal(payload)}
+            onEditRecord={isViewer ? null : (payload) => setEditModal(payload)}
           />
         </div>
         <div className="space-y-3">
@@ -292,6 +301,7 @@ export default function AttendanceTab() {
             registrations={centerHours.registrations}
             config={centerHours.config}
             reload={centerHours.reload}
+            readOnly={isViewer}
           />
         )}
       </div>

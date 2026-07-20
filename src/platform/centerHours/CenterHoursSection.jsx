@@ -17,8 +17,9 @@ import { todayStr } from '../utils/dateUtils.js'
 
 const DAY_LABEL = { 0: '일', 1: '월', 2: '화', 5: '금', 6: '토' }
 
+// readOnly: 감독관(viewer) 열람용 — 학생 대리 수정 에디터 숨김 (엑셀은 허용)
 export default function CenterHoursSection({
-  role, allStudents, editableStudents, registrations, config, reload,
+  role, allStudents, editableStudents, registrations, config, reload, readOnly = false,
 }) {
   const isAdmin = role === 'admin'
   const [day, setDay] = useState(() => {
@@ -209,15 +210,17 @@ export default function CenterHoursSection({
         </div>
       </div>
 
-      {/* 학생 대리 수정 */}
-      <StudentHoursEditor
-        role={role}
-        students={editableStudents}
-        registrations={registrations}
-        capacity={config.capacity}
-        onSaved={reload}
-        busyGlobal={busy}
-      />
+      {/* 학생 대리 수정 — 열람 전용 역할에는 숨김 */}
+      {!readOnly && (
+        <StudentHoursEditor
+          role={role}
+          students={editableStudents}
+          registrations={registrations}
+          capacity={config.capacity}
+          onSaved={reload}
+          busyGlobal={busy}
+        />
+      )}
     </div>
   )
 }

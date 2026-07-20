@@ -44,7 +44,8 @@ export function BookingProvider({ children }) {
     {
       // 역할별 본 데이터 fetch — config·알림과 독립이므로 병렬로 묶는다
       const fetchRoleData = async () => {
-        if (role === 'admin') {
+        // viewer(감독관)는 관리자와 같은 전체 범위 열람 (쓰기는 화면에서 숨김)
+        if (role === 'admin' || role === 'viewer') {
           const [slotRows, resRows, recRows] = await Promise.all([
             api.fetchSlots({ from, to }),
             api.fetchReservations({ from, to }),

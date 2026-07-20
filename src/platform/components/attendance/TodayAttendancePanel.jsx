@@ -137,7 +137,7 @@ export default function TodayAttendancePanel({ board, onEditRecord, isToday = tr
                   {record?.note ?? ''}
                 </td>
                 <td className="px-3 py-2.5">
-                  {record && (
+                  {record && onEditRecord && (
                     <button
                       onClick={() => onEditRecord({ student, record })}
                       className="p-1.5 text-gray-300 hover:text-gray-500"

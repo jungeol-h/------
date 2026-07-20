@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { X, Plus, Edit2, Trash2, AlertTriangle } from 'lucide-react'
 import QuizQuestionEditModal from './QuizQuestionEditModal.jsx'
+import { AttachmentChips } from '../counseling/AttachmentField.jsx'
+import { quizFileUrl } from '../../lib/quizFiles.js'
 
 export default function QuizQuestionsModal({
   quizSet,
@@ -108,6 +110,7 @@ export default function QuizQuestionsModal({
                         </p>
                       )}
                     </div>
+                    <AttachmentChips attachments={q.attachments} fileUrl={quizFileUrl} />
                   </div>
                   <div className="flex flex-col gap-1">
                     <button

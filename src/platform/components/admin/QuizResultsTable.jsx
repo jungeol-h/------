@@ -195,7 +195,11 @@ export default function QuizResultsTable({ attempts, students, quizSets, quizQue
               </div>
 
               {openAttempt.answers.length === 0 ? (
-                <p className="text-xs text-gray-400 text-center py-4">문제 정보를 불러오지 못했습니다.</p>
+                <p className="text-xs text-gray-400 text-center py-4">
+                  {openSet?.isScoreOnly
+                    ? '점수전용 회차 — 외부 시험 점수라 문항별 결과가 없습니다.'
+                    : '문제 정보를 불러오지 못했습니다.'}
+                </p>
               ) : (
                 openAttempt.answers.map((ans, idx) => {
                   const q = openQuestionMap[ans.questionId]

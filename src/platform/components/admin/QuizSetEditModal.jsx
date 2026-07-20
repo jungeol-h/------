@@ -20,11 +20,14 @@ export default function QuizSetEditModal({
   const [source, setSource] = useState(initial?.source ?? '')
   const [description, setDescription] = useState(initial?.description ?? '')
   const [isPublished, setIsPublished] = useState(initial?.isPublished ?? true)
+  const [isScoreOnly, setIsScoreOnly] = useState(initial?.isScoreOnly ?? false)
+  const [maxScore, setMaxScore] = useState(initial?.maxScore ?? 100)
   const [saving, setSaving] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
 
   const isEdit = mode === 'edit'
   const canSubmit = title.trim() && grade && Number.isFinite(Number(round)) && Number(round) > 0
+    && (!isScoreOnly || Number(maxScore) > 0)
 
   const handleSubmit = async () => {
     if (!canSubmit) return
@@ -39,6 +42,8 @@ export default function QuizSetEditModal({
         source: source.trim(),
         description: description.trim(),
         isPublished,
+        isScoreOnly,
+        maxScore: isScoreOnly ? Number(maxScore) : null,
       })
       onClose()
     } catch (err) {
@@ -128,6 +133,35 @@ export default function QuizSetEditModal({
               className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm resize-none"
               placeholder="회차에 대한 메모"
             />
+          </div>
+
+          <div className="space-y-2 rounded-xl bg-gray-50 p-3">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={isScoreOnly}
+                onChange={(e) => setIsScoreOnly(e.target.checked)}
+                disabled={isEdit}
+                className="w-4 h-4"
+              />
+              <span className="text-sm text-gray-700">점수전용 (외부 시험 — 문제 없이 점수만 기록)</span>
+            </label>
+            {isEdit && (
+              <p className="text-[11px] text-gray-400">회차 유형은 생성 후 변경할 수 없습니다.</p>
+            )}
+            {isScoreOnly && (
+              <div>
+                <label className="block text-[11px] font-bold text-gray-500 mb-1">만점 *</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={maxScore}
+                  onChange={(e) => setMaxScore(e.target.value)}
+                  disabled={isEdit}
+                  className="w-32 px-3 py-2 rounded-lg border border-gray-200 text-sm disabled:bg-gray-100 disabled:text-gray-500"
+                />
+              </div>
+            )}
           </div>
 
           <label className="flex items-center gap-2 cursor-pointer select-none">

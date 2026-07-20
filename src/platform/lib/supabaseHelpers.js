@@ -280,6 +280,8 @@ export const toQuizSet = (row) => ({
   source: row.source ?? '',
   description: row.description ?? '',
   isPublished: row.is_published ?? true,
+  isScoreOnly: row.is_score_only ?? false,
+  maxScore: row.max_score ?? null,
   createdAt: row.created_at,
 })
 
@@ -292,6 +294,7 @@ export const toQuizQuestion = (row) => ({
   acceptedAnswers: row.accepted_answers ?? [],
   explanation: row.explanation ?? '',
   hint: row.hint ?? '',
+  attachments: row.attachments ?? [],
 })
 
 export const toQuizAttempt = (row) => ({

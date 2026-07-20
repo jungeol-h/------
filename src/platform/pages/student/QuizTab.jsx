@@ -8,6 +8,23 @@ import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
 import { hasPendingGrading } from '../../utils/quizGrading.js'
 import { QUIZ_SUBJECTS, DEFAULT_QUIZ_SUBJECT } from '../../utils/quizSubjects.js'
+import { quizFileUrl, isImageAttachment } from '../../lib/quizFiles.js'
+import { AttachmentChips } from '../../components/counseling/AttachmentField.jsx'
+
+// 문항 첨부 렌더 — 이미지는 인라인, PDF는 열람 칩 (응시·결과 화면 공용)
+function QuestionAttachments({ attachments }) {
+  if (!attachments?.length) return null
+  const images = attachments.filter(isImageAttachment)
+  const files = attachments.filter((a) => !isImageAttachment(a))
+  return (
+    <div className="mt-2 space-y-2">
+      {images.map((a) => (
+        <img key={a.path} src={quizFileUrl(a.path)} alt={a.name} className="rounded-lg max-w-full border border-gray-100" />
+      ))}
+      <AttachmentChips attachments={files} fileUrl={quizFileUrl} />
+    </div>
+  )
+}
 
 const DRAFT_PREFIX = 'quiz_draft'
 
@@ -115,6 +132,9 @@ export default function QuizTab() {
 
   function openSet(setId) {
     const existing = myAttempts.find((a) => a.quizSetId === setId)
+    const set = mySets.find((s) => s.id === setId)
+    // 점수전용(외부시험) 회차는 앱 내 응시가 없다 — 점수 입력 전엔 진입 차단
+    if (set?.isScoreOnly && !existing) return
     const nextDraftKey = getDraftKey(studentId, setId)
     const draft = readDraft(nextDraftKey)
     setActiveSetId(setId)
@@ -210,17 +230,23 @@ export default function QuizTab() {
             {mySets.map((s) => {
               const attempt = myAttempts.find((a) => a.quizSetId === s.id)
               const done = !!attempt
+              const waitingScore = s.isScoreOnly && !done
               return (
                 <button
                   key={s.id}
                   onClick={() => openSet(s.id)}
-                  className="w-full text-left bg-white rounded-2xl p-4 border border-gray-100 shadow-sm active:scale-[0.98] transition-all"
+                  disabled={waitingScore}
+                  className="w-full text-left bg-white rounded-2xl p-4 border border-gray-100 shadow-sm active:scale-[0.98] transition-all disabled:active:scale-100"
                 >
                   <div className="flex items-start justify-between gap-2 mb-1">
                     <p className="font-bold text-gray-800 text-sm">{s.title}</p>
                     {done ? (
                       <span className="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full flex-shrink-0">
-                        응시 완료
+                        {s.isScoreOnly ? '점수 등록' : '응시 완료'}
+                      </span>
+                    ) : waitingScore ? (
+                      <span className="text-[10px] bg-gray-100 text-gray-500 font-bold px-2 py-0.5 rounded-full flex-shrink-0">
+                        점수 입력 대기
                       </span>
                     ) : (
                       <span className="text-[10px] bg-indigo-100 text-indigo-700 font-bold px-2 py-0.5 rounded-full flex-shrink-0">
@@ -229,13 +255,16 @@ export default function QuizTab() {
                     )}
                   </div>
                   {s.description && <p className="text-xs text-gray-500 leading-relaxed">{s.description}</p>}
+                  {waitingScore && (
+                    <p className="text-xs text-gray-400 mt-2">외부 시험 점수를 선생님이 입력하면 여기에서 확인할 수 있어요.</p>
+                  )}
                   {done && (
                     <p className="text-xs text-emerald-600 font-semibold mt-2">
                       {attempt.score} / {attempt.total} 점
                       {hasPendingGrading(attempt) && (
                         <span className="text-amber-600"> · 채점 대기 중</span>
                       )}
-                      {' '}· 결과 보기
+                      {!s.isScoreOnly && ' · 결과 보기'}
                     </p>
                   )}
                 </button>
@@ -283,6 +312,7 @@ export default function QuizTab() {
         <div className="bg-white rounded-2xl p-5 border border-gray-100 min-h-[120px]">
           <p className="text-[11px] font-bold text-emerald-600 mb-2">문제 {step + 1}</p>
           <p className="text-sm font-medium text-gray-800 leading-relaxed whitespace-pre-wrap">{q.question}</p>
+          <QuestionAttachments attachments={q.attachments} />
           {q.hint && <p className="text-xs text-gray-400 mt-2">힌트: {q.hint}</p>}
         </div>
 
@@ -368,12 +398,17 @@ export default function QuizTab() {
           <p className="text-xs opacity-80 mb-1">{activeSet.title}</p>
           <div className="flex items-end gap-2">
             <h2 className="text-3xl font-bold">{resultAttempt.score}</h2>
-            <p className="text-sm opacity-80 pb-1">/ {resultAttempt.total} 정답</p>
+            <p className="text-sm opacity-80 pb-1">/ {resultAttempt.total} {activeSet.isScoreOnly ? '점' : '정답'}</p>
             <span className="ml-auto text-sm font-bold bg-white/20 rounded-full px-2.5 py-0.5">{pct}%</span>
           </div>
           {hasPendingGrading(resultAttempt) && (
             <p className="text-xs mt-2 bg-white/20 rounded-lg px-2.5 py-1.5 leading-relaxed">
               서술형 채점 대기 문항이 있습니다. 선생님 채점 후 점수가 갱신됩니다.
+            </p>
+          )}
+          {activeSet.isScoreOnly && (
+            <p className="text-xs mt-2 bg-white/20 rounded-lg px-2.5 py-1.5 leading-relaxed">
+              외부 시험 점수입니다. 문항별 결과는 제공되지 않습니다.
             </p>
           )}
         </div>
@@ -396,10 +431,13 @@ export default function QuizTab() {
                       ? <CheckCircle2 size={18} className="text-emerald-500 flex-shrink-0 mt-0.5" />
                       : <XCircle    size={18} className="text-red-500     flex-shrink-0 mt-0.5" />
                   }
-                  <p className="text-sm text-gray-800 leading-relaxed flex-1 whitespace-pre-wrap">
-                    <span className="text-[11px] font-bold text-gray-400 mr-1">Q{idx + 1}.</span>
-                    {q.question}
-                  </p>
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
+                      <span className="text-[11px] font-bold text-gray-400 mr-1">Q{idx + 1}.</span>
+                      {q.question}
+                    </p>
+                    <QuestionAttachments attachments={q.attachments} />
+                  </div>
                 </div>
                 <div className="space-y-1 text-xs ml-6">
                   {pending && (

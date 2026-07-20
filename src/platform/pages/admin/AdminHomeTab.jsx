@@ -31,7 +31,8 @@ const RISK_COLOR = {
 }
 const RISK_LABEL = { danger: '위험', warning: '주의', normal: '정상' }
 
-export default function AdminHomeTab() {
+// basePath/readOnly: 감독관(viewer)이 재사용 — 이동 경로를 /viewer로, 쓰기 액션(긴급보고 확인·키오스크)은 숨김
+export default function AdminHomeTab({ basePath = '/admin', readOnly = false }) {
   const { data } = useData()
   const navigate = useNavigate()
   const [showUrgentList, setShowUrgentList] = useState(false)
@@ -123,7 +124,7 @@ export default function AdminHomeTab() {
   return (
     <div className="py-6 space-y-6">
       <div>
-        <h2 className="text-lg font-bold text-gray-900">관리자 대시보드</h2>
+        <h2 className="text-lg font-bold text-gray-900">{readOnly ? '대시보드' : '관리자 대시보드'}</h2>
         <p className="text-xs text-gray-500 mt-0.5">현재 상황을 한눈에 확인합니다.</p>
       </div>
 
@@ -226,7 +227,7 @@ export default function AdminHomeTab() {
             </div>
             <button
               type="button"
-              onClick={() => navigate('/admin/users')}
+              onClick={() => navigate(`${basePath}/users`)}
               className="text-[11px] font-semibold text-red-700 hover:text-red-800"
             >
               학생 관리 →
@@ -237,7 +238,7 @@ export default function AdminHomeTab() {
               <li key={student.id}>
                 <button
                   type="button"
-                  onClick={() => navigate(`/admin/student/${student.id}`)}
+                  onClick={() => navigate(`${basePath}/student/${student.id}`)}
                   className="w-full flex items-center justify-between bg-white rounded-lg px-3 py-2 text-left hover:bg-red-100/40 transition"
                 >
                   <div className="min-w-0">
@@ -258,7 +259,7 @@ export default function AdminHomeTab() {
       )}
 
       {/* ── 시스템 정합성 점검 ───────────────────────────── */}
-      <ReconciliationSection issues={reconciliation} onGoUsers={() => navigate('/admin/users')} />
+      <ReconciliationSection issues={reconciliation} onGoUsers={() => navigate(`${basePath}/users`)} />
 
       {/* ── 4단: 오늘의 업무 일정 ─────────────────────────── */}
       <section className="bg-white rounded-2xl shadow-sm p-4">
@@ -269,7 +270,7 @@ export default function AdminHomeTab() {
           </div>
           <button
             type="button"
-            onClick={() => navigate('/admin/counseling?menu=plans')}
+            onClick={() => navigate(`${basePath}/counseling?menu=plans`)}
             className="text-[11px] font-semibold text-blue-600 hover:text-blue-700"
           >
             업무계획 →
@@ -283,7 +284,7 @@ export default function AdminHomeTab() {
               <li key={plan.id}>
                 <button
                   type="button"
-                  onClick={() => navigate('/admin/counseling?menu=plans')}
+                  onClick={() => navigate(`${basePath}/counseling?menu=plans`)}
                   className="w-full flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2 text-left hover:bg-blue-50 transition"
                 >
                   <span className="text-xs font-bold text-gray-700 flex-shrink-0 w-11">
@@ -320,7 +321,7 @@ export default function AdminHomeTab() {
             title="사용자 관리"
             description="학생·매니저 관리 · 보고서 출력"
             meta={`학생 ${stats.active.length}명 / 매니저 ${managerCount}명`}
-            onClick={() => navigate('/admin/users')}
+            onClick={() => navigate(`${basePath}/users`)}
           />
           <NavCard
             icon={ClipboardCheck}
@@ -329,31 +330,33 @@ export default function AdminHomeTab() {
             title="확인평가"
             description="회차 관리 · 응시 모니터링"
             meta={`${quizSetCount}회 · 응시 ${attemptCount}건`}
-            onClick={() => navigate('/admin/quiz')}
+            onClick={() => navigate(`${basePath}/quiz`)}
           />
-          <NavCard
-            icon={MonitorSmartphone}
-            iconColor="text-indigo-600"
-            bgColor="bg-indigo-50"
-            title="등·하원 키오스크"
-            description="센터 공용 태블릿 전체화면"
-            meta="전화번호 뒷 4자리로 등·하원 체크"
-            onClick={() => navigate('/admin/kiosk')}
-          />
+          {!readOnly && (
+            <NavCard
+              icon={MonitorSmartphone}
+              iconColor="text-indigo-600"
+              bgColor="bg-indigo-50"
+              title="등·하원 키오스크"
+              description="센터 공용 태블릿 전체화면"
+              meta="전화번호 뒷 4자리로 등·하원 체크"
+              onClick={() => navigate('/admin/kiosk')}
+            />
+          )}
         </div>
       </section>
 
       {/* ── 5단: 통계 (구 통계 탭 → 홈 하단) ────────────────── */}
       <StatisticsSection />
 
-      {showUrgentList && <UrgentReportListModal onClose={() => setShowUrgentList(false)} />}
+      {showUrgentList && <UrgentReportListModal readOnly={readOnly} onClose={() => setShowUrgentList(false)} />}
       {cautionModal && (
         <CautionStudentsModal
           {...CAUTION_MODALS[cautionModal]}
           onClose={() => setCautionModal(null)}
           onSelect={(id) => {
             setCautionModal(null)
-            navigate(`/admin/student/${id}`)
+            navigate(`${basePath}/student/${id}`)
           }}
         />
       )}

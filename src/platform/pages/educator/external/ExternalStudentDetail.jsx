@@ -107,12 +107,14 @@ export default function ExternalStudentDetail({
           label="상담 보고서"
           disabled={records.length === 0}
         />
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-1 bg-emerald-500 text-white text-sm font-bold px-3 py-2 rounded-xl hover:bg-emerald-600 active:scale-95 transition-all"
-        >
-          <Plus size={16} /> 상담 작성
-        </button>
+        {currentUser?.role !== 'viewer' && (
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex items-center gap-1 bg-emerald-500 text-white text-sm font-bold px-3 py-2 rounded-xl hover:bg-emerald-600 active:scale-95 transition-all"
+          >
+            <Plus size={16} /> 상담 작성
+          </button>
+        )}
       </div>
 
       {sorted.length === 0 ? (

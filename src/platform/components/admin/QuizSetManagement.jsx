@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import {
   Settings, Plus, Edit2, Trash2, Eye,
-  ToggleLeft, ToggleRight, AlertTriangle, Shuffle,
+  ToggleLeft, ToggleRight, AlertTriangle, Shuffle, ClipboardEdit,
 } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
@@ -10,6 +10,7 @@ import {
 } from '../../utils/quizSubjects.js'
 import QuizSetEditModal from './QuizSetEditModal.jsx'
 import QuizQuestionsModal from './QuizQuestionsModal.jsx'
+import QuizScoreEntryModal from './QuizScoreEntryModal.jsx'
 
 const GRADE_BADGE = {
   '중1': 'bg-sky-50 text-sky-700 border-sky-200',
@@ -43,6 +44,7 @@ export default function QuizSetManagement() {
     createQuizQuestion,
     updateQuizQuestion,
     deleteQuizQuestion,
+    upsertScoreOnlyAttempt,
   } = useData()
 
   const { currentUser } = useAuth()
@@ -59,6 +61,7 @@ export default function QuizSetManagement() {
   const [togglingSetId, setTogglingSetId] = useState(null)
   const [duplicatingSetId, setDuplicatingSetId] = useState(null)
   const [deleting, setDeleting] = useState(false)
+  const [scoreEntrySetId, setScoreEntrySetId] = useState(null)
 
   const questionsBySet = useMemo(() => {
     const map = {}
@@ -254,14 +257,27 @@ export default function QuizSetManagement() {
                         <span className="text-sm font-bold text-gray-800 tabular-nums">{set.round}회</span>
                       </td>
                       <td className="px-3 py-3 align-top">
-                        <p className="text-sm font-semibold text-gray-800">{set.title}</p>
+                        <p className="text-sm font-semibold text-gray-800">
+                          {set.title}
+                          {set.isScoreOnly && (
+                            <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded border border-indigo-200 bg-indigo-50 text-indigo-700 text-[10px] font-bold align-middle">
+                              외부시험
+                            </span>
+                          )}
+                        </p>
                         {set.description && (
                           <p className="text-[11px] text-gray-500 mt-0.5 line-clamp-1">{set.description}</p>
                         )}
                       </td>
                       <td className="px-3 py-3 align-top text-right">
-                        <span className="text-sm font-semibold text-gray-700 tabular-nums">{questionCount}</span>
-                        <span className="text-[11px] text-gray-400 ml-0.5">개</span>
+                        {set.isScoreOnly ? (
+                          <span className="text-[11px] text-gray-500">만점 {set.maxScore}점</span>
+                        ) : (
+                          <>
+                            <span className="text-sm font-semibold text-gray-700 tabular-nums">{questionCount}</span>
+                            <span className="text-[11px] text-gray-400 ml-0.5">개</span>
+                          </>
+                        )}
                       </td>
                       <td className="px-3 py-3 align-top text-right">
                         <span className="text-sm font-semibold text-gray-700 tabular-nums">{attemptCount}</span>
@@ -289,21 +305,33 @@ export default function QuizSetManagement() {
                       </td>
                       <td className="px-4 py-3 align-top">
                         <div className="flex items-center justify-end gap-0.5">
-                          <button
-                            onClick={() => setViewingSetId(set.id)}
-                            className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-600"
-                            title="문제 보기"
-                          >
-                            <Eye size={16} />
-                          </button>
-                          <button
-                            onClick={() => handleDuplicate(set)}
-                            disabled={duplicatingSetId === set.id || questionCount === 0}
-                            className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600 disabled:opacity-40"
-                            title={questionCount === 0 ? '문제가 없어 복제할 수 없습니다' : '순서 셔플 복제 (새 회차로 생성, 미배포)'}
-                          >
-                            <Shuffle size={16} />
-                          </button>
+                          {set.isScoreOnly ? (
+                            <button
+                              onClick={() => setScoreEntrySetId(set.id)}
+                              className="p-1.5 rounded-lg hover:bg-indigo-50 text-indigo-600"
+                              title="점수 입력 (외부 시험)"
+                            >
+                              <ClipboardEdit size={16} />
+                            </button>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => setViewingSetId(set.id)}
+                                className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-600"
+                                title="문제 보기"
+                              >
+                                <Eye size={16} />
+                              </button>
+                              <button
+                                onClick={() => handleDuplicate(set)}
+                                disabled={duplicatingSetId === set.id || questionCount === 0}
+                                className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600 disabled:opacity-40"
+                                title={questionCount === 0 ? '문제가 없어 복제할 수 없습니다' : '순서 셔플 복제 (새 회차로 생성, 미배포)'}
+                              >
+                                <Shuffle size={16} />
+                              </button>
+                            </>
+                          )}
                           <button
                             onClick={() => setEditingSet(set)}
                             className="p-1.5 rounded-lg hover:bg-emerald-50 text-emerald-600"
@@ -348,6 +376,19 @@ export default function QuizSetManagement() {
           onClose={() => setEditingSet(null)}
         />
       )}
+
+      {scoreEntrySetId && (() => {
+        const set = allSets.find((s) => s.id === scoreEntrySetId)
+        return set ? (
+          <QuizScoreEntryModal
+            quizSet={set}
+            students={data.students ?? []}
+            attempts={data.quizAttempts.filter((a) => a.quizSetId === set.id)}
+            onUpsertScore={(studentId, quizSetId, score) => upsertScoreOnlyAttempt(studentId, quizSetId, score)}
+            onClose={() => setScoreEntrySetId(null)}
+          />
+        ) : null
+      })()}
 
       {viewingSet && (
         <QuizQuestionsModal

@@ -1,7 +1,14 @@
 import { useState } from 'react'
 import { X, Save } from 'lucide-react'
+import { useAuth } from '../../context/AuthContext.jsx'
+import { AttachmentField } from '../counseling/AttachmentField.jsx'
+import {
+  validateQuizAttachment, uploadQuizFiles, removeQuizFiles,
+  MAX_QUIZ_ATTACHMENTS, MAX_QUIZ_ATTACHMENT_MB,
+} from '../../lib/quizFiles.js'
 
 export default function QuizQuestionEditModal({ mode = 'create', initial, quizSetId, defaultOrderNo = 1, onSubmit, onClose }) {
+  const { currentUser } = useAuth()
   const [orderNo, setOrderNo] = useState(initial?.orderNo ?? defaultOrderNo)
   const [type, setType] = useState(initial?.type ?? 'short')
   const [question, setQuestion] = useState(initial?.question ?? '')
@@ -10,6 +17,8 @@ export default function QuizQuestionEditModal({ mode = 'create', initial, quizSe
   )
   const [explanation, setExplanation] = useState(initial?.explanation ?? '')
   const [hint, setHint] = useState(initial?.hint ?? '')
+  const [existingAttachments, setExistingAttachments] = useState(initial?.attachments ?? [])
+  const [attachFiles, setAttachFiles] = useState([]) // 업로드 대기 File[]
   const [saving, setSaving] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
 
@@ -33,6 +42,7 @@ export default function QuizQuestionEditModal({ mode = 'create', initial, quizSe
     setSaving(true)
     setErrorMsg('')
     try {
+      const uploaded = attachFiles.length > 0 ? await uploadQuizFiles(attachFiles, currentUser?.id) : []
       await onSubmit({
         quizSetId,
         orderNo: Number(orderNo),
@@ -41,7 +51,13 @@ export default function QuizQuestionEditModal({ mode = 'create', initial, quizSe
         acceptedAnswers: isEssay ? [] : parsedAnswers,
         explanation: explanation.trim(),
         hint: hint.trim(),
+        attachments: [...existingAttachments, ...uploaded],
       })
+      // 수정에서 제거된 첨부의 실파일 정리 (best-effort — 셔플 복제본과 path 공유 가능성은 수용)
+      if (isEdit) {
+        const keptPaths = new Set(existingAttachments.map((a) => a.path))
+        removeQuizFiles((initial?.attachments ?? []).filter((a) => !keptPaths.has(a.path)).map((a) => a.path))
+      }
       onClose()
     } catch (err) {
       setErrorMsg(err?.message ?? '저장 중 오류가 발생했습니다.')
@@ -123,6 +139,18 @@ export default function QuizQuestionEditModal({ mode = 'create', initial, quizSe
               )}
             </div>
           )}
+
+          <AttachmentField
+            existing={existingAttachments}
+            onRemoveExisting={(path) => setExistingAttachments((prev) => prev.filter((a) => a.path !== path))}
+            pending={attachFiles}
+            onChangePending={setAttachFiles}
+            accept="image/jpeg,image/png,image/webp,application/pdf,.pdf"
+            validate={validateQuizAttachment}
+            kindLabel="이미지·PDF"
+            maxCount={MAX_QUIZ_ATTACHMENTS}
+            maxMb={MAX_QUIZ_ATTACHMENT_MB}
+          />
 
           <div>
             <label className="block text-[11px] font-bold text-gray-500 mb-1">해설 (선택)</label>
