@@ -14,7 +14,7 @@ npm install
 cp .env.example .env   # Supabase URL/anon key 등 채우기 (주석 참고)
 npm run dev            # 개발 서버
 npm run lint           # ESLint — 0건 유지가 기준선
-npm run test           # Vitest 166개 — selector/유틸 순수함수 단위테스트
+npm run test           # Vitest — selector/유틸 순수함수 단위테스트
 npm run build          # 프로덕션 빌드 (배포 전 필수 확인)
 ```
 
@@ -27,8 +27,10 @@ Supabase Studio에서 SQL을 먼저 적용할 것** → `scripts/README.md` (마
 src/platform/
 ├── context/    데이터 계층 4계층 (fetchers/domains/selectors) → context/README.md
 │   └── selectors/  지표 공식·판정 임계값 도메인 지식 → selectors/README.md
-├── pages/      역할별 화면 6종 + 역할 추가 체크리스트 → pages/README.md
+├── pages/      역할별 화면 + 역할 추가 체크리스트 → pages/README.md
 │   └── educator/external/  외부상담 격리 모듈 → external/README.md
+├── booking/    컨설팅·코칭 예약 시스템 격리 모듈 → booking/README.md
+├── centerHours/ 센터 이용시간 등록·시간대별 출석부 격리 모듈 → centerHours/README.md
 ├── components/ 공용 UI (common/ModalShell, counseling/, admin/, workRecords/ ...)
 ├── pdf/        PDF 리포트 인프라 + 금기사항 → pdf/README.md
 ├── lib/        Supabase·Sentry·Storage + ⚠️ 보안 부채 목록 → lib/README.md
@@ -37,6 +39,11 @@ src/platform/
 ```
 
 기획 배경·용어는 `docs/README.md`, AI 작업 지침은 `CLAUDE.md`.
+
+**README 원칙**: 각 README는 코드가 말해주지 못하는 것만 담는다 — 설계 의도·격리 원칙,
+클라이언트와 확정한 비즈니스 규칙, 사고 이력 기반 금기, 운영 절차·이력. 탭 구성·파일 목록·
+함수 시그니처·개수처럼 코드에서 즉시 확인되는 사실은 적지 않는다(적으면 반드시 낡는다).
+문서와 코드가 다르면 코드가 현행이다 — 발견 시 문서를 고칠 것.
 
 ## 운영 특성 (코드만 봐서는 모르는 것)
 
