@@ -319,6 +319,7 @@ export default function ReservationSearch({ readOnly = false }) {
 function ProxyReserveModal({ students, config, slots, slotCounts, reservations, userNames, reserve, onClose }) {
   const [studentId, setStudentId] = useState('')
   const [programId, setProgramId] = useState(config.programs[0]?.id ?? '')
+  const [selectedSlot, setSelectedSlot] = useState(null)
   const [override, setOverride] = useState(false)
   const [reason, setReason] = useState('')
   const [failCode, setFailCode] = useState(null)
@@ -328,15 +329,15 @@ function ProxyReserveModal({ students, config, slots, slotCounts, reservations, 
   const filteredStudents = query ? students.filter((s) => s.name.includes(query)) : students
   const program = config.programs.find((p) => p.id === programId)
 
-  const pick = async (slot) => {
-    if (!studentId || busy) return
+  const submit = async () => {
+    if (!studentId || !selectedSlot || busy) return
     if (override && !reason.trim()) {
       setFailCode('REASON_REQUIRED')
       return
     }
     setBusy(true)
     try {
-      const result = await reserve({ slotId: slot.id, studentId, override, reason: reason.trim() || null })
+      const result = await reserve({ slotId: selectedSlot.id, studentId, override, reason: reason.trim() || null })
       if (result?.ok) onClose()
       else setFailCode(result?.code ?? 'ERROR')
     } finally {
@@ -354,11 +355,19 @@ function ProxyReserveModal({ students, config, slots, slotCounts, reservations, 
           placeholder="학생 검색"
           className={FIELD}
         />
-        <select value={studentId} onChange={(e) => setStudentId(e.target.value)} className={FIELD}>
+        <select
+          value={studentId}
+          onChange={(e) => { setStudentId(e.target.value); setSelectedSlot(null); setFailCode(null) }}
+          className={FIELD}
+        >
           <option value="">학생 선택</option>
           {filteredStudents.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
-        <select value={programId} onChange={(e) => setProgramId(e.target.value)} className={`${FIELD} col-span-2`}>
+        <select
+          value={programId}
+          onChange={(e) => { setProgramId(e.target.value); setSelectedSlot(null); setFailCode(null) }}
+          className={`${FIELD} col-span-2`}
+        >
           {config.programs.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
       </div>
@@ -374,10 +383,24 @@ function ProxyReserveModal({ students, config, slots, slotCounts, reservations, 
             programId={programId}
             studentReservations={reservations.filter((r) => r.studentId === studentId)}
             userNames={userNames}
-            onPick={pick}
+            onPick={(s) => { setSelectedSlot(s); setFailCode(null) }}
           />
         )
         : <p className="py-4 text-center text-xs text-gray-400">학생을 먼저 선택하세요.</p>}
+      {selectedSlot && (
+        <p className="text-sm text-gray-700 bg-blue-50 rounded-lg p-2 font-medium">
+          {selectedSlot.date} {selectedSlot.startTime}~{selectedSlot.endTime}
+          {' · '}{userNames[selectedSlot.educatorId]?.name ?? '미지정'}
+        </p>
+      )}
+      <button
+        type="button"
+        onClick={submit}
+        disabled={!studentId || !selectedSlot || busy}
+        className="w-full h-12 rounded-xl bg-blue-500 text-white font-bold disabled:opacity-50"
+      >
+        {busy ? '처리 중...' : '대리 예약 확정'}
+      </button>
     </ModalShell>
   )
 }
@@ -427,13 +450,14 @@ function AdminCancelModal({ reservation, studentName, cancel, onClose }) {
 }
 
 function AdminChangeModal({ reservation, studentName, slots, slotCounts, reservations, userNames, change, onClose }) {
+  const [selectedSlot, setSelectedSlot] = useState(null)
   const [override, setOverride] = useState(false)
   const [reason, setReason] = useState('')
   const [failCode, setFailCode] = useState(null)
   const [busy, setBusy] = useState(false)
 
-  const pick = async (slot) => {
-    if (busy) return
+  const submit = async () => {
+    if (!selectedSlot || busy) return
     if (!reason.trim()) {
       setFailCode('REASON_REQUIRED')
       return
@@ -441,7 +465,7 @@ function AdminChangeModal({ reservation, studentName, slots, slotCounts, reserva
     setBusy(true)
     try {
       const result = await change({
-        reservationId: reservation.id, newSlotId: slot.id, override, reason: reason.trim(),
+        reservationId: reservation.id, newSlotId: selectedSlot.id, override, reason: reason.trim(),
       })
       if (result?.ok) onClose()
       else setFailCode(result?.code ?? 'ERROR')
@@ -463,8 +487,22 @@ function AdminChangeModal({ reservation, studentName, slots, slotCounts, reserva
         programId={reservation.programId}
         studentReservations={reservations.filter((r) => r.studentId === reservation.studentId)}
         userNames={userNames}
-        onPick={pick}
+        onPick={(s) => { setSelectedSlot(s); setFailCode(null) }}
       />
+      {selectedSlot && (
+        <p className="text-sm text-gray-700 bg-blue-50 rounded-lg p-2 font-medium">
+          새 시간: {selectedSlot.date} {selectedSlot.startTime}~{selectedSlot.endTime}
+          {' · '}{userNames[selectedSlot.educatorId]?.name ?? '미지정'}
+        </p>
+      )}
+      <button
+        type="button"
+        onClick={submit}
+        disabled={!selectedSlot || busy}
+        className="w-full h-12 rounded-xl bg-blue-500 text-white font-bold disabled:opacity-50"
+      >
+        {busy ? '처리 중...' : '이 시간으로 변경'}
+      </button>
     </ModalShell>
   )
 }
