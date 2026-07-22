@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { User, AlertCircle, Search } from 'lucide-react'
+import { User, AlertCircle, Search, MonitorSmartphone } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
 import { getMindStatus } from '../../context/selectors/riskDetection.js'
@@ -41,7 +41,16 @@ export default function EducatorStudentListTab() {
 
   return (
     <div className="py-6 space-y-4">
-      <h2 className="text-lg font-bold text-gray-900">전체 학생 ({students.length}명)</h2>
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-lg font-bold text-gray-900">전체 학생 ({students.length}명)</h2>
+        <button
+          onClick={() => navigate(`/${currentUser.role}/kiosk`)}
+          className="px-3 py-2 bg-indigo-500 text-white rounded-xl text-sm font-bold flex items-center gap-1.5 active:scale-95 transition-all flex-shrink-0"
+        >
+          <MonitorSmartphone size={15} />
+          키오스크 열기
+        </button>
+      </div>
 
       <div className="relative">
         <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />

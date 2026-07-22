@@ -14,6 +14,7 @@ import ExternalCounselingTab from './external/ExternalCounselingTab.jsx'
 import QuizMonitorTab from '../admin/QuizMonitorTab.jsx'
 import StudentDetailPage from '../shared/StudentDetailPage.jsx'
 import EducatorBookingTab from './EducatorBookingTab.jsx'
+import KioskPage from '../manager/KioskPage.jsx'
 
 const ROLE_TITLES = { instructor: '교과강사', consultant: '컨설턴트' }
 
@@ -61,6 +62,8 @@ export default function EducatorDashboard() {
 
   return (
     <Routes>
+      {/* 등·하원 키오스크 — 전체화면(Header/TabBar 없음) */}
+      <Route path="kiosk" element={<KioskPage />} />
       <Route path="student/:studentId" element={
         <StudentDetailWrapper tabs={tabs} back={`${basePath}/students`} />
       } />

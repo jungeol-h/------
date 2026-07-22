@@ -35,8 +35,11 @@ export default function KioskPage() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const { kioskFindStudents, kioskCheckIn, kioskCheckOut } = useData()
-  // /admin/kiosk와 /manager/kiosk 양쪽에 마운트된다 — 종료 시 각자 대시보드로
-  const exitTo = pathname.startsWith('/admin') ? '/admin/home' : '/manager/attendance'
+  // /admin·/manager·/instructor·/consultant/kiosk 어디에나 마운트된다 — 종료 시 각자 첫 화면으로.
+  const exitTo =
+    pathname.startsWith('/admin') ? '/admin/home'
+    : pathname.startsWith('/manager') ? '/manager/attendance'
+    : `/${pathname.split('/')[1]}/students` // 강사·컨설턴트: 학생 탭으로
 
   // step: input → select → result
   const [digits, setDigits] = useState('')

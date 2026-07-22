@@ -20,6 +20,7 @@ import { COUNSELING_TYPE_LABELS } from '../../data/counselingTypes.js'
 import StatisticsSection from '../../components/admin/StatisticsSection.jsx'
 import UrgentReportListModal from '../../components/admin/UrgentReportListModal.jsx'
 import CautionStudentsModal from '../../components/admin/CautionStudentsModal.jsx'
+import GroupAttendanceSummary from '../../components/admin/GroupAttendanceSummary.jsx'
 
 const GRADE_ORDER = { 중1: 1, 중2: 2, 중3: 3, 고1: 4, 고2: 5, 고3: 6 }
 const gradeWeight = (g) => GRADE_ORDER[g] ?? 99
@@ -159,6 +160,9 @@ export default function AdminHomeTab({ basePath = '/admin', readOnly = false }) 
         </div>
         <p className="text-[10px] text-gray-400 mt-2">신입학 = 입학일이 이번 달인 학생 (사용자 관리에서 입학일 입력)</p>
       </section>
+
+      {/* ── 그룹별 출결 집계 (오늘) ─────────────────────────── */}
+      <GroupAttendanceSummary />
 
       {/* ── 2단: 핵심 지표 (주의 학생) ─────────────────────── */}
       <section>
