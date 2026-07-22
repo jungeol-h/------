@@ -202,11 +202,12 @@ export async function createRecord({ programStudentId, counselorId, content, typ
   return toProgramRecord({ ...row, created_at: new Date().toISOString() })
 }
 
-export async function updateRecord(id, { content, type, targetType, fields }) {
+export async function updateRecord(id, { content, type, targetType, fields, date }) {
   const patch = {}
   if (content !== undefined) patch.content = content
   if (type !== undefined) patch.type = type
   if (targetType !== undefined) patch.target_type = targetType
+  if (date !== undefined) patch.date = date
   if (fields !== undefined) {
     patch.topic = fields.topic ?? null
     patch.diagnosis = fields.diagnosis ?? null

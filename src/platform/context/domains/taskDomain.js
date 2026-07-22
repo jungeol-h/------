@@ -100,7 +100,7 @@ export function useTaskDomain(data, setData) {
 
   // 과제 부여 (교과강사/컨설턴트/매니저/관리자가 학생에게 과제 배정)
   const addTask = useCallback(
-    async ({ studentId, title, subject, dueDate, dueTime, assignerId, assignerName, method, content }) => {
+    async ({ studentId, title, subject, dueDate, dueTime, assignerId, assignerName, method, content, attachments }) => {
       const row = {
         id: makeId('t'),
         student_id: studentId,
@@ -113,6 +113,8 @@ export function useTaskDomain(data, setData) {
         assigner_name: assignerName ?? null,
         method: method || null,
         content: content || null,
+        attachments: attachments ?? [],
+        submissions: [],
       }
       const { error } = await withWriteRetry(
         () => supabase.from('tasks').insert(row),
@@ -137,6 +139,7 @@ export function useTaskDomain(data, setData) {
       if (patch.dueTime !== undefined) snake.due_time = patch.dueTime
       if (patch.method !== undefined) snake.method = patch.method || null
       if (patch.content !== undefined) snake.content = patch.content || null
+      if (patch.attachments !== undefined) snake.attachments = patch.attachments
       if (Object.keys(snake).length === 0) return
       const { error } = await withWriteRetry(
         () => supabase.from('tasks').update(snake).eq('id', id),
@@ -146,6 +149,23 @@ export function useTaskDomain(data, setData) {
       setData((prev) => ({
         ...prev,
         tasks: prev.tasks.map((t) => (t.id === id ? { ...t, ...patch } : t)),
+      }))
+    },
+    [setData]
+  )
+
+  // 과제 제출 파일 갱신 (학생이 자기 과제에 파일 제출/추가/제거).
+  // submissions 전체를 새 배열로 대체한다 — 업로드/제거 후 최종 목록을 넘긴다.
+  const setTaskSubmissions = useCallback(
+    async (id, submissions) => {
+      const { error } = await withWriteRetry(
+        () => supabase.from('tasks').update({ submissions }).eq('id', id),
+        { label: 'setTaskSubmissions' }
+      )
+      if (error) throw error
+      setData((prev) => ({
+        ...prev,
+        tasks: prev.tasks.map((t) => (t.id === id ? { ...t, submissions } : t)),
       }))
     },
     [setData]
@@ -167,5 +187,5 @@ export function useTaskDomain(data, setData) {
     [setData]
   )
 
-  return { toggleTask, addTask, updateTask, deleteTask, addTodoItem, updateTodoItem, toggleTodo }
+  return { toggleTask, addTask, updateTask, setTaskSubmissions, deleteTask, addTodoItem, updateTodoItem, toggleTodo }
 }

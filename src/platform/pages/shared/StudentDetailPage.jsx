@@ -26,6 +26,7 @@ import { AttachmentChips } from '../../components/counseling/AttachmentField.jsx
 import { removeCounselingFiles } from '../../lib/counselingFiles.js'
 import { educatorDisplayName } from '../../utils/educatorName.js'
 import TaskFormModal from '../../components/tasks/TaskFormModal.jsx'
+import TaskFileChips from '../../components/tasks/TaskFileChips.jsx'
 import DownloadPdfButton from '../../pdf/components/DownloadPdfButton.jsx'
 import { buildFilename, nowDateTime } from '../../pdf/utils/formatters.js'
 import { authorOf } from '../../pdf/config/meta.js'
@@ -333,6 +334,7 @@ function TaskSection({ studentId, data, currentUser, canWrite = false }) {
                     <p className="text-xs text-gray-400 mt-0.5">
                       {t.subject}{t.assignerName ? ` · 출제: ${t.assignerName}` : ''} · 마감 {t.dueDate}
                     </p>
+                    <TaskFileChips attachments={t.attachments} submissions={t.submissions} />
                   </div>
                   <ManageButtons t={t} />
                 </div>
@@ -348,6 +350,7 @@ function TaskSection({ studentId, data, currentUser, canWrite = false }) {
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-sm text-gray-500 line-through">{t.title}</p>
                     <p className="text-xs text-gray-400 mt-0.5">{t.subject}{t.assignerName ? ` · ${t.assignerName}` : ''}</p>
+                    <TaskFileChips attachments={t.attachments} submissions={t.submissions} />
                   </div>
                   <ManageButtons t={t} />
                 </div>

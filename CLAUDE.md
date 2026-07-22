@@ -20,7 +20,7 @@ Recharts · lucide-react · Supabase · @react-pdf/renderer · JSX
 
 ## 개발 규칙
 
-- 단순한 구현, 노가다성 작업은 Fable이 직접 하지 않고 하위 모델 Agent가 구현하고 Fable이 작업 결과를 판단/검증할 것.
+- 메인 리더는 Fable. 단순한 구현, 노가다성 작업은 Fable이 직접 하지 않고 하위 AI 모델 Agent가 구현하고 Fable이 작업 결과를 판단/검증할 것. (혼자 작업하지 말고 관료제처럼 유기적으로 구현하라는 뜻이다. 다만 너무 많이 자주 분업하는 것은 지양.)
 - **날짜 문자열('YYYY-MM-DD')은 반드시 `utils/dateUtils.js`** (toDateStr/todayStr/daysAgoStr).
   `toISOString().slice(0,10)` 금지 — UTC라 KST 00~09시에 전날로 기록되는 실버그가 있었다.
 - **도메인 CRUD는 `context/domains/crudKit.js` 팩토리** 우선 (모범: workRecordsDomain).

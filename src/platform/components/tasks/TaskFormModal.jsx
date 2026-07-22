@@ -3,6 +3,11 @@ import { X, CheckCheck } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
 import StudentCombobox from '../counseling/StudentCombobox.jsx'
+import { AttachmentField } from '../counseling/AttachmentField.jsx'
+import {
+  uploadTaskFiles, removeTaskFiles, validateTaskFile,
+  MAX_TASK_FILES, MAX_TASK_FILE_MB,
+} from '../../lib/taskFiles.js'
 
 // 과제 부여 모달 — 교과강사/컨설턴트/매니저/관리자가 학생에게 과제를 배정한다.
 // fixedStudent가 있으면 해당 학생 고정(학생상세), 없으면 students 목록에서 선택.
@@ -20,6 +25,8 @@ export default function TaskFormModal({ students = [], fixedStudent, task, onClo
   const [dueTime, setDueTime] = useState(task?.dueTime && task.dueTime !== '23:59' ? task.dueTime : '')
   const [method, setMethod] = useState(task?.method ?? '')
   const [content, setContent] = useState(task?.content ?? '')
+  const [existingAttachments, setExistingAttachments] = useState(task?.attachments ?? [])
+  const [attachFiles, setAttachFiles] = useState([]) // 업로드 대기 File[]
   const [saving, setSaving] = useState(false)
 
   const fieldClass = 'w-full border border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300'
@@ -30,8 +37,13 @@ export default function TaskFormModal({ students = [], fixedStudent, task, onClo
     if (!canSave) return
     setSaving(true)
     try {
+      const uploaded = attachFiles.length > 0 ? await uploadTaskFiles(attachFiles, currentUser?.id) : []
+      const attachments = [...existingAttachments, ...uploaded]
       if (isEdit) {
-        await updateTask(task.id, { title, subject, dueDate, dueTime: dueTime || '23:59', method, content })
+        await updateTask(task.id, { title, subject, dueDate, dueTime: dueTime || '23:59', method, content, attachments })
+        // 수정에서 제거된 첨부의 실파일 정리 (best-effort)
+        const keptPaths = new Set(existingAttachments.map((a) => a.path))
+        removeTaskFiles((task.attachments ?? []).filter((a) => !keptPaths.has(a.path)).map((a) => a.path))
       } else {
         await addTask({
           studentId,
@@ -43,6 +55,7 @@ export default function TaskFormModal({ students = [], fixedStudent, task, onClo
           assignerName: currentUser?.name,
           method,
           content,
+          attachments,
         })
       }
       onSaved?.()
@@ -107,6 +120,18 @@ export default function TaskFormModal({ students = [], fixedStudent, task, onClo
           onChange={(e) => setMethod(e.target.value)}
           placeholder="수행방법 (선택) — 예: 노트에 풀고 사진 제출"
           className={fieldClass}
+        />
+
+        <AttachmentField
+          existing={existingAttachments}
+          onRemoveExisting={(path) => setExistingAttachments((prev) => prev.filter((a) => a.path !== path))}
+          pending={attachFiles}
+          onChangePending={setAttachFiles}
+          accept="application/pdf,.pdf,image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+          validate={validateTaskFile}
+          kindLabel="이미지·PDF"
+          maxCount={MAX_TASK_FILES}
+          maxMb={MAX_TASK_FILE_MB}
         />
 
         <div className="grid grid-cols-2 gap-3">

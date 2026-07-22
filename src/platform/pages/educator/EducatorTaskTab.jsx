@@ -3,6 +3,7 @@ import { Plus, Pencil, Trash2 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
 import TaskFormModal from '../../components/tasks/TaskFormModal.jsx'
+import TaskFileChips from '../../components/tasks/TaskFileChips.jsx'
 
 // 교과강사/컨설턴트 과제 탭 — 상단 부여 버튼 + 본인이 부여한 과제 목록.
 export default function EducatorTaskTab() {
@@ -90,6 +91,7 @@ export default function EducatorTaskTab() {
                   {t.subject ? `${t.subject} · ` : ''}마감 {t.dueDate}
                   {t.dueTime && t.dueTime !== '23:59' ? ` ${t.dueTime}` : ''}
                 </p>
+                <TaskFileChips attachments={t.attachments} submissions={t.submissions} />
               </div>
             ))}
           </div>

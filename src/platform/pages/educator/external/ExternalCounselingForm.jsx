@@ -7,6 +7,7 @@ import {
 } from '../../../data/counselingTypes.js'
 import CounselingContentFields from '../../../components/counseling/CounselingContentFields.jsx'
 import { createRecord, updateRecord } from './externalData.js'
+import { todayStr } from '../../../utils/dateUtils.js'
 
 // 외생 상담 기록 작성/수정 모달. CounselingFormModal 스타일 차용.
 // record가 있으면 수정 모드. 저장 성공 시 onSaved(record)로 로컬 state 갱신.
@@ -15,6 +16,7 @@ export default function ExternalCounselingForm({ student, record, counselorId, o
   const isEdit = !!record
   const [type, setType] = useState(record?.type ?? COUNSELING_TYPES[0])
   const [targetType, setTargetType] = useState(record?.targetType ?? 'student')
+  const [date, setDate] = useState(record?.date ?? todayStr())
   const [fields, setFields] = useState({
     topic: record?.topic ?? '',
     diagnosis: record ? (hasStructuredContent(record) ? record.diagnosis : record.content ?? '') : '',
@@ -33,8 +35,8 @@ export default function ExternalCounselingForm({ student, record, counselorId, o
     try {
       const content = composeCounselingContent(fields)
       if (isEdit) {
-        await updateRecord(record.id, { content, type, targetType, fields })
-        onSaved?.({ ...record, content, type, targetType, ...fields })
+        await updateRecord(record.id, { content, type, targetType, fields, date })
+        onSaved?.({ ...record, content, type, targetType, date, ...fields })
       } else {
         const created = await createRecord({
           programStudentId: student.id,
@@ -42,6 +44,7 @@ export default function ExternalCounselingForm({ student, record, counselorId, o
           content,
           type,
           targetType,
+          date,
           fields,
         })
         onSaved?.(created)
@@ -68,6 +71,16 @@ export default function ExternalCounselingForm({ student, record, counselorId, o
 
         <div className="rounded-xl bg-gray-50 p-3 text-sm font-semibold text-gray-700">
           {student?.name ?? '학생'} 학생
+        </div>
+
+        <div>
+          <label className="text-xs text-gray-500 mb-1 block">상담일</label>
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className={fieldClass}
+          />
         </div>
 
         <div className="grid grid-cols-2 gap-3">

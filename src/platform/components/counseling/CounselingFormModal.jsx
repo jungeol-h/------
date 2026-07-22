@@ -10,6 +10,7 @@ import {
 import CounselingContentFields from './CounselingContentFields.jsx'
 import { AttachmentField } from './AttachmentField.jsx'
 import { uploadCounselingPdfs, removeCounselingFiles } from '../../lib/counselingFiles.js'
+import { todayStr } from '../../utils/dateUtils.js'
 
 // 상담 작성 모달 — 매니저/관리자/학생상세에서 재사용. 코칭 모달(ManagerHomeTab) 패턴 차용.
 // fixedStudent가 있으면 해당 학생 고정, 없으면 students 목록에서 선택.
@@ -22,6 +23,7 @@ export default function CounselingFormModal({ students = [], fixedStudent, recor
   const [studentId, setStudentId] = useState(record?.studentId ?? fixedStudent?.id ?? '')
   const [type, setType] = useState(record?.type ?? COUNSELING_TYPES[0])
   const [targetType, setTargetType] = useState(record?.targetType ?? 'student')
+  const [date, setDate] = useState(record?.date ?? todayStr())
   const [startTime, setStartTime] = useState(record?.startTime ?? '')
   const [endTime, setEndTime] = useState(record?.endTime ?? '')
   const [fields, setFields] = useState({
@@ -45,12 +47,12 @@ export default function CounselingFormModal({ students = [], fixedStudent, recor
       const uploaded = attachFiles.length > 0 ? await uploadCounselingPdfs(attachFiles, authorId) : []
       const attachments = [...existingAttachments, ...uploaded]
       if (isEdit) {
-        await updateCounselingRecord(record.id, { content, type, targetType, fields, attachments, startTime, endTime })
+        await updateCounselingRecord(record.id, { content, type, targetType, fields, attachments, startTime, endTime, date })
         // 수정에서 제거된 첨부의 실파일 정리 (best-effort)
         const keptPaths = new Set(existingAttachments.map((a) => a.path))
         removeCounselingFiles((record.attachments ?? []).filter((a) => !keptPaths.has(a.path)).map((a) => a.path))
       } else {
-        await addCounselingRecord({ studentId, authorId, content, type, targetType, fields, attachments, startTime, endTime })
+        await addCounselingRecord({ studentId, authorId, content, type, targetType, fields, attachments, startTime, endTime, date })
       }
       onSaved?.()
       onClose()
@@ -113,7 +115,16 @@ export default function CounselingFormModal({ students = [], fixedStudent, recor
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">상담일</label>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className={fieldClass}
+            />
+          </div>
           <div>
             <label className="text-xs text-gray-500 mb-1 block">시작시간</label>
             <input

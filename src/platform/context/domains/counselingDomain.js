@@ -18,12 +18,12 @@ export function useCounselingDomain(setData) {
   // fields: { topic, diagnosis, advice, followUp, note, nextAppointment } — 보고서 양식 6단계.
   // content에는 합성 텍스트가 함께 들어온다(NOT NULL·PDF/레거시 소비처 호환).
   const addCounselingRecord = useCallback(
-    async ({ studentId, authorId, content, type, targetType, fields, attachments, startTime, endTime }) => {
+    async ({ studentId, authorId, content, type, targetType, fields, attachments, startTime, endTime, date }) => {
       const row = {
         id: makeId('c'),
         student_id: studentId,
         manager_id: authorId,
-        date: todayStr(),
+        date: date || todayStr(),
         content,
         type,
         target_type: targetType ?? 'student',
@@ -52,7 +52,7 @@ export function useCounselingDomain(setData) {
 
   // 상담 기록 수정 — 앱 모델 content는 DB의 content 컬럼(변환기에서 comment로 매핑)이다.
   const updateCounselingRecord = useCallback(
-    async (id, { content, type, targetType, fields, attachments, startTime, endTime }) => {
+    async (id, { content, type, targetType, fields, attachments, startTime, endTime, date }) => {
       const snake = {}
       if (content !== undefined) snake.content = content
       if (type !== undefined) snake.type = type
@@ -60,6 +60,7 @@ export function useCounselingDomain(setData) {
       if (attachments !== undefined) snake.attachments = attachments
       if (startTime !== undefined) snake.start_time = startTime
       if (endTime !== undefined) snake.end_time = endTime
+      if (date !== undefined) snake.date = date
       if (fields !== undefined) {
         snake.topic = fields.topic ?? null
         snake.diagnosis = fields.diagnosis ?? null
@@ -86,6 +87,7 @@ export function useCounselingDomain(setData) {
                 ...(attachments !== undefined ? { attachments } : {}),
                 ...(startTime !== undefined ? { startTime } : {}),
                 ...(endTime !== undefined ? { endTime } : {}),
+                ...(date !== undefined ? { date } : {}),
                 ...(fields !== undefined
                   ? {
                       topic: fields.topic ?? '',

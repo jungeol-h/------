@@ -105,6 +105,8 @@ export const toTask = (row) => ({
   assignerName: row.assigner_name ?? '',
   method: row.method ?? '',
   content: row.content ?? '',
+  attachments: row.attachments ?? [], // 강사 첨부 (문제/자료)
+  submissions: row.submissions ?? [], // 학생 제출 파일
 })
 
 export const toCounselingRecord = (row) => ({
