@@ -6,6 +6,10 @@ export default function InstallButton() {
   const [showIOSGuide, setShowIOSGuide] = useState(false)
   // 렌더 전에 확정되는 값은 lazy init으로 — effect 안 동기 setState 금지 룰 준수.
   const [isIOS] = useState(() => /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream)
+  // iOS 비-Safari 브라우저: 공유 버튼 위치가 다름 (iOS 16.4+면 설치 자체는 가능)
+  const [isIOSNonSafari] = useState(() =>
+    /CriOS|FxiOS|EdgiOS|OPiOS|OPT\/|Whale|YaBrowser/i.test(navigator.userAgent)
+  )
   // 이미 standalone(설치됨) 상태면 버튼 숨김
   const [installed, setInstalled] = useState(
     () => window.matchMedia('(display-mode: standalone)').matches
@@ -71,7 +75,12 @@ export default function InstallButton() {
             <ol className="flex flex-col gap-3 text-sm text-gray-700">
               <li className="flex items-start gap-2">
                 <span className="flex-shrink-0 w-5 h-5 rounded-full bg-violet-100 text-violet-700 text-xs font-bold flex items-center justify-center mt-0.5">1</span>
-                <span>Safari 하단의 <strong>공유 버튼(↑)</strong>을 탭하세요.</span>
+                <span>
+                  {isIOSNonSafari
+                    ? '주소창 오른쪽의 '
+                    : 'Safari 하단의 '}
+                  <strong>공유 버튼(↑)</strong>을 탭하세요.
+                </span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="flex-shrink-0 w-5 h-5 rounded-full bg-violet-100 text-violet-700 text-xs font-bold flex items-center justify-center mt-0.5">2</span>
@@ -82,7 +91,9 @@ export default function InstallButton() {
                 <span>오른쪽 위 <strong>"추가"</strong>를 탭하면 완료!</span>
               </li>
             </ol>
-            <p className="text-xs text-gray-400 text-center">* Safari 브라우저에서만 설치 가능합니다.</p>
+            <p className="text-xs text-gray-400 text-center">
+              * "홈 화면에 추가"가 안 보이면(iOS 16.4 미만) Safari로 접속해 주세요.
+            </p>
           </div>
         </div>
       )}

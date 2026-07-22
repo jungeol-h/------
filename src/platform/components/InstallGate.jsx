@@ -1,14 +1,26 @@
 // PWA 설치 강제 게이트 (모바일 전용, App 루트에서 렌더).
 // 모바일 브라우저(비-standalone) 접속 시 전체 화면을 덮어 설치를 유도하고 조작을 차단한다.
 // - Android: beforeinstallprompt로 즉시 설치 버튼 / 없으면 수동 안내
-// - iOS: 공유 → 홈 화면에 추가 수동 안내 (프로그래매틱 설치 불가)
+// - iOS: 공유 → 홈 화면에 추가 수동 안내 (프로그래매틱 설치 불가).
+//   Safari는 하단 공유 버튼, 크롬 등 비-Safari는 주소창 옆 공유 버튼 안내 (iOS 16.4+ 설치 가능, 미만은 Safari 폴백 문구)
 // - 인앱 브라우저(카카오톡 등): PWA 설치 자체가 불가 → 외부 브라우저로 열기 안내
 // 데스크톱은 게이트 대상 아님. 비상 우회: ?browser=1 (sessionStorage, 탭 닫으면 소멸).
 
 import { useState, useEffect } from 'react'
-import { Share, MoreVertical, Plus, Smartphone, Download, ExternalLink, CheckCircle2 } from 'lucide-react'
+import {
+  Share,
+  MoreVertical,
+  Plus,
+  Smartphone,
+  Download,
+  ExternalLink,
+  CheckCircle2,
+  Copy,
+  Check,
+} from 'lucide-react'
 
 const BYPASS_KEY = 'namaek-pwa-gate-bypass'
+const SITE_URL = 'https://gooooookee.com'
 
 function detectEnv() {
   const ua = navigator.userAgent
@@ -16,12 +28,26 @@ function detectEnv() {
     window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true
   // iPadOS 13+는 데스크톱 UA를 쓰므로 Mac + 멀티터치로 판별
   const isIPadDesktopUA = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1
-  const isIOS = (/iphone|ipad|ipod/i.test(ua) && !window.MSStream) || isIPadDesktopUA
+  const isIPad = /ipad/i.test(ua) || isIPadDesktopUA
+  const isIOS = (/iphone|ipod/i.test(ua) && !window.MSStream) || isIPad
   const isAndroid = /android/i.test(ua)
   const isKakao = /KAKAOTALK/i.test(ua)
+  const isLine = /Line\//i.test(ua)
   // 인앱 브라우저: PWA 설치 불가 환경 (카카오톡·네이버·인스타·페북·라인·다음·일반 WebView)
-  const isInApp = isKakao || /NAVER\(inapp|Instagram|FBAN|FBAV|Line\/|DaumApps|; wv\)/i.test(ua)
-  return { isStandalone, isIOS, isAndroid, isKakao, isInApp, isMobile: isIOS || isAndroid }
+  const isInApp = isKakao || isLine || /NAVER\(inapp|Instagram|FBAN|FBAV|DaumApps|; wv\)/i.test(ua)
+  // iOS 비-Safari 브라우저(크롬·파폭·엣지·오페라·웨일 등): 공유 버튼 위치가 다름 (iOS 16.4+면 설치는 가능)
+  const isIOSNonSafari = isIOS && /CriOS|FxiOS|EdgiOS|OPiOS|OPT\/|Whale|YaBrowser/i.test(ua)
+  return {
+    isStandalone,
+    isIOS,
+    isIPad,
+    isIOSNonSafari,
+    isAndroid,
+    isKakao,
+    isLine,
+    isInApp,
+    isMobile: isIOS || isAndroid,
+  }
 }
 
 function checkBypass() {
@@ -73,6 +99,13 @@ export default function InstallGate() {
       'kakaotalk://web/openExternal?url=' + encodeURIComponent(window.location.href)
   }
 
+  // LINE 인앱 브라우저는 openExternalBrowser=1 파라미터로 외부 브라우저 강제 오픈 지원
+  const openExternalLine = () => {
+    const url = new URL(window.location.href)
+    url.searchParams.set('openExternalBrowser', '1')
+    window.location.href = url.toString()
+  }
+
   return (
     <div className="fixed inset-0 z-[100] bg-gray-50 overflow-y-auto">
       <div className="max-w-lg mx-auto px-5 py-10 flex flex-col gap-6 min-h-full justify-center">
@@ -99,9 +132,9 @@ export default function InstallGate() {
             </p>
           </div>
         ) : env.isInApp ? (
-          <InAppGuide isKakao={env.isKakao} onOpenKakao={openExternalKakao} />
+          <InAppGuide env={env} onOpenKakao={openExternalKakao} onOpenLine={openExternalLine} />
         ) : env.isIOS ? (
-          <IOSGuide />
+          <IOSGuide nonSafari={env.isIOSNonSafari} isIPad={env.isIPad} />
         ) : (
           <AndroidGuide promptEvent={promptEvent} onInstall={handleInstall} />
         )}
@@ -114,22 +147,26 @@ export default function InstallGate() {
   )
 }
 
-function InAppGuide({ isKakao, onOpenKakao }) {
+function InAppGuide({ env, onOpenKakao, onOpenLine }) {
+  const { isKakao, isLine, isIOS } = env
+  const appName = isKakao ? '카카오톡' : isLine ? 'LINE' : '앱 내'
+  const browserName = isIOS ? 'Safari' : 'Chrome'
+
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
       <div className="bg-amber-500 px-5 py-3">
         <span className="text-white font-bold text-sm">
-          {isKakao ? '카카오톡' : '앱 내'} 브라우저에서는 설치할 수 없어요
+          {appName} 브라우저에서는 설치할 수 없어요
         </span>
       </div>
       <div className="px-5 py-4 space-y-4">
-        {isKakao ? (
+        {isKakao || isLine ? (
           <>
             <p className="text-sm text-gray-700 leading-relaxed">
-              아래 버튼을 눌러 <strong>외부 브라우저</strong>로 열어주세요.
+              아래 버튼을 눌러 <strong>외부 브라우저({browserName})</strong>로 열어주세요.
             </p>
             <button
-              onClick={onOpenKakao}
+              onClick={isKakao ? onOpenKakao : onOpenLine}
               className="w-full flex items-center justify-center gap-2 bg-violet-600 hover:bg-violet-700 text-white font-bold text-sm rounded-xl py-3.5"
             >
               <ExternalLink size={16} />
@@ -146,33 +183,98 @@ function InAppGuide({ isKakao, onOpenKakao }) {
               메뉴 버튼을 탭
             </Step>
             <Step num={2}>
-              <strong>"다른 브라우저로 열기"</strong> 또는 <strong>"기본 브라우저로 열기"</strong>{' '}
-              선택
+              {isIOS ? (
+                <>
+                  <strong>"Safari로 열기"</strong> 또는 <strong>"기본 브라우저로 열기"</strong> 선택
+                </>
+              ) : (
+                <>
+                  <strong>"다른 브라우저로 열기"</strong> 또는 <strong>"기본 브라우저로 열기"</strong>{' '}
+                  선택
+                </>
+              )}
             </Step>
           </>
         )}
-        <div className="bg-amber-50 rounded-xl px-4 py-3 text-xs text-amber-700 leading-relaxed">
-          💡 안 되면 주소를 복사해서 Chrome이나 Safari에 붙여넣어 주세요:{' '}
-          <strong className="text-amber-800">gooooookee.com</strong>
+        <div className="bg-amber-50 rounded-xl px-4 py-3 space-y-2">
+          <p className="text-xs text-amber-700 leading-relaxed">
+            💡 안 되면 아래 버튼으로 주소를 복사한 뒤 {browserName}에 붙여넣어 주세요.
+          </p>
+          <CopyUrlButton />
         </div>
       </div>
     </div>
   )
 }
 
-function IOSGuide() {
+function CopyUrlButton() {
+  const [copied, setCopied] = useState(false)
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(SITE_URL)
+      setCopied(true)
+    } catch {
+      // 구형 WebView 등 clipboard API 미지원 환경 폴백
+      try {
+        const ta = document.createElement('textarea')
+        ta.value = SITE_URL
+        ta.style.position = 'fixed'
+        ta.style.opacity = '0'
+        document.body.appendChild(ta)
+        ta.select()
+        document.execCommand('copy')
+        document.body.removeChild(ta)
+        setCopied(true)
+      } catch {
+        setCopied(false)
+      }
+    }
+  }
+
+  return (
+    <button
+      onClick={copy}
+      className="w-full flex items-center justify-center gap-1.5 bg-white border border-amber-200 text-amber-800 font-bold text-xs rounded-lg py-2.5"
+    >
+      {copied ? (
+        <>
+          <Check size={13} className="text-emerald-600" />
+          복사 완료! 브라우저 주소창에 붙여넣어 주세요
+        </>
+      ) : (
+        <>
+          <Copy size={13} />
+          주소 복사 (gooooookee.com)
+        </>
+      )}
+    </button>
+  )
+}
+
+function IOSGuide({ nonSafari, isIPad }) {
+  // 공유 버튼 위치: iPhone Safari는 하단 가운데, iPad Safari는 오른쪽 위, 비-Safari는 주소창 옆
+  const shareLocation = nonSafari ? '주소창 오른쪽의' : isIPad ? '오른쪽 위' : '하단 가운데'
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
       <div className="bg-blue-500 px-5 py-3">
-        <span className="text-white font-bold text-sm">iPhone / iPad 설치 방법</span>
+        <span className="text-white font-bold text-sm">
+          {isIPad ? 'iPad' : 'iPhone'} 설치 방법
+        </span>
       </div>
       <div className="px-5 py-4 space-y-4">
         <Step num={1}>
-          하단 가운데{' '}
+          {shareLocation}{' '}
           <InlineIcon>
             <Share size={14} />
           </InlineIcon>{' '}
           공유 버튼을 탭
+          {nonSafari && (
+            <>
+              {' '}
+              (안 보이면 메뉴에서 <strong>"공유"</strong> 선택)
+            </>
+          )}
         </Step>
         <Step num={2}>
           아래로 스크롤해서 <strong>"홈 화면에 추가"</strong> 탭
@@ -185,11 +287,21 @@ function IOSGuide() {
           오른쪽 위 <strong>"추가"</strong> 탭
         </Step>
         <Step num={4}>
-          Safari를 닫고 <strong>홈 화면의 나매크 아이콘</strong>으로 접속하면 완료!
+          브라우저를 닫고 <strong>홈 화면의 나매크 아이콘</strong>으로 접속하면 완료!
         </Step>
         <div className="bg-blue-50 rounded-xl px-4 py-3 text-xs text-blue-700 leading-relaxed">
-          ※ 공유 버튼이 없다면 <strong className="text-blue-800">Safari</strong>로{' '}
-          <strong className="text-blue-800">gooooookee.com</strong>에 접속해 주세요.
+          {nonSafari ? (
+            <>
+              ※ <strong className="text-blue-800">"홈 화면에 추가"</strong>가 안 보이면(iOS 16.4
+              미만) <strong className="text-blue-800">Safari</strong>로{' '}
+              <strong className="text-blue-800">gooooookee.com</strong>에 접속해 주세요.
+            </>
+          ) : (
+            <>
+              ※ 공유 버튼이 없다면 <strong className="text-blue-800">Safari</strong>로{' '}
+              <strong className="text-blue-800">gooooookee.com</strong>에 접속해 주세요.
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -231,9 +343,15 @@ function AndroidGuide({ promptEvent, onInstall }) {
             <Step num={3}>
               설치 후 <strong>홈 화면의 나매크 아이콘</strong>으로 접속하면 완료!
             </Step>
-            <div className="bg-emerald-50 rounded-xl px-4 py-3 text-xs text-emerald-700 leading-relaxed">
-              💡 메뉴에 설치 항목이 없다면 <strong className="text-emerald-800">Chrome</strong>으로{' '}
-              <strong className="text-emerald-800">gooooookee.com</strong>에 접속해 주세요.
+            <div className="bg-emerald-50 rounded-xl px-4 py-3 text-xs text-emerald-700 leading-relaxed space-y-1">
+              <p>
+                💡 메뉴에 설치 항목이 없다면 <strong className="text-emerald-800">Chrome</strong>
+                으로 <strong className="text-emerald-800">gooooookee.com</strong>에 접속해 주세요.
+              </p>
+              <p>
+                💡 메뉴에 <strong className="text-emerald-800">"열기"</strong>가 보이면 이미 설치된
+                거예요. 홈 화면의 나매크 아이콘으로 접속해 주세요.
+              </p>
             </div>
           </>
         )}

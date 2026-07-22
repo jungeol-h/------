@@ -87,7 +87,8 @@ export default function InstallGuidePage() {
               <strong>Safari</strong> 브라우저로 <strong>gooooookee.com</strong>{" "}
               접속
               <span className="block text-xs text-gray-400 mt-0.5">
-                ※ Safari가 아니면 설치가 안 돼요
+                ※ 크롬 등 다른 브라우저도 iOS 16.4 이상이면 공유 → "홈 화면에
+                추가"로 설치할 수 있어요
               </span>
             </Step>
             <Step num={2}>
