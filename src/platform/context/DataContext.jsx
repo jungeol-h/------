@@ -34,8 +34,13 @@ import { useUrgentReportDomain } from './domains/urgentReportDomain.js'
 import { useWorkRecordsDomain } from './domains/workRecordsDomain.js'
 import { getWeeklyLearning as selectWeeklyLearning } from './selectors/weeklyLearning.js'
 import { reportError, setSentryUser } from '../lib/sentry.js'
+import { isTransientFetchMessage } from '../lib/supabaseRetry.js'
 
 const DataContext = createContext(null)
+
+// 초기 fetch 재시도 백오프 — 모바일 복귀 직후 네트워크가 깨어나기 전이면
+// 첫 시도가 타임아웃/네트워크 에러로 떨어지므로, 잠시 뒤 전체를 다시 시도한다.
+const INITIAL_LOAD_BACKOFF_MS = [1000, 3000]
 
 export function DataProvider({ children }) {
   const { currentUser } = useAuth()
@@ -72,15 +77,30 @@ export function DataProvider({ children }) {
     setDataReady(false)
 
     const load = async () => {
-      try {
-        const fetched = await fetchAll()
-        if (!cancelled) {
+      // 일시적 네트워크 장애(타임아웃 포함)면 전체 fetch를 백오프 후 재시도한다.
+      // 표 단위 에러는 collectRows가 _fetchErrors로 모으므로 결과를 보고 판단한다.
+      for (let attempt = 0; attempt <= INITIAL_LOAD_BACKOFF_MS.length; attempt++) {
+        const canRetry = attempt < INITIAL_LOAD_BACKOFF_MS.length
+        try {
+          const fetched = await fetchAll()
+          if (cancelled) return
+          const hasTransientError = (fetched?._fetchErrors ?? [])
+            .some((e) => isTransientFetchMessage(e.message))
+          if (hasTransientError && canRetry) {
+            await new Promise((r) => setTimeout(r, INITIAL_LOAD_BACKOFF_MS[attempt]))
+            if (cancelled) return
+            continue
+          }
           setData(fetched)
           setDataReady(true)
-        }
-      } catch (err) {
-        reportError(err, { where: 'DataContext.load', role: currentUser?.role })
-        if (!cancelled) {
+        } catch (err) {
+          if (cancelled) return
+          if (canRetry && isTransientFetchMessage(err?.message ?? String(err))) {
+            await new Promise((r) => setTimeout(r, INITIAL_LOAD_BACKOFF_MS[attempt]))
+            if (cancelled) return
+            continue
+          }
+          reportError(err, { where: 'DataContext.load', role: currentUser?.role, retryCount: attempt })
           // fetch 전체가 실패해도 침묵하지 않도록 _fetchErrors에 남긴다.
           setData({
             ...EMPTY,
@@ -88,8 +108,8 @@ export function DataProvider({ children }) {
           })
           setDataReady(true)
         }
-      } finally {
-        if (!cancelled) setLoading(false)
+        setLoading(false)
+        return
       }
     }
 

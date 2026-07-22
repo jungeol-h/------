@@ -32,6 +32,23 @@ function emitErrorToast(error, label) {
   }
 }
 
+// 일시적 네트워크 장애로 볼 수 있는 에러 메시지인지. postgrest-js는 fetch가 throw한
+// 에러를 `${name}: ${message}` 형태의 error.message로 감싸 반환하므로 문자열로 판별한다.
+// 읽기(초기 fetch) 재시도 판단용 — 타임아웃 포함. 쓰기 재시도(isRetryable)는 타임아웃을
+// 제외한다: 타임아웃된 쓰기는 서버에 이미 도달했을 수 있어 재시도가 중복 저장이 된다.
+export function isTransientFetchMessage(message) {
+  const msg = String(message ?? '').toLowerCase()
+  return (
+    msg.includes('load failed') ||
+    msg.includes('failed to fetch') ||
+    msg.includes('networkerror') ||
+    msg.includes('network request failed') ||
+    msg.includes('timeouterror') ||
+    msg.includes('aborterror') ||
+    msg.includes('typeerror')
+  )
+}
+
 function isRetryable(error) {
   if (!error) return false
   if (error instanceof TypeError) return true
