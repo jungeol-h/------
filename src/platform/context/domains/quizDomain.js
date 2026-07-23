@@ -4,7 +4,7 @@
 import { useCallback } from 'react'
 import { supabase } from '../../lib/supabase.js'
 import { toQuizSet, toQuizQuestion, toQuizAttempt } from '../../lib/supabaseHelpers.js'
-import { gradeAttempt } from '../../utils/quizGrading.js'
+import { gradeAttempt, answerPoints, answerEarned } from '../../utils/quizGrading.js'
 import { shuffleQuestionsOrder } from '../../utils/quizShuffle.js'
 import { makeId } from '../dataModel.js'
 import { withWriteRetry } from '../../lib/supabaseRetry.js'
@@ -65,34 +65,47 @@ export function useQuizDomain(data, setData) {
     [data.quizQuestions, setData]
   )
 
-  // 교사 수동 채점 — 문항별 정오(isCorrect)를 병합하고 score를 재계산해 UPDATE.
-  // 서술형 채점 대기(null) 해소 + 자동채점 정정 겸용. 갱신된 attempt를 반환한다.
+  // 교사 수동 채점 — gradingByQid 값이 boolean이면 단답 정오(earned = 정답 ? 배점 : 0),
+  // 숫자면 서술형 득점(0~배점 클램프, 만점이면 isCorrect true), null이면 채점 대기로 되돌림.
+  // score(득점 합)·total(배점 합)을 함께 재계산해 UPDATE. 구 답안(points 스냅샷 없음)은
+  // 문항에서 배점을 찾아(없으면 1점) 백필해 저장한다. 갱신된 attempt를 반환한다.
   const updateQuizAttemptGrading = useCallback(
-    async (attemptId, isCorrectByQid) => {
+    async (attemptId, gradingByQid) => {
       const attempt = data.quizAttempts.find((a) => a.id === attemptId)
       if (!attempt) throw new Error('응시 기록을 찾지 못했습니다.')
-      const newAnswers = attempt.answers.map((a) =>
-        isCorrectByQid[a.questionId] !== undefined
-          ? { ...a, isCorrect: isCorrectByQid[a.questionId] }
-          : a
-      )
-      const newScore = newAnswers.filter((a) => a.isCorrect === true).length
+      const newAnswers = attempt.answers.map((a) => {
+        const grade = gradingByQid[a.questionId]
+        if (grade === undefined) return a
+        const pts = Number.isFinite(a.points)
+          ? a.points
+          : answerPoints(data.quizQuestions.find((q) => q.id === a.questionId))
+        if (typeof grade === 'boolean') {
+          return { ...a, points: pts, isCorrect: grade, earned: grade ? pts : 0 }
+        }
+        if (grade === null || !Number.isFinite(grade)) {
+          return { ...a, points: pts, isCorrect: null, earned: null }
+        }
+        const earned = Math.min(Math.max(grade, 0), pts)
+        return { ...a, points: pts, isCorrect: earned >= pts, earned }
+      })
+      const newScore = newAnswers.reduce((sum, a) => sum + (answerEarned(a) ?? 0), 0)
+      const newTotal = newAnswers.reduce((sum, a) => sum + answerPoints(a), 0)
       const { error } = await withWriteRetry(
         () => supabase
           .from('quiz_attempts')
-          .update({ answers: newAnswers, score: newScore })
+          .update({ answers: newAnswers, score: newScore, total: newTotal })
           .eq('id', attemptId),
         { label: 'updateQuizAttemptGrading' }
       )
       if (error) throw error
-      const updated = { ...attempt, answers: newAnswers, score: newScore }
+      const updated = { ...attempt, answers: newAnswers, score: newScore, total: newTotal }
       setData((prev) => ({
         ...prev,
         quizAttempts: prev.quizAttempts.map((a) => (a.id === attemptId ? updated : a)),
       }))
       return updated
     },
-    [data.quizAttempts, setData]
+    [data.quizAttempts, data.quizQuestions, setData]
   )
 
   // 점수전용 회차의 점수 직접 입력 — 학생 응시 없이 강사/관리자가 기록.
@@ -240,6 +253,7 @@ export function useQuizDomain(data, setData) {
         accepted_answers: q.acceptedAnswers,
         explanation: q.explanation ?? '',
         hint: q.hint ?? '',
+        points: q.points ?? 1,
         // 첨부 메타는 복제하되 실파일은 원본과 path 공유 (삭제는 best-effort라 수용)
         attachments: q.attachments ?? [],
       }))
@@ -295,7 +309,7 @@ export function useQuizDomain(data, setData) {
 
   // 문제 신규 생성
   const createQuizQuestion = useCallback(
-    async ({ quizSetId, orderNo, type = 'short', question, acceptedAnswers, explanation = '', hint = '', attachments = [] }) => {
+    async ({ quizSetId, orderNo, type = 'short', question, acceptedAnswers, explanation = '', hint = '', points = 1, attachments = [] }) => {
       const row = {
         id: makeId('qq-'),
         quiz_set_id: quizSetId,
@@ -305,6 +319,7 @@ export function useQuizDomain(data, setData) {
         accepted_answers: acceptedAnswers,
         explanation,
         hint,
+        points,
         attachments,
       }
       const { error } = await withWriteRetry(
@@ -332,6 +347,7 @@ export function useQuizDomain(data, setData) {
       if (patch.acceptedAnswers !== undefined) snake.accepted_answers = patch.acceptedAnswers
       if (patch.explanation !== undefined) snake.explanation = patch.explanation
       if (patch.hint !== undefined) snake.hint = patch.hint
+      if (patch.points !== undefined) snake.points = patch.points
       if (patch.attachments !== undefined) snake.attachments = patch.attachments
 
       const { error } = await withWriteRetry(

@@ -50,7 +50,8 @@ DB 스키마 변경은 **Supabase Studio SQL Editor에서 수동 실행**한다 
 | `add-center-hours.sql` | 센터 이용시간 등록: center_hour_registrations(학생×요일×1시간 단위) + admin_config('center_hours') 설정 + RPC 2종(center_save_hours 정원·잠금 검증 저장 / center_sync_attendance_schedules 일괄 보정). v2(2026-07-18): center_save_hours가 저장 시 등·하원 시간표 자동 파생 | 적용됨 (v2 포함 — 2026-07-20 실DB 검증: 당일 저장 건이 즉시 파생됐고 59명·199건 시간표가 등록과 전건 일치) |
 | `add-quiz-attachments-and-score-only.sql` | 확인평가 확장: quiz_questions.attachments(이미지/PDF 메타) + quiz_sets.is_score_only/max_score(외부시험 점수전용 회차) + 'quiz-attachments' 버킷 | 적용됨 (2026-07-20) |
 | `add-booking-science-educators.sql` | 예약 교과 컨설팅에 '과학' 교과 추가 + 최돈권(수학)·박영균(과학) 상담사 배정 (계정은 seed-staff-accounts로 기존재, 역할 변경 없음) | 적용됨 (2026-07-20) |
-| `add-task-attachments.sql` | 과제 파일 첨부(양방향): tasks.attachments(강사 문제/자료 메타) + tasks.submissions(학생 제출 메타) + 'task-files' 버킷(이미지/PDF) | 미적용 — 배포 전 적용 필요 |
+| `add-task-attachments.sql` | 과제 파일 첨부(양방향): tasks.attachments(강사 문제/자료 메타) + tasks.submissions(학생 제출 메타) + 'task-files' 버킷(이미지/PDF) | 적용됨 (2026-07-23) |
+| `add-quiz-question-points.sql` | quiz_questions.points (서술형 배점 — 교사가 0~배점 점수 입력 채점, 단답형·기존 데이터는 1점) | 적용됨 (2026-07-23) |
 
 ## 시드·일회성 유틸 (재실행 금지 또는 불필요)
 

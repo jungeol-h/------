@@ -16,6 +16,7 @@ import UrgentReportModal from './UrgentReportModal.jsx'
 import MonthlyReportModal from './MonthlyReportModal.jsx'
 import { AttachmentField, AttachmentChips } from './AttachmentField.jsx'
 import { uploadCounselingPdfs, removeCounselingFiles } from '../../lib/counselingFiles.js'
+import { todayStr } from '../../utils/dateUtils.js'
 
 const EMPTY_FIELDS = { topic: '', diagnosis: '', advice: '', followUp: '', note: '', nextAppointment: '' }
 
@@ -29,6 +30,7 @@ export default function CounselingTabContent({ students, records, showAuthor = f
   const [studentId, setStudentId] = useState('')
   const [type, setType] = useState(COUNSELING_TYPES[0])
   const [targetType, setTargetType] = useState('student')
+  const [date, setDate] = useState(todayStr())
   const [startTime, setStartTime] = useState('')
   const [endTime, setEndTime] = useState('')
   const [fields, setFields] = useState(EMPTY_FIELDS)
@@ -115,11 +117,12 @@ export default function CounselingTabContent({ students, records, showAuthor = f
     try {
       const content = composeCounselingContent(fields)
       const attachments = attachFiles.length > 0 ? await uploadCounselingPdfs(attachFiles, authorId) : []
-      await addCounselingRecord({ studentId, authorId, content, type, targetType, fields, attachments, startTime, endTime })
+      await addCounselingRecord({ studentId, authorId, content, type, targetType, fields, attachments, startTime, endTime, date })
       // 성공 시 폼 초기화(학생/유형은 연속 작성 편의를 위해 유지하지 않고 비움).
       setStudentId('')
       setType(COUNSELING_TYPES[0])
       setTargetType('student')
+      setDate(todayStr())
       setStartTime('')
       setEndTime('')
       setFields(EMPTY_FIELDS)
@@ -188,7 +191,16 @@ export default function CounselingTabContent({ students, records, showAuthor = f
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">상담일</label>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className={`${fieldClass} w-full`}
+            />
+          </div>
           <div>
             <label className="text-xs text-gray-500 mb-1 block">시작시간</label>
             <input

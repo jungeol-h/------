@@ -1,12 +1,12 @@
 // 학생 확인평가 응시 (/student/diagnosis/quiz) — 본인 학년·선택 과목의 공개 회차 목록 → 문항 풀이 → 결과.
 // 풀이 중 답안은 localStorage 초안으로 저장해 이탈 후 복구한다. 제출은 submitQuizAttempt.
-// 서술형 문항은 '채점 대기'(isCorrect === null)로 표시되고 선생님 채점 후 점수가 갱신된다.
+// 서술형 문항은 '채점 대기'(earned === null)로 표시되고 선생님이 0~배점 사이 점수로 채점하면 갱신된다.
 
 import { useEffect, useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight, ClipboardCheck, CheckCircle2, XCircle, RotateCcw, Loader, Clock } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
-import { hasPendingGrading } from '../../utils/quizGrading.js'
+import { hasPendingGrading, isPendingAnswer, answerEarned, answerPoints } from '../../utils/quizGrading.js'
 import { QUIZ_SUBJECTS, DEFAULT_QUIZ_SUBJECT } from '../../utils/quizSubjects.js'
 import { quizFileUrl, isImageAttachment } from '../../lib/quizFiles.js'
 import { AttachmentChips } from '../../components/counseling/AttachmentField.jsx'
@@ -398,7 +398,7 @@ export default function QuizTab() {
           <p className="text-xs opacity-80 mb-1">{activeSet.title}</p>
           <div className="flex items-end gap-2">
             <h2 className="text-3xl font-bold">{resultAttempt.score}</h2>
-            <p className="text-sm opacity-80 pb-1">/ {resultAttempt.total} {activeSet.isScoreOnly ? '점' : '정답'}</p>
+            <p className="text-sm opacity-80 pb-1">/ {resultAttempt.total} 점</p>
             <span className="ml-auto text-sm font-bold bg-white/20 rounded-full px-2.5 py-0.5">{pct}%</span>
           </div>
           {hasPendingGrading(resultAttempt) && (
@@ -417,19 +417,28 @@ export default function QuizTab() {
           {resultAttempt.answers.map((a, idx) => {
             const q = activeQuestionsById[a.questionId]
             if (!q) return null
-            const pending = a.isCorrect === null
-            const ok = a.isCorrect === true
+            const pending = isPendingAnswer(a)
+            const earned = answerEarned(a)
+            const pts = answerPoints(a)
+            const full = !pending && earned >= pts
+            const zero = !pending && earned === 0
+            // 색 규칙: 대기·부분점수 amber / 만점 초록 / 0점 빨강
+            const tone = pending || (!full && !zero) ? 'amber' : full ? 'emerald' : 'red'
             return (
               <div
                 key={a.questionId}
-                className={`bg-white rounded-2xl p-4 border ${pending ? 'border-amber-100' : ok ? 'border-emerald-100' : 'border-red-100'}`}
+                className={`bg-white rounded-2xl p-4 border ${
+                  tone === 'amber' ? 'border-amber-100' : tone === 'emerald' ? 'border-emerald-100' : 'border-red-100'
+                }`}
               >
                 <div className="flex items-start gap-2 mb-2">
                   {pending
                     ? <Clock size={18} className="text-amber-500 flex-shrink-0 mt-0.5" />
-                    : ok
+                    : full
                       ? <CheckCircle2 size={18} className="text-emerald-500 flex-shrink-0 mt-0.5" />
-                      : <XCircle    size={18} className="text-red-500     flex-shrink-0 mt-0.5" />
+                      : zero
+                        ? <XCircle      size={18} className="text-red-500     flex-shrink-0 mt-0.5" />
+                        : <CheckCircle2 size={18} className="text-amber-500   flex-shrink-0 mt-0.5" />
                   }
                   <div className="flex-1">
                     <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
@@ -443,9 +452,19 @@ export default function QuizTab() {
                   {pending && (
                     <p className="text-amber-600 font-semibold">채점 대기 — 선생님이 확인 후 채점합니다</p>
                   )}
+                  {q.type === 'essay' && !pending && (
+                    <p>
+                      <span className="text-gray-400">득점: </span>
+                      <span className={`font-semibold ${full ? 'text-emerald-700' : zero ? 'text-red-700' : 'text-amber-700'}`}>
+                        {earned} / {pts}점
+                      </span>
+                    </p>
+                  )}
                   <p>
                     <span className="text-gray-400">내 답: </span>
-                    <span className={`whitespace-pre-wrap ${pending ? 'text-gray-700 font-semibold' : ok ? 'text-emerald-700 font-semibold' : 'text-red-700 font-semibold'}`}>
+                    <span className={`whitespace-pre-wrap font-semibold ${
+                      pending ? 'text-gray-700' : full ? 'text-emerald-700' : zero ? 'text-red-700' : 'text-amber-700'
+                    }`}>
                       {a?.raw || '(미입력)'}
                     </span>
                   </p>

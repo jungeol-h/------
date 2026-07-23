@@ -296,6 +296,7 @@ export const toQuizQuestion = (row) => ({
   acceptedAnswers: row.accepted_answers ?? [],
   explanation: row.explanation ?? '',
   hint: row.hint ?? '',
+  points: row.points ?? 1, // 배점 — 컬럼 미적용/기존 문항은 1점
   attachments: row.attachments ?? [],
 })
 

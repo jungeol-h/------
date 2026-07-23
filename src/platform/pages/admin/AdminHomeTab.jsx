@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   Users, AlertTriangle, Bell, CalendarX, TrendingDown,
   UserCog, ClipboardCheck, ChevronRight, MonitorSmartphone,
-  ShieldCheck, ShieldAlert, CalendarDays, Siren,
+  ShieldCheck, ShieldAlert, CalendarDays, Siren, Loader,
 } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
 import { getRiskStudents, getMindCautionStudents } from '../../context/selectors/riskDetection.js'
@@ -21,9 +21,14 @@ import StatisticsSection from '../../components/admin/StatisticsSection.jsx'
 import UrgentReportListModal from '../../components/admin/UrgentReportListModal.jsx'
 import CautionStudentsModal from '../../components/admin/CautionStudentsModal.jsx'
 import GroupAttendanceSummary from '../../components/admin/GroupAttendanceSummary.jsx'
+import { useHomeGroupFilter } from '../../components/admin/useHomeGroupFilter.js'
 
 const GRADE_ORDER = { 중1: 1, 중2: 2, 중3: 3, 고1: 4, 고2: 5, 고3: 6 }
 const gradeWeight = (g) => GRADE_ORDER[g] ?? 99
+
+// 신입학 판정용 이번 달 프리픽스 — 로컬 기준 YYYY-MM (UTC 변환 시 하루 밀림 방지)
+const currentMonthStr = (now = new Date()) =>
+  `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
 
 const RISK_COLOR = {
   danger: 'text-red-600 bg-red-100',
@@ -38,36 +43,78 @@ export default function AdminHomeTab({ basePath = '/admin', readOnly = false }) 
   const navigate = useNavigate()
   const [showUrgentList, setShowUrgentList] = useState(false)
   const [cautionModal, setCautionModal] = useState(null) // 'attendance' | 'learning' | 'mind'
+  const [memberView, setMemberView] = useState('grade') // 인원 현황 보기: 'grade' | 'group'
   const unconfirmedUrgent = data.urgentReports.filter((r) => !r.confirmed).length
+
+  // 그룹 필터 — 인원 현황(그룹별 보기)·그룹별 출결 집계가 공유. admin_config에 사용자별 저장.
+  const { groups: homeGroups, toggleGroup, saveGroups, saving: savingGroups } = useHomeGroupFilter()
 
   const stats = useMemo(() => {
     const active = data.students.filter((s) => (s.status ?? 'active') === 'active')
-    const withdrawn = data.students.filter((s) => s.status === 'inactive')
     // 마인드 위험군 — 전체 active 학생 중 마인드 점수 위험 (미배정 학생도 포함)
     const mindRiskStudents = getRiskStudents(data)
-    return {
-      active,
-      withdrawn,
-      mindRiskStudents,
-      enrolled: active.length + withdrawn.length,
-    }
+    return { active, mindRiskStudents }
   }, [data])
 
   // 1단: 학년별 인원 현황 — 재적(전체) / 현인원(active) / 신입학(입학일이 이번 달) / 탈퇴
   const gradeRows = useMemo(() => {
-    const now = new Date()
-    const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}` // 로컬 기준 YYYY-MM
+    const thisMonth = currentMonthStr()
     const byGrade = {}
     data.students.forEach((s) => {
       const g = s.grade || '미지정'
-      if (!byGrade[g]) byGrade[g] = { grade: g, enrolled: 0, active: 0, newcomer: 0, withdrawn: 0 }
+      if (!byGrade[g]) byGrade[g] = { label: g, enrolled: 0, active: 0, newcomer: 0, withdrawn: 0 }
       byGrade[g].enrolled += 1
       if ((s.status ?? 'active') === 'active') byGrade[g].active += 1
       else byGrade[g].withdrawn += 1
       if (s.enrolledAt && String(s.enrolledAt).startsWith(thisMonth)) byGrade[g].newcomer += 1
     })
-    return Object.values(byGrade).sort((a, b) => gradeWeight(a.grade) - gradeWeight(b.grade))
+    return Object.values(byGrade).sort((a, b) => gradeWeight(a.label) - gradeWeight(b.label))
   }, [data.students])
+
+  // 1단-그룹별: 같은 지표를 그룹 기준으로 버킷팅 — 출결 집계와 같은 관례를 따른다.
+  // (첫 소속 기준, 필터 지정 시 해당 그룹만, 필터에 있지만 0명인 그룹도 행 노출,
+  //  정렬은 필터 순서 → 인원 많은 순 → 무소속 마지막)
+  const groupRows = useMemo(() => {
+    const thisMonth = currentMonthStr()
+    const filter = homeGroups ?? []
+    const NO_GROUP = '무소속'
+    const buckets = new Map() // group → counts
+    const ensure = (g) => {
+      if (!buckets.has(g)) buckets.set(g, { label: g, enrolled: 0, active: 0, newcomer: 0, withdrawn: 0 })
+      return buckets.get(g)
+    }
+    data.students.forEach((s) => {
+      const g = s.groups?.[0] || NO_GROUP
+      if (filter.length > 0 && !filter.includes(g)) return
+      const b = ensure(g)
+      b.enrolled += 1
+      if ((s.status ?? 'active') === 'active') b.active += 1
+      else b.withdrawn += 1
+      if (s.enrolledAt && String(s.enrolledAt).startsWith(thisMonth)) b.newcomer += 1
+    })
+    filter.forEach((g) => ensure(g))
+    const orderIndex = (g) => {
+      if (g === NO_GROUP) return Infinity
+      const i = filter.indexOf(g)
+      return i === -1 ? filter.length : i
+    }
+    return [...buckets.values()].sort((a, b) => {
+      const oi = orderIndex(a.label) - orderIndex(b.label)
+      if (oi !== 0) return oi
+      return b.enrolled - a.enrolled
+    })
+  }, [data.students, homeGroups])
+
+  // 인원 현황 표에 실제로 뿌릴 행/합계 — 그룹별 보기는 필터로 일부 학생이 빠질 수 있어 행 합산으로 계산.
+  const memberRows = memberView === 'group' ? groupRows : gradeRows
+  const memberTotals = memberRows.reduce(
+    (acc, r) => {
+      acc.enrolled += r.enrolled; acc.active += r.active
+      acc.newcomer += r.newcomer; acc.withdrawn += r.withdrawn
+      return acc
+    },
+    { enrolled: 0, active: 0, newcomer: 0, withdrawn: 0 }
+  )
 
   // 2단: 핵심지표 — 출결 주의(최근 30일 결석 3회+) / 학습 주의(7일 이행률 60% 미만) / 마인드 주의(단일 -3 이하)
   const cautions = useMemo(() => ({
@@ -129,40 +176,69 @@ export default function AdminHomeTab({ basePath = '/admin', readOnly = false }) 
         <p className="text-xs text-gray-500 mt-0.5">현재 상황을 한눈에 확인합니다.</p>
       </div>
 
-      {/* ── 1단: 인원 현황 (학년별) ─────────────────────── */}
+      {/* ── 1단: 인원 현황 (학년별/그룹별 보기 전환) ─────────── */}
       <section className="bg-white rounded-2xl shadow-sm p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <Users size={16} className="text-blue-600" />
-          <h3 className="text-sm font-bold text-gray-800">인원 현황</h3>
-        </div>
-        <div className="grid grid-cols-5 gap-1 text-center text-[11px] font-bold text-gray-400 pb-1.5 border-b border-gray-100">
-          <span className="text-left pl-1">학년</span>
-          <span>재적</span>
-          <span className="text-blue-600">현 인원</span>
-          <span className="text-emerald-600">신입학</span>
-          <span>탈퇴</span>
-        </div>
-        {gradeRows.map((row) => (
-          <div key={row.grade} className="grid grid-cols-5 gap-1 text-center text-sm py-1.5 border-b border-gray-50 last:border-0">
-            <span className="text-left pl-1 text-xs font-bold text-gray-600 self-center">{row.grade}</span>
-            <span className="font-semibold text-gray-800">{row.enrolled}</span>
-            <span className="font-semibold text-blue-700">{row.active}</span>
-            <span className={`font-semibold ${row.newcomer > 0 ? 'text-emerald-600' : 'text-gray-300'}`}>{row.newcomer}</span>
-            <span className={`font-semibold ${row.withdrawn > 0 ? 'text-gray-500' : 'text-gray-300'}`}>{row.withdrawn}</span>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Users size={16} className="text-blue-600" />
+            <h3 className="text-sm font-bold text-gray-800">인원 현황</h3>
           </div>
-        ))}
-        <div className="grid grid-cols-5 gap-1 text-center text-sm pt-2 mt-0.5 border-t border-gray-100">
-          <span className="text-left pl-1 text-xs font-bold text-gray-800 self-center">전체</span>
-          <span className="font-bold text-gray-800">{stats.enrolled}</span>
-          <span className="font-bold text-blue-700">{stats.active.length}</span>
-          <span className="font-bold text-emerald-600">{gradeRows.reduce((s, r) => s + r.newcomer, 0)}</span>
-          <span className="font-bold text-gray-500">{stats.withdrawn.length}</span>
+          <div className="flex bg-gray-100 rounded-lg p-0.5">
+            {[['grade', '학년별'], ['group', '그룹별']].map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setMemberView(key)}
+                className={`px-2 py-1 rounded-md text-[11px] font-bold transition ${
+                  memberView === key ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
-        <p className="text-[10px] text-gray-400 mt-2">신입학 = 입학일이 이번 달인 학생 (사용자 관리에서 입학일 입력)</p>
+        {memberView === 'group' && homeGroups === null ? (
+          // 그룹 필터 로드 전 — 출결 집계와 같은 스피너
+          <div className="flex justify-center py-6 text-gray-300">
+            <Loader size={20} className="animate-spin" />
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-5 gap-1 text-center text-[11px] font-bold text-gray-400 pb-1.5 border-b border-gray-100">
+              <span className="text-left pl-1">{memberView === 'group' ? '그룹' : '학년'}</span>
+              <span>재적</span>
+              <span className="text-blue-600">현 인원</span>
+              <span className="text-emerald-600">신입학</span>
+              <span>탈퇴</span>
+            </div>
+            {memberRows.map((row) => (
+              <div key={row.label} className="grid grid-cols-5 gap-1 text-center text-sm py-1.5 border-b border-gray-50 last:border-0">
+                <span className="text-left pl-1 text-xs font-bold text-gray-600 self-center truncate">{row.label}</span>
+                <span className="font-semibold text-gray-800">{row.enrolled}</span>
+                <span className="font-semibold text-blue-700">{row.active}</span>
+                <span className={`font-semibold ${row.newcomer > 0 ? 'text-emerald-600' : 'text-gray-300'}`}>{row.newcomer}</span>
+                <span className={`font-semibold ${row.withdrawn > 0 ? 'text-gray-500' : 'text-gray-300'}`}>{row.withdrawn}</span>
+              </div>
+            ))}
+            <div className="grid grid-cols-5 gap-1 text-center text-sm pt-2 mt-0.5 border-t border-gray-100">
+              <span className="text-left pl-1 text-xs font-bold text-gray-800 self-center">전체</span>
+              <span className="font-bold text-gray-800">{memberTotals.enrolled}</span>
+              <span className="font-bold text-blue-700">{memberTotals.active}</span>
+              <span className="font-bold text-emerald-600">{memberTotals.newcomer}</span>
+              <span className="font-bold text-gray-500">{memberTotals.withdrawn}</span>
+            </div>
+            <p className="text-[10px] text-gray-400 mt-2">
+              {memberView === 'group'
+                ? '그룹은 첫 소속 기준 · 표시 그룹은 출결 집계의 그룹 설정과 공유 · 신입학 = 입학일이 이번 달'
+                : '신입학 = 입학일이 이번 달인 학생 (사용자 관리에서 입학일 입력)'}
+            </p>
+          </>
+        )}
       </section>
 
       {/* ── 그룹별 출결 집계 (오늘) ─────────────────────────── */}
-      <GroupAttendanceSummary />
+      <GroupAttendanceSummary groups={homeGroups} toggleGroup={toggleGroup} saveGroups={saveGroups} saving={savingGroups} />
 
       {/* ── 2단: 핵심 지표 (주의 학생) ─────────────────────── */}
       <section>

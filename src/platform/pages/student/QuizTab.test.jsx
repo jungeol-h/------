@@ -165,3 +165,29 @@ describe('QuizTab 채점 대기 표시', () => {
     expect(screen.getByText('채점 대기 — 선생님이 확인 후 채점합니다')).toBeTruthy()
   })
 })
+
+describe('QuizTab 서술형 부분점수 표시', () => {
+  beforeEach(() => {
+    data.quizAttempts.push({
+      id: 'qa-2',
+      studentId: 's001',
+      quizSetId: 'qs-2',
+      score: 3,
+      total: 5,
+      submittedAt: '2026-07-01T00:00:00.000Z',
+      answers: [{ questionId: 'q3', raw: '서술 답안', points: 5, isCorrect: false, earned: 3 }],
+    })
+  })
+
+  afterEach(() => {
+    data.quizAttempts.length = 0
+  })
+
+  it('채점된 서술형은 "득점: X / Y점"을 보여주고 채점 대기가 아니다', () => {
+    render(<QuizTab />)
+    fireEvent.click(screen.getByText('중1 확인평가 2회'))
+
+    expect(screen.getByText('3 / 5점')).toBeTruthy()
+    expect(screen.queryByText('채점 대기 — 선생님이 확인 후 채점합니다')).toBeNull()
+  })
+})

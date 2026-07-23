@@ -17,6 +17,7 @@ export default function QuizQuestionEditModal({ mode = 'create', initial, quizSe
   )
   const [explanation, setExplanation] = useState(initial?.explanation ?? '')
   const [hint, setHint] = useState(initial?.hint ?? '')
+  const [points, setPoints] = useState(initial?.points ?? 1) // 서술형 배점 (단답형은 항상 1점)
   const [existingAttachments, setExistingAttachments] = useState(initial?.attachments ?? [])
   const [attachFiles, setAttachFiles] = useState([]) // 업로드 대기 File[]
   const [saving, setSaving] = useState(false)
@@ -30,10 +31,11 @@ export default function QuizQuestionEditModal({ mode = 'create', initial, quizSe
     .filter(Boolean)
 
   const isEssay = type === 'essay'
+  const pointsValid = Number.isInteger(Number(points)) && Number(points) >= 1
 
   const canSubmit =
     question.trim() &&
-    (isEssay || parsedAnswers.length > 0) &&
+    (isEssay ? pointsValid : parsedAnswers.length > 0) &&
     Number.isFinite(Number(orderNo)) &&
     Number(orderNo) > 0
 
@@ -51,6 +53,7 @@ export default function QuizQuestionEditModal({ mode = 'create', initial, quizSe
         acceptedAnswers: isEssay ? [] : parsedAnswers,
         explanation: explanation.trim(),
         hint: hint.trim(),
+        points: isEssay ? Number(points) : 1,
         attachments: [...existingAttachments, ...uploaded],
       })
       // 수정에서 제거된 첨부의 실파일 정리 (best-effort — 셔플 복제본과 path 공유 가능성은 수용)
@@ -106,10 +109,25 @@ export default function QuizQuestionEditModal({ mode = 'create', initial, quizSe
             </div>
             {isEssay && (
               <p className="text-[11px] text-amber-600 mt-1">
-                서술형은 제출 후 선생님이 직접 채점합니다 (자동채점 없음)
+                서술형은 제출 후 선생님이 0~배점 사이 점수로 채점합니다 (자동채점 없음)
               </p>
             )}
           </div>
+
+          {isEssay && (
+            <div>
+              <label className="block text-[11px] font-bold text-gray-500 mb-1">배점 *</label>
+              <input
+                type="number"
+                min={1}
+                step={1}
+                value={points}
+                onChange={(e) => setPoints(e.target.value)}
+                className="w-32 px-3 py-2 rounded-lg border border-gray-200 text-sm"
+              />
+              <p className="text-[11px] text-gray-400 mt-1">단답형은 항상 1점, 서술형은 배점 내에서 부분점수를 줄 수 있습니다</p>
+            </div>
+          )}
 
           <div>
             <label className="block text-[11px] font-bold text-gray-500 mb-1">문제 본문 *</label>

@@ -29,10 +29,11 @@ export const COUNSELING_TYPE_LABELS = {
 }
 
 // 피상담자 유형 — 외부 상담 기록에서 사용 (program_counseling_records.target_type)
-export const COUNSELING_TARGET_TYPES = ['student', 'mother', 'father']
+export const COUNSELING_TARGET_TYPES = ['student', 'student_parent', 'mother', 'father']
 
 export const COUNSELING_TARGET_LABELS = {
   student: '학생',
+  student_parent: '학생+보호자',
   mother: '학생 모',
   father: '학생 부',
 }

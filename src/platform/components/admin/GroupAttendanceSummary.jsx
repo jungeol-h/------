@@ -1,58 +1,28 @@
 // 관리자 홈 '출결 집계' 섹션 — 그룹별 오늘 출결 현황.
-// 표시할 그룹은 관리자마다 admin_config(home_group_filter:<userId>)에 저장돼 다음 방문에도 유지된다.
-// 설정이 없으면 로그인한 관리자의 소속 그룹(currentUser.groups)을 기본값으로 채운다.
+// 그룹 필터 상태는 AdminHomeTab이 useHomeGroupFilter로 한 번만 로드해 props로 내려준다
+// (인원 현황 그룹별 보기와 같은 필터 공유). '그룹 설정' 편집 UI는 이 섹션에 유지.
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { CalendarCheck, SlidersHorizontal, Check, Loader } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
-import { useAuth } from '../../context/AuthContext.jsx'
 import { getGroupAttendanceSummary } from '../../context/selectors/attendanceStats.js'
 import { GROUP_OPTIONS } from '../../data/groups.js'
 import { todayStr } from '../../utils/dateUtils.js'
-import { fetchHomeGroupFilter, saveHomeGroupFilter } from '../../lib/homeGroupFilter.js'
 
-export default function GroupAttendanceSummary() {
+// groups: null=로딩 중 / toggleGroup·saveGroups·saving: useHomeGroupFilter 반환값
+export default function GroupAttendanceSummary({ groups, toggleGroup, saveGroups, saving }) {
   const { data } = useData()
-  const { currentUser } = useAuth()
 
-  const [groups, setGroups] = useState(null) // null = 아직 로드 전
   const [editing, setEditing] = useState(false)
-  const [saving, setSaving] = useState(false)
-
-  // 저장된 필터 로드. 없으면 로그인 관리자의 소속 그룹을 기본값으로.
-  useEffect(() => {
-    let alive = true
-    fetchHomeGroupFilter(currentUser?.id)
-      .then((saved) => {
-        if (!alive) return
-        if (saved) setGroups(saved)
-        else setGroups(currentUser?.groups?.length ? [...currentUser.groups] : [])
-      })
-      .catch(() => {
-        if (alive) setGroups(currentUser?.groups?.length ? [...currentUser.groups] : [])
-      })
-    return () => { alive = false }
-  }, [currentUser?.id, currentUser?.groups])
 
   const summary = useMemo(
     () => getGroupAttendanceSummary(data, { dateStr: todayStr(), groups: groups ?? [] }),
     [data, groups]
   )
 
-  const toggleGroup = (g) => {
-    setGroups((prev) => (prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g]))
-  }
-
   const handleSaveFilter = async () => {
-    setSaving(true)
-    try {
-      await saveHomeGroupFilter(currentUser?.id, groups)
-      setEditing(false)
-    } catch {
-      // 실패는 전역 Toast가 표면화한다.
-    } finally {
-      setSaving(false)
-    }
+    const ok = await saveGroups()
+    if (ok) setEditing(false)
   }
 
   return (
