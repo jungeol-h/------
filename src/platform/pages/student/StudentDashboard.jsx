@@ -2,8 +2,8 @@
 // DataContext 로딩 가드 후 PageLayout + Routes 구성.
 // [임시] 타이머 버그 안내 모달(TimerFixNoticeModal)을 학생별 1회 노출 — 철수 시 제거.
 
-import { useState } from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { useMemo, useState } from 'react'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { Home, BookOpen, ClipboardList, Heart, Activity, CalendarClock, Loader } from 'lucide-react'
 import PageLayout from '../../components/layout/PageLayout.jsx'
 import { useData } from '../../context/DataContext.jsx'
@@ -18,6 +18,7 @@ import CareerDesignTab from './CareerDesignTab.jsx'
 import LearningDiagnosisTab from './LearningDiagnosisTab.jsx'
 import QuizTab from './QuizTab.jsx'
 import BookingTab from './BookingTab.jsx'
+import useTaskBadge from './useTaskBadge.js'
 
 const TABS = [
   { path: '/student/dashboard', label: '홈', icon: Home },
@@ -73,7 +74,22 @@ function TimerFixNoticeModal() {
 }
 
 export default function StudentDashboard() {
-  const { loading } = useData()
+  const { loading, data } = useData()
+  const { currentUser } = useAuth()
+  const location = useLocation()
+
+  // 새 과제 배지 — 과제 탭 진입 시 확인 처리되어 소거된다 (useTaskBadge)
+  const myTasks = useMemo(
+    () => data.tasks.filter((t) => t.studentId === currentUser?.id),
+    [data.tasks, currentUser?.id]
+  )
+  const newTaskCount = useTaskBadge(
+    currentUser?.id, myTasks, location.pathname.startsWith('/student/task')
+  )
+  const tabs = useMemo(
+    () => TABS.map((t) => (t.path === '/student/task' ? { ...t, badge: newTaskCount } : t)),
+    [newTaskCount]
+  )
 
   if (loading) {
     return (
@@ -87,7 +103,7 @@ export default function StudentDashboard() {
   }
 
   return (
-    <PageLayout title="나의 학습" tabs={TABS}>
+    <PageLayout title="나의 학습" tabs={tabs}>
       <TimerFixNoticeModal />
       <Routes>
         <Route index element={<Navigate to="dashboard" replace />} />

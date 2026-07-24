@@ -107,6 +107,7 @@ export const toTask = (row) => ({
   content: row.content ?? '',
   attachments: row.attachments ?? [], // 강사 첨부 (문제/자료)
   submissions: row.submissions ?? [], // 학생 제출 파일
+  createdAt: row.created_at ?? null, // 새 과제 배지 판정 기준
 })
 
 export const toCounselingRecord = (row) => ({
