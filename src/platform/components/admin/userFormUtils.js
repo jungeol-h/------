@@ -21,6 +21,9 @@ export function humanizeSupabaseError(err) {
   const code = err.code
   const msg = err.message || ''
   if (code === '23505' || /duplicate key/i.test(msg)) {
+    if (/users_student_name_phone/i.test(msg)) {
+      return '같은 이름·전화번호의 학생이 이미 있습니다(퇴원·신청취소 포함). 기존 계정을 확인하세요.'
+    }
     return '이미 사용 중인 login_id입니다.'
   }
   if (code === '23514' || /check constraint/i.test(msg)) {

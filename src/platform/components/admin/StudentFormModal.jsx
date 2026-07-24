@@ -4,6 +4,7 @@ import { GROUP_OPTIONS } from '../../data/groups.js'
 import {
   cleanText, normalizePhone, isValidPhone, LOGIN_ID_RE, humanizeSupabaseError,
 } from './userFormUtils.js'
+import { findDuplicateStudents, describeDuplicate } from '../../utils/studentDedup.js'
 
 const GRADE_OPTIONS = ['중1', '중2', '중3']
 
@@ -12,6 +13,7 @@ export default function StudentFormModal({
   initial,
   managers = [],
   initialManagerId = '',
+  students = [],
   onSubmit,
   onClose,
 }) {
@@ -28,12 +30,27 @@ export default function StudentFormModal({
   const [enrolledAt, setEnrolledAt] = useState(initial?.enrolledAt ?? '')
   const [saving, setSaving] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
+  const [dupMatches, setDupMatches] = useState(null)
+  const [dupConfirmed, setDupConfirmed] = useState(false)
 
   const isEdit = mode === 'edit'
 
   // 입력 핸들러: 전화번호는 입력 즉시 정규화(다듬어진 값만 state에 저장)
-  const handlePasswordChange = (e) => setPassword(normalizePhone(e.target.value))
-  const handleParentPwChange = (e) => setParentPassword(normalizePhone(e.target.value))
+  const handleNameChange = (e) => {
+    setName(e.target.value)
+    setDupMatches(null)
+    setDupConfirmed(false)
+  }
+  const handlePasswordChange = (e) => {
+    setPassword(normalizePhone(e.target.value))
+    setDupMatches(null)
+    setDupConfirmed(false)
+  }
+  const handleParentPwChange = (e) => {
+    setParentPassword(normalizePhone(e.target.value))
+    setDupMatches(null)
+    setDupConfirmed(false)
+  }
 
   const canSubmit =
     cleanText(name) && grade && cleanText(loginId) && password
@@ -83,6 +100,15 @@ export default function StudentFormModal({
       return
     }
 
+    const matches = findDuplicateStudents(students, {
+      name: nameClean, password: pwClean, parentPassword: parentPwClean,
+      excludeId: isEdit ? initial?.id : undefined,
+    })
+    if (matches.length > 0 && !dupConfirmed) {
+      setDupMatches(matches)
+      return
+    }
+
     setSaving(true)
     try {
       await onSubmit({
@@ -124,7 +150,7 @@ export default function StudentFormModal({
             <input
               type="text"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={handleNameChange}
               className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
               placeholder="예: 홍길동"
             />
@@ -282,6 +308,31 @@ export default function StudentFormModal({
               {errorMsg}
             </div>
           )}
+
+          {dupMatches?.length > 0 && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-800 space-y-1.5">
+              <p className="font-bold">이미 등록된 학생과 정보가 겹칩니다</p>
+              <ul className="space-y-0.5">
+                {dupMatches.map((match) => (
+                  <li key={match.student.id}>{describeDuplicate(match)}</li>
+                ))}
+              </ul>
+              {dupMatches.some((m) => m.samePerson) && (
+                <p>
+                  동일 학생이면 새로 등록하지 말고 기존 계정의 상태를 '재원'으로 되돌려 주세요.
+                  (퇴원·신청취소 학생은 '비활성 포함' 필터로 목록에서 찾을 수 있습니다)
+                </p>
+              )}
+              <label className="flex items-center gap-1.5 pt-0.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={dupConfirmed}
+                  onChange={(e) => setDupConfirmed(e.target.checked)}
+                />
+                동명이인/다른 학생임을 확인했습니다 — 계속 등록
+              </label>
+            </div>
+          )}
         </div>
 
         <div className="px-4 py-3 border-t border-gray-100 flex gap-2">
@@ -293,7 +344,7 @@ export default function StudentFormModal({
           </button>
           <button
             onClick={handleSubmit}
-            disabled={!canSubmit || saving}
+            disabled={!canSubmit || saving || (dupMatches?.length > 0 && !dupConfirmed)}
             className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-sm font-semibold text-white flex items-center justify-center gap-1 disabled:opacity-50"
           >
             <Save size={16} />

@@ -30,6 +30,13 @@ Recharts · lucide-react · Supabase · @react-pdf/renderer · JSX
 - **DB 변경**: `scripts/add-*.sql` 멱등 작성 → Studio 수동 적용(신코드 배포 전) →
   `scripts/README.md` 대장 갱신.
 - **보안 부채**(평문 비밀번호·RLS 무력화·정답 노출 등)는 `lib/README.md` — 키우지 말 것.
+- **학생 계정 생성(시드·명단 작업 포함) 전 중복 검사 필수**: 기존 users를 **전체 상태**
+  (퇴원 withdrawn·신청취소 cancelled·inactive 포함)로 조회해 ①학생 전화번호(password)
+  ②이름+학교 ③이름+학부모 번호(parent_password) 일치를 대조할 것. 일치하면 새로 만들지
+  말고 기존 행 status 복구·정보 갱신으로 처리. login_id만 검사하면 이름 오타·아이디
+  변형('강_은성')이 뚫린다 — 2026-07 동일인 5쌍 중복 사고의 원인. 프론트 검사는
+  `utils/studentDedup.js`(폼)·`utils/studentImport.js`(일괄), DB 백스톱은
+  `scripts/add-student-dedup-guard.sql`(name+password 부분 unique 인덱스).
 
 ## 코드 구조 (`src/platform/`)
 

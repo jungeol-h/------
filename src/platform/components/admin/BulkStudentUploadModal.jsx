@@ -34,7 +34,8 @@ export default function BulkStudentUploadModal({ onClose }) {
       const existingLoginIds = [...data.students, ...data.educators]
         .map((u) => u.loginId)
         .filter(Boolean)
-      const res = parseStudentSheet(aoa, { existingLoginIds })
+      // data.students는 퇴원·신청취소 포함 전체 — 전화번호·이름 동일인 검사용
+      const res = parseStudentSheet(aoa, { existingLoginIds, existingStudents: data.students })
       if (!res.ok) {
         setError(res.error)
         setParsed(null)

@@ -604,6 +604,7 @@ export default function UserManagementTab({ readOnly = false }) {
           initial={modal.mode === 'edit' ? modal.student : undefined}
           managers={managers}
           initialManagerId={modal.mode === 'edit' ? findManagerId(modal.student.id) : ''}
+          students={data.students}
           onSubmit={modal.mode === 'edit' ? handleEdit : handleCreate}
           onClose={() => setModal(null)}
         />

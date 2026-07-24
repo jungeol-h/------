@@ -1,8 +1,10 @@
 // 학생 명단 엑셀(구글폼 응답 등) → 일괄 등록 행 파서. exceljs/DOM 무의존 순수함수.
 //
-// parseStudentSheet(aoa, { existingLoginIds })
+// parseStudentSheet(aoa, { existingLoginIds, existingStudents })
 // - aoa: 시트 전체를 문자열 2차원 배열로 (빈 셀은 ''/null 허용)
 // - existingLoginIds: 이미 DB에 있는 login_id 집합 (학생+교직원 전부)
+// - existingStudents: 기존 학생 전체(퇴원·신청취소 포함) — { name, school, password,
+//   parentPassword, status } 형태. 전화번호·이름 기반 동일인 검사에 쓴다.
 //
 // 반환: { ok, error?, headerRowIndex?, rows?: [행], summary? }
 // 행: { name, school, grade, phone, phoneValid, parentPhone, parentPhoneValid,
@@ -13,6 +15,11 @@
 // - 같은 이름+같은 학교 중복 행 = 동일인 재제출 → 마지막 제출 채택 (구글폼은 재제출이 정정).
 // - 같은 이름+다른 학교 = 동명이인 → login_id를 '이름(학교)'로 구분.
 // - login_id가 이미 DB에 있으면 제외 (동명이인이면 학생 추가에서 별도 아이디로 수동 등록).
+// - 기존 학생과 전화번호가 같거나(오타 이름이어도 동일인), 이름+학교 또는
+//   이름+학부모 번호가 같으면 제외 — 2026-07 동일인 5쌍 중복 등록 사고 재발 방지.
+//   퇴원·신청취소 계정과 겹치면 새로 만들지 말고 기존 계정을 복구해야 한다.
+
+import { STUDENT_STATUS_LABELS } from '../data/studentStatus.js'
 
 const INVISIBLE_RE = new RegExp('\\u200B|\\u200C|\\u200D|\\uFEFF|\\u00A0', 'g')
 const FULLWIDTH_DIGITS = /[０-９]/g
@@ -63,7 +70,7 @@ function findHeaderRow(aoa, scanLimit = 10) {
   return null
 }
 
-export function parseStudentSheet(aoa, { existingLoginIds } = {}) {
+export function parseStudentSheet(aoa, { existingLoginIds, existingStudents } = {}) {
   const existing = new Set(existingLoginIds ?? [])
   const header = findHeaderRow(aoa ?? [])
   if (!header) {
@@ -122,6 +129,39 @@ export function parseStudentSheet(aoa, { existingLoginIds } = {}) {
     if (r.include && existing.has(r.loginId)) {
       r.include = false
       r.note = '이미 등록된 아이디 — 제외 (동명이인이면 학생 추가에서 수동 등록)'
+    }
+  })
+
+  // 기존 학생(퇴원·취소 포함)과 동일인 검사 — login_id가 달라도(오타·변형) 잡는다.
+  // 전화번호 일치가 최우선 근거: 비밀번호 = 학생 전화번호 관례.
+  const students = existingStudents ?? []
+  const statusOf = (s) => STUDENT_STATUS_LABELS[s.status] ?? s.status ?? '재원'
+  parsed.forEach((r) => {
+    if (!r.include) return
+    const hit = students.find(
+      (s) =>
+        (r.phoneValid && s.password === r.phone) ||
+        (s.name === r.name && s.school && s.school === r.school) ||
+        (s.name === r.name && r.parentPhoneValid && s.parentPassword === r.parentPhone)
+    )
+    if (hit) {
+      r.include = false
+      const why = r.phoneValid && hit.password === r.phone ? '전화번호 일치' : '이름 일치'
+      r.note = `기존 학생과 동일인으로 보임(${hit.name} · ${statusOf(hit)} · ${why}) — 복귀면 기존 계정을 재원으로 복구, 동명이인이면 학생 추가에서 수동 등록`
+    }
+  })
+
+  // 파일 안에서 서로 다른 이름이 같은 전화번호를 쓰면 오타 의심 — 등록은 두되 경고
+  const phoneOwners = new Map()
+  parsed.filter((r) => r.include && r.phoneValid).forEach((r) => {
+    if (!phoneOwners.has(r.phone)) phoneOwners.set(r.phone, [])
+    phoneOwners.get(r.phone).push(r)
+  })
+  phoneOwners.forEach((rows) => {
+    if (new Set(rows.map((r) => r.name)).size > 1) {
+      rows.forEach((r) => {
+        r.note = [r.note, '파일 내 전화번호 중복(다른 이름) — 오타 확인 필요'].filter(Boolean).join(' · ')
+      })
     }
   })
 
