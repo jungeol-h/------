@@ -11,6 +11,9 @@
   `centerHoursApi.js`가 직접 fetch, 쓰기 후 refetch.
 - 기존 컬렉션(students)은 `useData()`에서 **읽기만** 한다 (AttendanceTab이 props로 전달).
 - 마이그레이션 미적용 시 자체 안내 카드만 띄운다 (`isMigrationMissing`).
+- 학생 홈 '오늘의 센터 일정' 카드(`pages/student/useTodayCenterSchedule.js`)가
+  `fetchStudentCenterHours`(본인분만)를 읽기 전용으로 호출한다 — 실패 시 홈은
+  해당 파트만 안내문으로 대체하고 깨지지 않는다.
 
 ## 구조
 

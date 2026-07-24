@@ -36,6 +36,16 @@ export async function fetchCenterHours() {
   }
 }
 
+// 학생 홈 '오늘의 센터 일정' 카드용 — 본인 등록분만 조회 (전체 fetch보다 가볍다)
+export async function fetchStudentCenterHours(studentId) {
+  const { data, error } = await supabase
+    .from('center_hour_registrations')
+    .select('id, student_id, day_of_week, start_time, end_time')
+    .eq('student_id', studentId)
+  if (error) throw error
+  return (data ?? []).map(toRegistration)
+}
+
 // 한 학생의 등록 전체 교체. entries = [{ day, start, end }]
 // 반환: { ok:true } | { ok:false, code:'LOCKED'|'SLOT_FULL'|..., full?:[{day,start}] }
 export async function saveCenterHours({ studentId, actorRole, entries }) {

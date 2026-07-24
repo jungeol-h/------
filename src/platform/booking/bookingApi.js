@@ -258,6 +258,19 @@ export async function fetchUserNames(ids) {
   return map
 }
 
+// 학생 홈 '오늘의 센터 일정' 카드용 경량 이름 맵 — fetchBookingConfig(4쿼리) 대신
+// 표시에 필요한 프로그램·과목 이름만 가져온다
+export async function fetchBookingNameMaps() {
+  const [programs, subjects] = await Promise.all([
+    supabase.from('booking_programs').select('id, name'),
+    supabase.from('booking_subjects').select('id, name'),
+  ])
+  if (programs.error) throw programs.error
+  if (subjects.error) throw subjects.error
+  const toMap = (rows) => Object.fromEntries((rows ?? []).map((r) => [r.id, r.name]))
+  return { programNames: toMap(programs.data), subjectNames: toMap(subjects.data) }
+}
+
 export async function fetchNotifications(recipientId, { limit = 100 } = {}) {
   const { data, error } = await supabase
     .from('booking_notifications')

@@ -11,6 +11,9 @@
 - snake↔camel 변환은 `bookingApi.js`의 로컬 `toBookingXxx` (누락 컬럼 `?? 기본값` 내성).
 - 마이그레이션 미적용 시 `BookingGate`가 자체 오류 화면을 띄운다 — `_fetchErrors` 배너와 무관.
 - 기존 컬렉션(users·students·parentChildren)은 `useData()`에서 **읽기만** 한다.
+- 학생 홈 '오늘의 센터 일정' 카드(`pages/student/useTodayCenterSchedule.js`)는
+  BookingProvider 밖에서 `bookingApi`의 읽기 함수만 직접 호출한다 (오늘 예약 +
+  경량 이름 맵 `fetchBookingNameMaps`). 쓰기·RPC는 여전히 예약 라우트 전용.
 
 ## 데이터·검증 아키텍처
 

@@ -1,4 +1,5 @@
-// 학생 홈 탭 (/student/dashboard) — 환영 배너(출석·로그인 횟수), 오늘 학습계획 시계 타임테이블,
+// 학생 홈 탭 (/student/dashboard) — 환영 배너(출석·로그인 횟수), 오늘의 센터 일정
+// (상담 예약·이용시간, TodayCenterScheduleCard), 오늘 학습계획 시계 타임테이블,
 // 마인드 날씨·오늘 학습·미완료 과제 요약 카드, 오늘 과목별 학습 차트, 과제 현황,
 // 선생님 코멘트·리마인더 말풍선(getStudentHomeMessages).
 
@@ -13,6 +14,7 @@ import { getStudentHomeMessages } from '../../context/selectors/homeMessages.js'
 import { todayPlansFor } from './learningTabLogic.js'
 import { todayStr } from '../../utils/dateUtils.js'
 import ClockTimetable from '../../components/student/ClockTimetable.jsx'
+import TodayCenterScheduleCard from './TodayCenterScheduleCard.jsx'
 
 function getMoodWeather(mindRecord) {
   if (!mindRecord) return { Icon: Cloud, color: 'text-gray-300', label: '미입력' }
@@ -38,6 +40,11 @@ export default function DashboardTab() {
   const todayMind = data.mindRecords.filter(r => r.studentId === currentUser?.id).slice(-1)[0]
   const pendingTasks = myTasks.filter(t => t.status === 'pending').length
   const doneTasks = myTasks.filter(t => t.status === 'done').length
+  // 과제 알림 — 미완료(마감 임박순)를 앞세운 미리보기 3건
+  const taskPreview = [...myTasks].sort((a, b) => {
+    if (a.status !== b.status) return a.status === 'pending' ? -1 : 1
+    return (a.dueDate ?? '').localeCompare(b.dueDate ?? '')
+  }).slice(0, 3)
 
   // 오늘 과목별 학습 시간
   const today = todayStr()
@@ -65,6 +72,9 @@ export default function DashboardTab() {
         </div>
         <p className="text-sm opacity-70 mt-1">{student?.school} · {student?.grade}</p>
       </div>
+
+      {/* 오늘의 센터 일정 — 상담 예약 현황 + 이용시간 등록 현황 */}
+      <TodayCenterScheduleCard studentId={currentUser?.id} />
 
       {/* 오늘의 학습계획표 (부채꼴 타임테이블) */}
       <ClockTimetable plans={todayPlans} onGoPlan={() => navigate('/student/learning')} />
@@ -134,7 +144,7 @@ export default function DashboardTab() {
             {doneTasks} / {myTasks.length} 완료
           </span>
         </div>
-        {myTasks.slice(0, 3).map(t => (
+        {taskPreview.map(t => (
           <div key={t.id} className={`flex items-center gap-2 mt-2 text-sm rounded-lg px-2 py-1.5 ${
             t.status === 'pending' ? 'bg-red-50' : ''
           }`}>
