@@ -52,7 +52,7 @@ DB 스키마 변경은 **Supabase Studio SQL Editor에서 수동 실행**한다 
 | `add-booking-science-educators.sql` | 예약 교과 컨설팅에 '과학' 교과 추가 + 최돈권(수학)·박영균(과학) 상담사 배정 (계정은 seed-staff-accounts로 기존재, 역할 변경 없음) | 적용됨 (2026-07-20) |
 | `add-task-attachments.sql` | 과제 파일 첨부(양방향): tasks.attachments(강사 문제/자료 메타) + tasks.submissions(학생 제출 메타) + 'task-files' 버킷(이미지/PDF) | 적용됨 (2026-07-23) |
 | `add-quiz-question-points.sql` | quiz_questions.points (서술형 배점 — 교사가 0~배점 점수 입력 채점, 단답형·기존 데이터는 1점) | 적용됨 (2026-07-23) |
-| `add-student-dedup-guard.sql` | 학생 중복 등록 DB 백스톱: 부분 unique 인덱스 users(name, password) WHERE role='student' (자리표시 비밀번호 제외). 2026-07-24 동일인 5쌍 중복 정리 후 재발 방지 — 프론트 검사(studentDedup.js·studentImport.js)와 세트 | **미적용, Studio 실행 필요** |
+| `add-student-dedup-guard.sql` | 학생 중복 등록 DB 백스톱: 부분 unique 인덱스 users(name, password) WHERE role='student' (자리표시 비밀번호 제외). 2026-07-24 동일인 5쌍 중복 정리 후 재발 방지 — 프론트 검사(studentDedup.js·studentImport.js)와 세트 | 적용됨 (2026-07-24) |
 
 ## 시드·일회성 유틸 (재실행 금지 또는 불필요)
 
