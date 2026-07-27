@@ -23,15 +23,19 @@ const WEEKDAYS = [
   { value: 0, label: '일' },
 ]
 
-export default function TimetableWizard({ onClose, lockEducatorId = null, intent = 'dated' }) {
+export default function TimetableWizard({
+  onClose, lockEducatorId = null, intent = 'dated', lockProgramId = null,
+}) {
   const { config, userNames, createSlotBatch, saveTimetableTemplates, actor } = useBooking()
   const isAdmin = actor.role === 'admin'
   const templates = config.templates ?? []
   const isPrebook = intent === 'prebook'
 
   // 강사 모드: 배정된 프로그램만 / 접수제 모드: 사전예약형 프로그램만
+  // lockProgramId: 프로그램 카드에서 진입 — 그 프로그램으로 고정
   const programs = useMemo(() => {
     let list = config.programs.filter((p) => p.active)
+    if (lockProgramId) return list.filter((p) => p.id === lockProgramId)
     if (isPrebook) list = list.filter((p) => p.requiresOpenPeriod)
     if (!lockEducatorId) return list
     const mine = new Set(
@@ -40,7 +44,7 @@ export default function TimetableWizard({ onClose, lockEducatorId = null, intent
         .map((e) => e.programId),
     )
     return list.filter((p) => mine.has(p.id))
-  }, [config.programs, config.educators, lockEducatorId, isPrebook])
+  }, [config.programs, config.educators, lockEducatorId, isPrebook, lockProgramId])
 
   const [form, setForm] = useState({
     programId: programs[0]?.id ?? '',
@@ -285,12 +289,18 @@ export default function TimetableWizard({ onClose, lockEducatorId = null, intent
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        <label className="text-xs text-gray-500 col-span-2">
-          프로그램
-          <select value={form.programId} onChange={set('programId')} className={`${FIELD} w-full mt-1`}>
-            {programs.map((p) => <option key={p.id} value={p.id}>{p.name} ({p.slotMinutes}분)</option>)}
-          </select>
-        </label>
+        {lockProgramId ? (
+          <p className="text-xs text-gray-500 col-span-2 pb-1">
+            프로그램: <b className="text-gray-700">{program?.name}</b> ({program?.slotMinutes}분 단위)
+          </p>
+        ) : (
+          <label className="text-xs text-gray-500 col-span-2">
+            프로그램
+            <select value={form.programId} onChange={set('programId')} className={`${FIELD} w-full mt-1`}>
+              {programs.map((p) => <option key={p.id} value={p.id}>{p.name} ({p.slotMinutes}분)</option>)}
+            </select>
+          </label>
+        )}
         {lockEducatorId ? (
           <p className="text-xs text-gray-500 self-end pb-2">
             담당 강사: <b className="text-gray-700">{userNames[lockEducatorId]?.name ?? '나'}</b> (본인)

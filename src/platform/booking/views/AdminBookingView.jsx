@@ -32,11 +32,10 @@ const FIELD = 'h-10 px-3 rounded-lg border border-gray-200 text-sm'
 // admin도 강사로 배정될 수 있다 (예: 황광희 원장이 직접 상담 진행)
 const EDUCATOR_ROLES = ['manager', 'instructor', 'consultant', 'admin']
 
-// ─── 타임테이블 메뉴: 강사 예약 가능 시간 + 접수제 준비 + 슬롯 목록 ──
+// ─── 타임테이블 메뉴: 시간 축 전용 — 강사 예약 가능 시간 + 슬롯 목록.
+//     접수제 슬롯 준비(상품 축 캠페인)는 프로그램 메뉴의 해당 카드에 있다. ──
 function TimetableMenu() {
   const { config, slots, reservations, userNames, setSlotStatus } = useBooking()
-  const [prebookOpen, setPrebookOpen] = useState(false)
-  const hasPrebookProgram = config.programs.some((p) => p.active && p.requiresOpenPeriod)
   const [filters, setFilters] = useState({
     programId: '', status: '', from: todayStr(), to: addDaysStr(todayStr(), 30),
   })
@@ -85,26 +84,6 @@ function TimetableMenu() {
     <div className="space-y-3">
       {/* 상시 운영 = 강사 예약 가능 시간 (매주 반복 + 특정 날짜) — 단일 홈 */}
       <AvailabilityRulesSection />
-
-      {/* 접수제(사전예약형)만의 캠페인 운영 — 해당 프로그램이 있을 때만 노출 */}
-      {hasPrebookProgram && (
-        <div className="bg-white rounded-2xl shadow-sm p-4 mt-2 flex items-center gap-3">
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-gray-700">접수제 슬롯 준비</p>
-            <p className="text-[11px] text-gray-400 mt-0.5">
-              사전예약형 프로그램(컨설팅 등)의 월 배치 — 작성중으로 만들어 검토 후,
-              접수 시작에 맞춰 아래 목록에서 일괄 공개합니다.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setPrebookOpen(true)}
-            className="flex-shrink-0 px-3 h-9 rounded-xl bg-blue-600 text-white text-xs font-bold flex items-center gap-1"
-          >
-            <Plus size={13} /> 슬롯 준비
-          </button>
-        </div>
-      )}
 
       <p className="text-xs font-bold text-gray-400 pt-2">슬롯 목록</p>
       <div className="grid grid-cols-2 gap-2">
@@ -170,7 +149,6 @@ function TimetableMenu() {
         )}
       </div>
 
-      {prebookOpen && <TimetableWizard intent="prebook" onClose={() => setPrebookOpen(false)} />}
       {editSlot && (
         <SlotEditorModal
           slot={editSlot}
@@ -192,6 +170,7 @@ function ProgramsMenu() {
   const [creating, setCreating] = useState(false)
   const [subjectInputs, setSubjectInputs] = useState({})
   const [assignForm, setAssignForm] = useState({})
+  const [prebookProgram, setPrebookProgram] = useState(null) // 접수제 슬롯 준비 대상
 
   // DataContext에는 users 키가 없다 — 교직원은 educators 컬렉션 (admin fetch가 채움)
   const educatorUsers = useMemo(
@@ -319,10 +298,24 @@ function ProgramsMenu() {
               </div>
             </div>
 
+            {/* 접수제 운영은 상품 축 — 오픈기간(접수 창구)과 슬롯 준비가 한 카드에서 세트로 */}
             {program.requiresOpenPeriod && (
               <div className="space-y-1.5">
                 <p className="text-[11px] font-bold text-gray-400">예약 오픈기간</p>
                 <OpenPeriodEditor program={program} />
+                <div className="rounded-xl bg-gray-50 p-3 flex items-center gap-2">
+                  <p className="flex-1 text-[11px] text-gray-500">
+                    접수기간에 풀 슬롯을 <b>작성중</b>으로 준비하고, 검토 후 타임테이블
+                    메뉴의 슬롯 목록에서 접수 시작에 맞춰 일괄 공개하세요.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setPrebookProgram(program)}
+                    className="flex-shrink-0 px-3 h-8 rounded-lg bg-blue-600 text-white text-[11px] font-bold flex items-center gap-1"
+                  >
+                    <Plus size={12} /> 슬롯 준비
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -333,6 +326,14 @@ function ProgramsMenu() {
         <ProgramFormModal
           program={editProgram}
           onClose={() => { setCreating(false); setEditProgram(null) }}
+        />
+      )}
+
+      {prebookProgram && (
+        <TimetableWizard
+          intent="prebook"
+          lockProgramId={prebookProgram.id}
+          onClose={() => setPrebookProgram(null)}
         />
       )}
     </div>
