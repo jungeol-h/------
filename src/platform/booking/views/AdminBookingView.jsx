@@ -44,6 +44,56 @@ const dowOf = (dateStr) => {
   return WEEKDAY[new Date(y, m - 1, d).getDay()]
 }
 
+const timeToMin = (t) => {
+  const [h, m] = String(t).split(':').map(Number)
+  return h * 60 + m
+}
+
+// 점유율 스트립 — 접힌 날짜 행에서 "하루의 모양"(어느 시간대가 열렸고 찼는지)을
+// 숫자 없이 전달한다 (출결 TodayTimeline의 비율 막대 관용구 승계).
+// 색 = 상태(칩과 같은 색 계열), 위치·폭 = 실제 시간 비례. 여러 강사의 슬롯이
+// 같은 시간에 겹치면 늦게 칠한 쪽이 보인다 — open을 맨 위로 칠해 "공개가 있다"가
+// 이기게 하고, 강사 필터를 걸면 그 강사의 정확한 하루가 된다.
+const STRIP_COLOR = {
+  draft: 'bg-gray-300',
+  reviewed: 'bg-yellow-400',
+  open: 'bg-green-500',
+  openFull: 'bg-green-800', // 파생: 공개인데 정원 마감
+  closed: 'bg-orange-400',
+  done: 'bg-gray-400',
+  cancelled: 'bg-red-300',
+}
+const STRIP_PAINT_ORDER = ['cancelled', 'done', 'draft', 'reviewed', 'closed', 'open']
+
+function DayOccupancyStrip({ group, isFull }) {
+  const start = timeToMin(group.dayStart)
+  const span = Math.max(timeToMin(group.dayEnd) - start, 1)
+  const segments = [...group.slots].sort(
+    (a, b) => STRIP_PAINT_ORDER.indexOf(a.status) - STRIP_PAINT_ORDER.indexOf(b.status),
+  )
+  return (
+    <span className="flex items-center gap-1.5 mt-1.5">
+      <span className="text-[9px] text-gray-400 tabular-nums flex-shrink-0">{group.dayStart}</span>
+      <span className="relative flex-1 h-1.5 rounded-full bg-gray-100 overflow-hidden">
+        {segments.map((s) => {
+          const color = s.status === 'open' && isFull(s) ? STRIP_COLOR.openFull : STRIP_COLOR[s.status]
+          return (
+            <i
+              key={s.id}
+              className={`absolute top-0 h-full ${color ?? 'bg-gray-300'}`}
+              style={{
+                left: `${((timeToMin(s.startTime) - start) / span) * 100}%`,
+                width: `${((timeToMin(s.endTime) - timeToMin(s.startTime)) / span) * 100}%`,
+              }}
+            />
+          )
+        })}
+      </span>
+      <span className="text-[9px] text-gray-400 tabular-nums flex-shrink-0">{group.dayEnd}</span>
+    </span>
+  )
+}
+
 function TimetableMenu() {
   const { config, slots, reservations, userNames, setSlotStatus } = useBooking()
   const [filters, setFilters] = useState({
@@ -90,12 +140,16 @@ function TimetableMenu() {
       const byStatus = {}
       let booked = 0
       let capacity = 0
+      let dayStart = g.slots[0].startTime
+      let dayEnd = g.slots[0].endTime
       for (const s of g.slots) {
         byStatus[s.status] = (byStatus[s.status] ?? 0) + 1
         booked += confirmedOf(s.id)
         capacity += s.capacity
+        if (s.startTime < dayStart) dayStart = s.startTime
+        if (s.endTime > dayEnd) dayEnd = s.endTime
       }
-      return { ...g, byStatus, booked, capacity }
+      return { ...g, byStatus, booked, capacity, dayStart, dayEnd }
     })
     // confirmedOf는 reservations 파생 — filtered와 함께 갱신되면 충분
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -203,30 +257,36 @@ function TimetableMenu() {
                 <button
                   type="button"
                   onClick={() => toggleExpand(group.date)}
-                  className="flex-1 min-w-0 flex items-center gap-2 text-left"
+                  className="flex-1 min-w-0 text-left"
                 >
-                  <span className="text-xs font-bold text-gray-900 whitespace-nowrap">
-                    {group.date.slice(5).replace('-', '/')} ({dowOf(group.date)})
+                  <span className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-gray-900 whitespace-nowrap">
+                      {group.date.slice(5).replace('-', '/')} ({dowOf(group.date)})
+                    </span>
+                    <span className="text-[11px] text-gray-400 whitespace-nowrap">
+                      {group.slots.length}슬롯 · 예약 {group.booked}/{group.capacity}
+                    </span>
+                    <span className="flex items-center gap-1 flex-wrap min-w-0">
+                      {Object.entries(group.byStatus).map(([status, count]) => (
+                        <span
+                          key={status}
+                          className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap ${SLOT_STATUS[status]?.color ?? 'bg-gray-100 text-gray-500'}`}
+                        >
+                          {SLOT_STATUS[status]?.label ?? status} {count}
+                        </span>
+                      ))}
+                    </span>
+                    {dayPickedCount > 0 && !dayAllPicked && (
+                      <span className="text-[10px] font-bold text-blue-500 whitespace-nowrap">{dayPickedCount}개 선택</span>
+                    )}
+                    <span className="ml-auto text-gray-300 flex-shrink-0">
+                      {isExpanded ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+                    </span>
                   </span>
-                  <span className="text-[11px] text-gray-400 whitespace-nowrap">
-                    {group.slots.length}슬롯 · 예약 {group.booked}/{group.capacity}
-                  </span>
-                  <span className="flex items-center gap-1 flex-wrap min-w-0">
-                    {Object.entries(group.byStatus).map(([status, count]) => (
-                      <span
-                        key={status}
-                        className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap ${SLOT_STATUS[status]?.color ?? 'bg-gray-100 text-gray-500'}`}
-                      >
-                        {SLOT_STATUS[status]?.label ?? status} {count}
-                      </span>
-                    ))}
-                  </span>
-                  {dayPickedCount > 0 && !dayAllPicked && (
-                    <span className="text-[10px] font-bold text-blue-500 whitespace-nowrap">{dayPickedCount}개 선택</span>
-                  )}
-                  <span className="ml-auto text-gray-300 flex-shrink-0">
-                    {isExpanded ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
-                  </span>
+                  <DayOccupancyStrip
+                    group={group}
+                    isFull={(s) => confirmedOf(s.id) >= s.capacity}
+                  />
                 </button>
               </div>
 
