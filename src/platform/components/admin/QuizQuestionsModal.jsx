@@ -88,13 +88,12 @@ export default function QuizQuestionsModal({
                       {q.type === 'essay' ? (
                         <p>
                           <span className="inline-block px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-semibold">서술형</span>
-                          {(q.points ?? 1) !== 1 && (
-                            <span className="inline-block px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 font-semibold ml-1">{q.points}점</span>
-                          )}
+                          <span className="inline-block px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 font-semibold ml-1">{q.points ?? 1}점</span>
                           <span className="text-gray-400 ml-1">선생님이 직접 채점</span>
                         </p>
                       ) : (
                         <p>
+                          <span className="inline-block px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 font-semibold mr-1">{q.points ?? 1}점</span>
                           <span className="text-gray-400">정답: </span>
                           <span className="text-emerald-700 font-semibold">{q.acceptedAnswers[0]}</span>
                           {q.acceptedAnswers.length > 1 && (

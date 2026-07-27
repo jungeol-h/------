@@ -17,7 +17,7 @@ export default function QuizQuestionEditModal({ mode = 'create', initial, quizSe
   )
   const [explanation, setExplanation] = useState(initial?.explanation ?? '')
   const [hint, setHint] = useState(initial?.hint ?? '')
-  const [points, setPoints] = useState(initial?.points ?? 1) // 서술형 배점 (단답형은 항상 1점)
+  const [points, setPoints] = useState(initial?.points ?? 1) // 문항 배점 — 단답형은 정답 시 만점, 서술형은 부분점수 가능
   const [existingAttachments, setExistingAttachments] = useState(initial?.attachments ?? [])
   const [attachFiles, setAttachFiles] = useState([]) // 업로드 대기 File[]
   const [saving, setSaving] = useState(false)
@@ -35,7 +35,8 @@ export default function QuizQuestionEditModal({ mode = 'create', initial, quizSe
 
   const canSubmit =
     question.trim() &&
-    (isEssay ? pointsValid : parsedAnswers.length > 0) &&
+    pointsValid &&
+    (isEssay || parsedAnswers.length > 0) &&
     Number.isFinite(Number(orderNo)) &&
     Number(orderNo) > 0
 
@@ -53,7 +54,7 @@ export default function QuizQuestionEditModal({ mode = 'create', initial, quizSe
         acceptedAnswers: isEssay ? [] : parsedAnswers,
         explanation: explanation.trim(),
         hint: hint.trim(),
-        points: isEssay ? Number(points) : 1,
+        points: Number(points),
         attachments: [...existingAttachments, ...uploaded],
       })
       // 수정에서 제거된 첨부의 실파일 정리 (best-effort — 셔플 복제본과 path 공유 가능성은 수용)
@@ -114,20 +115,22 @@ export default function QuizQuestionEditModal({ mode = 'create', initial, quizSe
             )}
           </div>
 
-          {isEssay && (
-            <div>
-              <label className="block text-[11px] font-bold text-gray-500 mb-1">배점 *</label>
-              <input
-                type="number"
-                min={1}
-                step={1}
-                value={points}
-                onChange={(e) => setPoints(e.target.value)}
-                className="w-32 px-3 py-2 rounded-lg border border-gray-200 text-sm"
-              />
-              <p className="text-[11px] text-gray-400 mt-1">단답형은 항상 1점, 서술형은 배점 내에서 부분점수를 줄 수 있습니다</p>
-            </div>
-          )}
+          <div>
+            <label className="block text-[11px] font-bold text-gray-500 mb-1">배점 *</label>
+            <input
+              type="number"
+              min={1}
+              step={1}
+              value={points}
+              onChange={(e) => setPoints(e.target.value)}
+              className="w-32 px-3 py-2 rounded-lg border border-gray-200 text-sm"
+            />
+            <p className="text-[11px] text-gray-400 mt-1">
+              {isEssay
+                ? '서술형은 0~배점 사이에서 부분점수를 줄 수 있습니다'
+                : '단답형은 정답이면 배점만큼 득점합니다'}
+            </p>
+          </div>
 
           <div>
             <label className="block text-[11px] font-bold text-gray-500 mb-1">문제 본문 *</label>

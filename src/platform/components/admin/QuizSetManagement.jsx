@@ -28,10 +28,12 @@ function formatDateKey(iso) {
   return `${y}-${m}-${day}`
 }
 
-function formatDateLabel(key) {
-  if (key === '날짜 없음') return key
-  const [, m, d] = key.split('-')
-  return `${Number(m)}월 ${Number(d)}일`
+// 모바일 셀 폭을 위해 "7/24" 형태 + 연도 분리
+function formatDateShort(iso) {
+  const key = formatDateKey(iso)
+  if (key === '날짜 없음') return { md: '—', year: '' }
+  const [y, m, d] = key.split('-')
+  return { md: `${Number(m)}/${Number(d)}`, year: y }
 }
 
 export default function QuizSetManagement() {
@@ -88,9 +90,9 @@ export default function QuizSetManagement() {
     return data.quizSets
   }, [data.quizSets, mySubject, subjectFilter])
 
-  // 일자(내림차순) → 학년 → 회차 정렬 후 일자별 그룹으로 묶기
-  const dateGroups = useMemo(() => {
-    const sorted = [...scopedSets].sort((a, b) => {
+  // 일자(내림차순) → 과목 → 학년 → 회차 정렬
+  const allSets = useMemo(() => (
+    [...scopedSets].sort((a, b) => {
       const dateA = formatDateKey(a.createdAt)
       const dateB = formatDateKey(b.createdAt)
       if (dateA !== dateB) return dateB.localeCompare(dateA) // 최신 일자가 위로
@@ -100,20 +102,7 @@ export default function QuizSetManagement() {
       if (gradeCmp !== 0) return gradeCmp
       return (a.round ?? 0) - (b.round ?? 0)
     })
-    const groups = []
-    sorted.forEach((set) => {
-      const key = formatDateKey(set.createdAt)
-      const last = groups[groups.length - 1]
-      if (last && last.dateKey === key) {
-        last.sets.push(set)
-      } else {
-        groups.push({ dateKey: key, sets: [set] })
-      }
-    })
-    return groups
-  }, [scopedSets])
-
-  const allSets = useMemo(() => dateGroups.flatMap((g) => g.sets), [dateGroups])
+  ), [scopedSets])
   const viewingSet = viewingSetId ? allSets.find((s) => s.id === viewingSetId) : null
   const viewingQuestions = viewingSetId ? (questionsBySet[viewingSetId] ?? []) : []
   const viewingAttemptCount = viewingSetId ? (attemptsBySet[viewingSetId] ?? 0) : 0
@@ -208,150 +197,130 @@ export default function QuizSetManagement() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
               <tr>
-                <th className="text-left px-4 py-2.5 w-28">생성일</th>
-                <th className="text-left px-3 py-2.5 w-16">과목</th>
-                <th className="text-left px-3 py-2.5 w-16">학년</th>
-                <th className="text-left px-3 py-2.5 w-14">회차</th>
-                <th className="text-left px-3 py-2.5">제목</th>
-                <th className="text-right px-3 py-2.5 w-20">문제</th>
-                <th className="text-right px-3 py-2.5 w-20">응시</th>
-                <th className="text-left px-3 py-2.5 w-40">출처</th>
-                <th className="text-center px-3 py-2.5 w-20">배포</th>
-                <th className="text-right px-4 py-2.5 w-44">액션</th>
+                <th className="text-left px-2 sm:px-4 py-2.5 w-14">과목</th>
+                <th className="text-left px-2 sm:px-3 py-2.5">제목</th>
+                <th className="text-center px-1 sm:px-3 py-2.5 w-11 sm:w-14">회차</th>
+                <th className="text-center px-1 sm:px-3 py-2.5 w-12 sm:w-20">작성일</th>
+                <th className="text-right px-2 sm:px-4 py-2.5 w-[76px] sm:w-40">관리</th>
               </tr>
             </thead>
             <tbody>
-              {dateGroups.map((group) => (
-                group.sets.map((set, idxInGroup) => {
-                  const questionCount = (questionsBySet[set.id] ?? []).length
-                  const attemptCount = attemptsBySet[set.id] ?? 0
-                  const isFirstOfDate = idxInGroup === 0
-                  const gradeClass = GRADE_BADGE[set.grade] ?? 'bg-gray-50 text-gray-700 border-gray-200'
+              {allSets.map((set) => {
+                const questionCount = (questionsBySet[set.id] ?? []).length
+                const attemptCount = attemptsBySet[set.id] ?? 0
+                const gradeClass = GRADE_BADGE[set.grade] ?? 'bg-gray-50 text-gray-700 border-gray-200'
+                const date = formatDateShort(set.createdAt)
 
-                  return (
-                    <tr
-                      key={set.id}
-                      className={`border-t border-gray-100 hover:bg-gray-50/60 ${isFirstOfDate ? 'border-t-gray-200' : ''}`}
-                    >
-                      <td className="px-4 py-3 align-top">
-                        {isFirstOfDate ? (
-                          <div>
-                            <p className="text-xs font-bold text-gray-700">{formatDateLabel(group.dateKey)}</p>
-                            <p className="text-[10px] text-gray-400 mt-0.5">{group.dateKey}</p>
-                          </div>
-                        ) : (
-                          <span className="text-[10px] text-gray-300">↑ 동일</span>
-                        )}
-                      </td>
-                      <td className="px-3 py-3 align-top">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md border text-[11px] font-bold ${SUBJECT_BADGE[set.subject] ?? 'bg-gray-50 text-gray-700 border-gray-200'}`}>
+                return (
+                  <tr key={set.id} className="border-t border-gray-100 hover:bg-gray-50/60">
+                    {/* 과목·학년 배지 세로 스택 — 모바일 가로폭 절약 */}
+                    <td className="px-2 sm:px-4 py-3 align-top">
+                      <div className="flex flex-col items-start gap-1">
+                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded-md border text-[11px] font-bold ${SUBJECT_BADGE[set.subject] ?? 'bg-gray-50 text-gray-700 border-gray-200'}`}>
                           {set.subject ?? '국어'}
                         </span>
-                      </td>
-                      <td className="px-3 py-3 align-top">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md border text-[11px] font-bold ${gradeClass}`}>
+                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded-md border text-[11px] font-bold ${gradeClass}`}>
                           {set.grade}
                         </span>
-                      </td>
-                      <td className="px-3 py-3 align-top">
-                        <span className="text-sm font-bold text-gray-800 tabular-nums">{set.round}회</span>
-                      </td>
-                      <td className="px-3 py-3 align-top">
-                        <p className="text-sm font-semibold text-gray-800">
-                          {set.title}
-                          {set.isScoreOnly && (
-                            <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded border border-indigo-200 bg-indigo-50 text-indigo-700 text-[10px] font-bold align-middle">
-                              외부시험
-                            </span>
-                          )}
-                        </p>
-                        {set.description && (
-                          <p className="text-[11px] text-gray-500 mt-0.5 line-clamp-1">{set.description}</p>
+                      </div>
+                    </td>
+                    <td className="px-2 sm:px-3 py-3 align-top">
+                      <p className="text-sm font-semibold text-gray-800">
+                        {set.title}
+                        {set.isScoreOnly && (
+                          <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded border border-indigo-200 bg-indigo-50 text-indigo-700 text-[10px] font-bold align-middle">
+                            외부시험
+                          </span>
                         )}
-                      </td>
-                      <td className="px-3 py-3 align-top text-right">
-                        {set.isScoreOnly ? (
-                          <span className="text-[11px] text-gray-500">만점 {set.maxScore}점</span>
-                        ) : (
-                          <>
-                            <span className="text-sm font-semibold text-gray-700 tabular-nums">{questionCount}</span>
-                            <span className="text-[11px] text-gray-400 ml-0.5">개</span>
-                          </>
-                        )}
-                      </td>
-                      <td className="px-3 py-3 align-top text-right">
-                        <span className="text-sm font-semibold text-gray-700 tabular-nums">{attemptCount}</span>
-                        <span className="text-[11px] text-gray-400 ml-0.5">명</span>
-                      </td>
-                      <td className="px-3 py-3 align-top">
-                        {set.source ? (
-                          <p className="text-[11px] text-gray-500 line-clamp-1" title={set.source}>{set.source}</p>
-                        ) : (
-                          <span className="text-[11px] text-gray-300">—</span>
-                        )}
-                      </td>
-                      <td className="px-3 py-3 align-top text-center">
+                      </p>
+                      {set.description && (
+                        <p className="text-[11px] text-gray-500 mt-0.5 line-clamp-1">{set.description}</p>
+                      )}
+                      {/* 축소된 칼럼(배포·문제·응시·출처)은 제목 아래 보조 라인으로 */}
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1.5 text-[11px] text-gray-500">
                         <button
                           onClick={() => handleTogglePublish(set)}
                           disabled={togglingSetId === set.id}
-                          className="p-1 rounded-lg hover:bg-gray-100 disabled:opacity-50"
+                          className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md border text-[10px] font-bold disabled:opacity-50 ${
+                            set.isPublished
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : 'bg-gray-50 text-gray-500 border-gray-200'
+                          }`}
                           title={set.isPublished ? '배포 중 (클릭하여 OFF)' : '미배포 (클릭하여 ON)'}
                         >
                           {set.isPublished
-                            ? <ToggleRight size={22} className="text-emerald-600" />
-                            : <ToggleLeft  size={22} className="text-gray-400" />
+                            ? <ToggleRight size={13} className="text-emerald-600" />
+                            : <ToggleLeft  size={13} className="text-gray-400" />
                           }
+                          {set.isPublished ? '배포중' : '미배포'}
                         </button>
-                      </td>
-                      <td className="px-4 py-3 align-top">
-                        <div className="flex items-center justify-end gap-0.5">
-                          {set.isScoreOnly ? (
+                        {set.isScoreOnly ? (
+                          <span>만점 <span className="font-semibold text-gray-700 tabular-nums">{set.maxScore}</span>점</span>
+                        ) : (
+                          <span>문제 <span className="font-semibold text-gray-700 tabular-nums">{questionCount}</span>개</span>
+                        )}
+                        <span>응시 <span className="font-semibold text-gray-700 tabular-nums">{attemptCount}</span>명</span>
+                        {set.source && (
+                          <span className="line-clamp-1 max-w-[180px]" title={set.source}>출처 {set.source}</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-1 sm:px-3 py-3 align-top text-center">
+                      <span className="text-sm font-bold text-gray-800 tabular-nums whitespace-nowrap">{set.round}회</span>
+                    </td>
+                    <td className="px-1 sm:px-3 py-3 align-top text-center" title={formatDateKey(set.createdAt)}>
+                      <p className="text-xs font-bold text-gray-700 tabular-nums whitespace-nowrap">{date.md}</p>
+                      {date.year && <p className="text-[10px] text-gray-400 mt-0.5 tabular-nums">{date.year}</p>}
+                    </td>
+                    <td className="px-2 sm:px-4 py-3 align-top">
+                      {/* 모바일은 2×2 그리드, sm 이상은 한 줄 */}
+                      <div className="grid grid-cols-2 gap-0.5 justify-items-end sm:flex sm:items-center sm:justify-end">
+                        {set.isScoreOnly ? (
+                          <button
+                            onClick={() => setScoreEntrySetId(set.id)}
+                            className="p-1.5 rounded-lg hover:bg-indigo-50 text-indigo-600"
+                            title="점수 입력 (외부 시험)"
+                          >
+                            <ClipboardEdit size={16} />
+                          </button>
+                        ) : (
+                          <>
                             <button
-                              onClick={() => setScoreEntrySetId(set.id)}
-                              className="p-1.5 rounded-lg hover:bg-indigo-50 text-indigo-600"
-                              title="점수 입력 (외부 시험)"
+                              onClick={() => setViewingSetId(set.id)}
+                              className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-600"
+                              title="문제 보기"
                             >
-                              <ClipboardEdit size={16} />
+                              <Eye size={16} />
                             </button>
-                          ) : (
-                            <>
-                              <button
-                                onClick={() => setViewingSetId(set.id)}
-                                className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-600"
-                                title="문제 보기"
-                              >
-                                <Eye size={16} />
-                              </button>
-                              <button
-                                onClick={() => handleDuplicate(set)}
-                                disabled={duplicatingSetId === set.id || questionCount === 0}
-                                className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600 disabled:opacity-40"
-                                title={questionCount === 0 ? '문제가 없어 복제할 수 없습니다' : '순서 셔플 복제 (새 회차로 생성, 미배포)'}
-                              >
-                                <Shuffle size={16} />
-                              </button>
-                            </>
-                          )}
-                          <button
-                            onClick={() => setEditingSet(set)}
-                            className="p-1.5 rounded-lg hover:bg-emerald-50 text-emerald-600"
-                            title="편집"
-                          >
-                            <Edit2 size={16} />
-                          </button>
-                          <button
-                            onClick={() => setConfirmDeleteSet(set)}
-                            className="p-1.5 rounded-lg hover:bg-red-50 text-red-500"
-                            title="삭제"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })
-              ))}
+                            <button
+                              onClick={() => handleDuplicate(set)}
+                              disabled={duplicatingSetId === set.id || questionCount === 0}
+                              className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600 disabled:opacity-40"
+                              title={questionCount === 0 ? '문제가 없어 복제할 수 없습니다' : '순서 셔플 복제 (새 회차로 생성, 미배포)'}
+                            >
+                              <Shuffle size={16} />
+                            </button>
+                          </>
+                        )}
+                        <button
+                          onClick={() => setEditingSet(set)}
+                          className="p-1.5 rounded-lg hover:bg-emerald-50 text-emerald-600"
+                          title="편집"
+                        >
+                          <Edit2 size={16} />
+                        </button>
+                        <button
+                          onClick={() => setConfirmDeleteSet(set)}
+                          className="p-1.5 rounded-lg hover:bg-red-50 text-red-500"
+                          title="삭제"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
