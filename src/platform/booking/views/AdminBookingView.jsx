@@ -4,7 +4,7 @@
 
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Plus, Pencil, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronRight, Plus, Pencil, Trash2 } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
 import { useBooking } from '../BookingContext.jsx'
 import { todayStr } from '../../utils/dateUtils.js'
@@ -33,13 +33,24 @@ const FIELD = 'h-10 px-3 rounded-lg border border-gray-200 text-sm'
 const EDUCATOR_ROLES = ['manager', 'instructor', 'consultant', 'admin']
 
 // ─── 타임테이블 메뉴: 시간 축 전용 — 강사 예약 가능 시간 + 슬롯 목록.
-//     접수제 슬롯 준비(상품 축 캠페인)는 프로그램 메뉴의 해당 카드에 있다. ──
+//     접수제 슬롯 준비(상품 축 캠페인)는 프로그램 메뉴의 해당 카드에 있다.
+//     슬롯 목록은 날짜 그룹 접기 — 롤링 파생으로 항상 수백 슬롯이 깔려 있어
+//     평면 카드 나열은 못 읽는다. 날짜 헤더가 요약이자 그날 전체 선택 단위
+//     ("8월 첫 주만 공개" 같은 부분 일괄 작업이 헤더 체크 몇 번으로 끝난다). ──
+
+const WEEKDAY = ['일', '월', '화', '수', '목', '금', '토']
+const dowOf = (dateStr) => {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  return WEEKDAY[new Date(y, m - 1, d).getDay()]
+}
+
 function TimetableMenu() {
   const { config, slots, reservations, userNames, setSlotStatus } = useBooking()
   const [filters, setFilters] = useState({
-    programId: '', status: '', from: todayStr(), to: addDaysStr(todayStr(), 30),
+    programId: '', status: '', educatorId: '', from: todayStr(), to: addDaysStr(todayStr(), 30),
   })
   const [selected, setSelected] = useState(new Set())
+  const [expanded, setExpanded] = useState(() => new Set()) // 펼친 날짜들 (기본 접힘)
   const [editSlot, setEditSlot] = useState(null)
   const [busy, setBusy] = useState(false)
 
@@ -47,11 +58,18 @@ function TimetableMenu() {
   const programName = (id) => config.programs.find((p) => p.id === id)?.name ?? id
   const confirmedOf = (slotId) => reservations.filter((r) => r.slotId === slotId && r.status === 'confirmed').length
 
+  // 강사 필터 선택지 — 현재 로드된 슬롯에 실제로 등장하는 강사만
+  const educatorOptions = useMemo(
+    () => [...new Set(slots.map((s) => s.educatorId).filter(Boolean))],
+    [slots],
+  )
+
   const filtered = useMemo(
     () => slots
       .filter((s) => {
         if (filters.programId && s.programId !== filters.programId) return false
         if (filters.status && s.status !== filters.status) return false
+        if (filters.educatorId && s.educatorId !== filters.educatorId) return false
         if (filters.from && s.date < filters.from) return false
         if (filters.to && s.date > filters.to) return false
         return true
@@ -59,6 +77,29 @@ function TimetableMenu() {
       .sort((a, b) => (a.date === b.date ? (a.startTime < b.startTime ? -1 : 1) : a.date < b.date ? -1 : 1)),
     [slots, filters],
   )
+
+  // 날짜 그룹 + 헤더 요약(상태별 수·예약/정원 합)
+  const dayGroups = useMemo(() => {
+    const groups = []
+    for (const s of filtered) {
+      const last = groups[groups.length - 1]
+      if (last && last.date === s.date) last.slots.push(s)
+      else groups.push({ date: s.date, slots: [s] })
+    }
+    return groups.map((g) => {
+      const byStatus = {}
+      let booked = 0
+      let capacity = 0
+      for (const s of g.slots) {
+        byStatus[s.status] = (byStatus[s.status] ?? 0) + 1
+        booked += confirmedOf(s.id)
+        capacity += s.capacity
+      }
+      return { ...g, byStatus, booked, capacity }
+    })
+    // confirmedOf는 reservations 파생 — filtered와 함께 갱신되면 충분
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtered, reservations])
 
   const toggle = (id) => setSelected((prev) => {
     const next = new Set(prev)
@@ -68,6 +109,24 @@ function TimetableMenu() {
   })
   const toggleAll = () => setSelected((prev) =>
     prev.size === filtered.length ? new Set() : new Set(filtered.map((s) => s.id)))
+
+  // 날짜 헤더 체크 — 그날 전부 선택돼 있으면 해제, 아니면 전부 선택
+  const toggleDay = (group) => setSelected((prev) => {
+    const next = new Set(prev)
+    const allPicked = group.slots.every((s) => next.has(s.id))
+    for (const s of group.slots) {
+      if (allPicked) next.delete(s.id)
+      else next.add(s.id)
+    }
+    return next
+  })
+
+  const toggleExpand = (date) => setExpanded((prev) => {
+    const next = new Set(prev)
+    if (next.has(date)) next.delete(date)
+    else next.add(date)
+    return next
+  })
 
   const bulkTransition = async (status) => {
     if (selected.size === 0 || busy) return
@@ -94,6 +153,12 @@ function TimetableMenu() {
         <select value={filters.status} onChange={setF('status')} className={FIELD}>
           <option value="">전체 상태</option>
           {Object.entries(SLOT_STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+        </select>
+        <select value={filters.educatorId} onChange={setF('educatorId')} className={`${FIELD} col-span-2`}>
+          <option value="">전체 강사</option>
+          {educatorOptions.map((eid) => (
+            <option key={eid} value={eid}>{userNames[eid]?.name ?? eid}</option>
+          ))}
         </select>
         <input type="date" value={filters.from} onChange={setF('from')} className={FIELD} />
         <input type="date" value={filters.to} onChange={setF('to')} className={FIELD} />
@@ -122,25 +187,76 @@ function TimetableMenu() {
       </div>
 
       <div className="space-y-1.5">
-        {filtered.map((s) => {
-          const status = SLOT_STATUS[s.status]
-          const booked = confirmedOf(s.id)
+        {dayGroups.map((group) => {
+          const isExpanded = expanded.has(group.date)
+          const dayAllPicked = group.slots.every((s) => selected.has(s.id))
+          const dayPickedCount = group.slots.filter((s) => selected.has(s.id)).length
           return (
-            <div key={s.id} className="bg-white rounded-xl shadow-sm p-3 flex items-center gap-2">
-              <input type="checkbox" checked={selected.has(s.id)} onChange={() => toggle(s.id)} />
-              <button type="button" onClick={() => setEditSlot(s)} className="flex-1 text-left min-w-0">
-                <p className="text-xs font-bold text-gray-900 truncate">
-                  {s.date} {s.startTime}~{s.endTime}
-                  <span className="ml-1.5 font-semibold text-gray-500">{programName(s.programId)}</span>
-                  {!s.isPublic && <span className="ml-1 text-[10px] text-gray-400">비공개</span>}
-                </p>
-                <p className="text-[11px] text-gray-500 mt-0.5">
-                  {userNames[s.educatorId]?.name ?? '강사 미지정'} · {booked}/{s.capacity}명
-                </p>
-              </button>
-              <span className={`text-[10px] font-bold px-2 py-1 rounded-full flex-shrink-0 ${status?.color}`}>
-                {status?.label}
-              </span>
+            <div key={group.date} className="bg-white rounded-xl shadow-sm overflow-hidden">
+              <div className="flex items-center gap-2 p-3">
+                <input
+                  type="checkbox"
+                  checked={dayAllPicked}
+                  onChange={() => toggleDay(group)}
+                  aria-label={`${group.date} 전체 선택`}
+                />
+                <button
+                  type="button"
+                  onClick={() => toggleExpand(group.date)}
+                  className="flex-1 min-w-0 flex items-center gap-2 text-left"
+                >
+                  <span className="text-xs font-bold text-gray-900 whitespace-nowrap">
+                    {group.date.slice(5).replace('-', '/')} ({dowOf(group.date)})
+                  </span>
+                  <span className="text-[11px] text-gray-400 whitespace-nowrap">
+                    {group.slots.length}슬롯 · 예약 {group.booked}/{group.capacity}
+                  </span>
+                  <span className="flex items-center gap-1 flex-wrap min-w-0">
+                    {Object.entries(group.byStatus).map(([status, count]) => (
+                      <span
+                        key={status}
+                        className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap ${SLOT_STATUS[status]?.color ?? 'bg-gray-100 text-gray-500'}`}
+                      >
+                        {SLOT_STATUS[status]?.label ?? status} {count}
+                      </span>
+                    ))}
+                  </span>
+                  {dayPickedCount > 0 && !dayAllPicked && (
+                    <span className="text-[10px] font-bold text-blue-500 whitespace-nowrap">{dayPickedCount}개 선택</span>
+                  )}
+                  <span className="ml-auto text-gray-300 flex-shrink-0">
+                    {isExpanded ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+                  </span>
+                </button>
+              </div>
+
+              {isExpanded && (
+                <div className="border-t border-gray-50 px-3 py-2 space-y-1">
+                  {group.slots.map((s) => {
+                    const status = SLOT_STATUS[s.status]
+                    const booked = confirmedOf(s.id)
+                    return (
+                      <div key={s.id} className="flex items-center gap-2 py-1">
+                        <input type="checkbox" checked={selected.has(s.id)} onChange={() => toggle(s.id)} />
+                        <button type="button" onClick={() => setEditSlot(s)} className="flex-1 text-left min-w-0">
+                          <p className="text-xs font-bold text-gray-900 truncate">
+                            {s.startTime}~{s.endTime}
+                            <span className="ml-1.5 font-semibold text-gray-500">{programName(s.programId)}</span>
+                            {s.ruleId && <span className="ml-1 text-[10px] font-bold text-indigo-400">자동</span>}
+                            {!s.isPublic && <span className="ml-1 text-[10px] text-gray-400">비공개</span>}
+                          </p>
+                          <p className="text-[11px] text-gray-500">
+                            {userNames[s.educatorId]?.name ?? '강사 미지정'} · {booked}/{s.capacity}명
+                          </p>
+                        </button>
+                        <span className={`text-[10px] font-bold px-2 py-1 rounded-full flex-shrink-0 ${status?.color}`}>
+                          {status?.label}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           )
         })}
