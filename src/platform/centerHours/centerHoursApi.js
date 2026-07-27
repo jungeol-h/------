@@ -4,7 +4,7 @@
 // (scripts/add-center-hours.sql). 설정은 admin_config('center_hours') 한 행.
 
 import { supabase } from '../lib/supabase.js'
-import { CENTER_CAPACITY_DEFAULT } from '../data/centerHours.js'
+import { CENTER_CAPACITY_DEFAULT, DEFAULT_OPERATING_DAYS } from '../data/centerHours.js'
 
 const toRegistration = (row) => ({
   id: row.id,
@@ -18,6 +18,15 @@ const toRegistration = (row) => ({
 export const isMigrationMissing = (error) =>
   error?.code === '42P01' || /does not exist/i.test(error?.message ?? '')
 
+// admin_config('center_hours') value → 화면용 config (누락·오염 값 방어)
+const toConfig = (value) => ({
+  isOpen: value?.isOpen ?? false,
+  capacity: value?.capacity ?? CENTER_CAPACITY_DEFAULT,
+  operatingDays: Array.isArray(value?.operatingDays) && value.operatingDays.length > 0
+    ? value.operatingDays
+    : DEFAULT_OPERATING_DAYS,
+})
+
 export async function fetchCenterHours() {
   const [regRes, cfgRes] = await Promise.all([
     supabase
@@ -29,11 +38,16 @@ export async function fetchCenterHours() {
   if (cfgRes.error) throw cfgRes.error
   return {
     registrations: (regRes.data ?? []).map(toRegistration),
-    config: {
-      isOpen: cfgRes.data?.value?.isOpen ?? false,
-      capacity: cfgRes.data?.value?.capacity ?? CENTER_CAPACITY_DEFAULT,
-    },
+    config: toConfig(cfgRes.data?.value),
   }
+}
+
+// 설정만 경량 조회 — 학생 홈 카드의 운영 요일 판정용
+export async function fetchCenterHoursConfig() {
+  const { data, error } = await supabase
+    .from('admin_config').select('value').eq('key', 'center_hours').maybeSingle()
+  if (error) throw error
+  return toConfig(data?.value)
 }
 
 // 학생 홈 '오늘의 센터 일정' 카드용 — 본인 등록분만 조회 (전체 fetch보다 가볍다)
@@ -63,12 +77,18 @@ export async function updateCenterHoursConfig(patch) {
   const { data: row, error: readError } = await supabase
     .from('admin_config').select('value').eq('key', 'center_hours').maybeSingle()
   if (readError) throw readError
-  const next = { isOpen: false, capacity: CENTER_CAPACITY_DEFAULT, ...row?.value, ...patch }
+  const next = {
+    isOpen: false,
+    capacity: CENTER_CAPACITY_DEFAULT,
+    operatingDays: DEFAULT_OPERATING_DAYS,
+    ...row?.value,
+    ...patch,
+  }
   const { error } = await supabase
     .from('admin_config')
     .upsert({ key: 'center_hours', value: next }, { onConflict: 'key' })
   if (error) throw error
-  return next
+  return toConfig(next)
 }
 
 // 등·하원 시간표 일괄 반영. 반환: { ok:true, students } | { ok:false, code }

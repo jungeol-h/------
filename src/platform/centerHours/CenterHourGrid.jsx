@@ -2,29 +2,30 @@
 // 요일마다 단위 시각이 달라(주중 16시~, 주말 12:30~) 시간축을 공유하지 않고
 // 각 셀 안에 시작 시각을 표기한다.
 
-import { CENTER_HOUR_UNITS, CENTER_DAY_ORDER, unitKey } from '../data/centerHours.js'
-
-const DAY_LABEL = { 0: '일', 1: '월', 2: '화', 5: '금', 6: '토' }
+import { CENTER_HOUR_UNITS, CENTER_DAY_LABEL, DEFAULT_OPERATING_DAYS, operatingDayOrder, unitKey } from '../data/centerHours.js'
 
 // selected: Set(unitKey) · othersCount: { [unitKey]: 본인 제외 등록 수 }
 // ignoreCapacity: 관리자 대리 수정 — 마감 셀도 토글 가능
+// days: 운영 요일 (admin_config operatingDays — 표시 순서 정렬은 여기서 처리)
 export default function CenterHourGrid({
   selected, othersCount, capacity, editable, ignoreCapacity = false, onToggle,
+  days = DEFAULT_OPERATING_DAYS,
 }) {
-  const maxRows = Math.max(...CENTER_DAY_ORDER.map((d) => CENTER_HOUR_UNITS[d].length))
+  const dayOrder = operatingDayOrder(days)
+  const maxRows = Math.max(...dayOrder.map((d) => CENTER_HOUR_UNITS[d].length))
 
   return (
     <div className="bg-white rounded-2xl shadow-sm p-2">
-      <div className="grid gap-0.5" style={{ gridTemplateColumns: `repeat(${CENTER_DAY_ORDER.length}, 1fr)` }}>
-        {CENTER_DAY_ORDER.map((day) => (
+      <div className="grid gap-0.5" style={{ gridTemplateColumns: `repeat(${dayOrder.length}, 1fr)` }}>
+        {dayOrder.map((day) => (
           <div key={day} className="text-center py-1">
             <p className={`text-[11px] font-bold ${day === 0 ? 'text-red-400' : 'text-gray-600'}`}>
-              {DAY_LABEL[day]}
+              {CENTER_DAY_LABEL[day]}
             </p>
           </div>
         ))}
         {Array.from({ length: maxRows }, (_, row) =>
-          CENTER_DAY_ORDER.map((day) => {
+          dayOrder.map((day) => {
             const unit = CENTER_HOUR_UNITS[day][row]
             if (!unit) return <div key={`${day}-${row}`} className="h-11 rounded-md bg-gray-50/60" />
             const k = unitKey(day, unit.start)

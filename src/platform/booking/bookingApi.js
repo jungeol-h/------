@@ -171,22 +171,46 @@ export function toBookingAuditLog(row) {
 
 // ─── 조회 ─────────────────────────────────────────────────────
 
-// 프로그램·교과·강사배정·오픈기간 — 전부 소량이라 한 번에 (예약 화면 공통 기초)
+// 타임블럭 템플릿 기본값 — 클라이언트 고정 운영시간 (2026-07-27 요청).
+// 슬롯 단위(40분/20분)는 프로그램(slotMinutes)이 정하고, 템플릿은 요일·시간창만 담는다.
+export const DEFAULT_TIMETABLE_TEMPLATES = [
+  {
+    id: 'tpl-weekday',
+    name: 'A · 평일형 (16:00~22:00)',
+    weekdays: [1, 2, 3, 4, 5],
+    dayStart: '16:00', dayEnd: '22:00',
+    breakStart: '', breakEnd: '',
+  },
+  {
+    id: 'tpl-weekend',
+    name: 'B · 주말형 (12:30~19:00)',
+    weekdays: [6, 0],
+    dayStart: '12:30', dayEnd: '19:00',
+    breakStart: '', breakEnd: '',
+  },
+]
+
+// 프로그램·교과·강사배정·오픈기간·타임블럭 템플릿 — 전부 소량이라 한 번에 (예약 화면 공통 기초)
 export async function fetchBookingConfig() {
-  const [programs, subjects, educators, openPeriods] = await Promise.all([
+  const [programs, subjects, educators, openPeriods, templatesRow] = await Promise.all([
     supabase.from('booking_programs').select('*').order('sort_order').order('created_at'),
     supabase.from('booking_subjects').select('*').order('sort_order'),
     supabase.from('booking_educators').select('*'),
     supabase.from('booking_open_periods').select('*').order('open_from', { ascending: false }),
+    supabase.from('admin_config').select('value').eq('key', 'booking_timetable_templates').maybeSingle(),
   ])
-  for (const res of [programs, subjects, educators, openPeriods]) {
+  for (const res of [programs, subjects, educators, openPeriods, templatesRow]) {
     if (res.error) throw res.error
   }
+  const storedTemplates = templatesRow.data?.value?.templates
   return {
     programs: (programs.data ?? []).map(toBookingProgram),
     subjects: (subjects.data ?? []).map(toBookingSubject),
     educators: (educators.data ?? []).map(toBookingEducator),
     openPeriods: (openPeriods.data ?? []).map(toBookingOpenPeriod),
+    templates: Array.isArray(storedTemplates) && storedTemplates.length > 0
+      ? storedTemplates
+      : DEFAULT_TIMETABLE_TEMPLATES,
   }
 }
 
@@ -511,11 +535,26 @@ export async function deleteOpenPeriod(id, actor) {
   })
 }
 
-// 타임테이블 일괄 생성 — slotGeneration.js가 만든 슬롯 배열을 배치와 함께 저장
-export async function createSlotBatch({ programId, params, slots }, actor) {
+// 타임블럭 템플릿 전체 저장 (관리자 전용 화면에서만 호출) — admin_config 한 행 교체
+export async function saveTimetableTemplates(templates, actor) {
+  await writeRow(() => supabase.from('admin_config')
+    .upsert({ key: 'booking_timetable_templates', value: { templates } }, { onConflict: 'key' }),
+  'bookingSaveTimetableTemplates')
+  await logAudit({
+    entityType: 'timetable_template', entityId: 'booking_timetable_templates', action: 'update',
+    actorId: actor.id, actorRole: actor.role, afterData: { templates },
+  })
+  return templates
+}
+
+// 타임테이블 일괄 생성 — slotGeneration.js가 만든 슬롯 배열을 배치와 함께 저장.
+// status: 'draft'(기본, 관리자 검토 후 공개) | 'open'(강사 셀프 개설 등 즉시 공개 —
+// NewSlotModal의 단일 슬롯 open 생성과 같은 권한 모델)
+export async function createSlotBatch({ programId, params, slots, status = 'draft' }, actor) {
+  const slotStatus = status === 'open' ? 'open' : 'draft'
   const batchId = makeId('bkb')
   await writeRow(() => supabase.from('booking_timetable_batches').insert({
-    id: batchId, program_id: programId, params, created_by: actor.id,
+    id: batchId, program_id: programId, params: { ...params, status: slotStatus }, created_by: actor.id,
   }), 'bookingCreateBatch')
 
   const rows = slots.map((s) => ({
@@ -528,7 +567,7 @@ export async function createSlotBatch({ programId, params, slots }, actor) {
     start_time: s.startTime,
     end_time: s.endTime,
     capacity: s.capacity,
-    status: 'draft',
+    status: slotStatus,
     is_public: s.isPublic ?? true,
     note: s.note ?? '',
     created_by: actor.id,

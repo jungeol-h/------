@@ -5,7 +5,9 @@
 
 import { useMemo, useState } from 'react'
 import { ChevronDown, ChevronUp } from 'lucide-react'
-import { CENTER_HOUR_UNITS, unitKey, unitLabel } from '../data/centerHours.js'
+import {
+  CENTER_HOUR_UNITS, CENTER_DAY_LABEL, DEFAULT_OPERATING_DAYS, operatingDayOrder, unitKey, unitLabel,
+} from '../data/centerHours.js'
 import { timeToMinutes } from '../context/selectors/attendance.js'
 import { toDateStr } from '../utils/dateUtils.js'
 
@@ -23,12 +25,15 @@ const GROUPS = [
   { key: 'wait', label: '등원 전', bar: 'bg-gray-300', text: 'text-gray-500', chip: 'bg-gray-50' },
 ]
 
-export default function TodayTimeline({ registrations, board, dateStr, now = new Date() }) {
+export default function TodayTimeline({
+  registrations, board, dateStr, now = new Date(), operatingDays = DEFAULT_OPERATING_DAYS,
+}) {
   const viewDateStr = dateStr ?? toDateStr(now)
   const isToday = viewDateStr === toDateStr(now)
   const [y, m, d] = viewDateStr.split('-').map(Number)
   const dow = new Date(y, m - 1, d).getDay()
-  const units = CENTER_HOUR_UNITS[dow]
+  const dayOrder = operatingDayOrder(operatingDays)
+  const units = dayOrder.includes(dow) ? CENTER_HOUR_UNITS[dow] : null
   const [expanded, setExpanded] = useState(null) // unit.start | null(=현재 시간대 자동)
 
   // studentId → { student, status }
@@ -68,7 +73,8 @@ export default function TodayTimeline({ registrations, board, dateStr, now = new
   if (!units) {
     return (
       <div className="bg-white rounded-2xl shadow-sm p-5 text-center text-sm text-gray-400">
-        {isToday ? '오늘은' : '이 날은'} 센터 운영 요일이 아닙니다 (운영: 월·화·금·토·일)
+        {isToday ? '오늘은' : '이 날은'} 센터 운영 요일이 아닙니다
+        (운영: {dayOrder.map((x) => CENTER_DAY_LABEL[x]).join('·')})
       </div>
     )
   }

@@ -2,7 +2,9 @@
 // 클라이언트가 쓰던 수기 출석부 포맷을 따른다:
 // 요일별 시트 > 시간 단위 열(학생 이름 | 학교·학년 2열) > 학년→이름순 행.
 
-import { CENTER_HOUR_UNITS, CENTER_DAY_ORDER, unitKey, unitLabel } from '../data/centerHours.js'
+import {
+  CENTER_HOUR_UNITS, DEFAULT_OPERATING_DAYS, operatingDayOrder, unitKey, unitLabel,
+} from '../data/centerHours.js'
 
 const DAY_NAMES = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일']
 
@@ -20,7 +22,7 @@ export function buildCenterHoursSheets({
   registrations = [],
   students = [],
   unitsByDay = CENTER_HOUR_UNITS,
-  dayOrder = CENTER_DAY_ORDER,
+  dayOrder = operatingDayOrder(DEFAULT_OPERATING_DAYS),
 }) {
   const studentById = new Map(students.map((s) => [s.id, s]))
 

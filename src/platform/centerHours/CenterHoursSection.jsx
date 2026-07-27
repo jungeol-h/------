@@ -8,26 +8,34 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   CalendarRange, CheckCheck, FileSpreadsheet, Loader2, Lock, LockOpen, UserPen,
 } from 'lucide-react'
-import { CENTER_HOUR_UNITS, CENTER_DAY_ORDER, unitKey, unitLabel } from '../data/centerHours.js'
+import {
+  CENTER_HOUR_UNITS, CENTER_DAY_LABEL as DAY_LABEL, CENTER_WEEK_ORDER,
+  operatingDayOrder, unitKey, unitLabel,
+} from '../data/centerHours.js'
 import { saveCenterHours, updateCenterHoursConfig, syncAttendanceSchedules } from './centerHoursApi.js'
 import { buildCenterHoursSheets, downloadCenterHoursWorkbook } from './centerHoursExcel.js'
 import { selectionToEntries } from './centerHoursSelection.js'
 import CenterHourGrid from './CenterHourGrid.jsx'
 import { todayStr } from '../utils/dateUtils.js'
 
-const DAY_LABEL = { 0: '일', 1: '월', 2: '화', 5: '금', 6: '토' }
-
 // readOnly: 감독관(viewer) 열람용 — 학생 대리 수정 에디터 숨김 (엑셀은 허용)
 export default function CenterHoursSection({
   role, allStudents, editableStudents, registrations, config, reload, readOnly = false,
 }) {
   const isAdmin = role === 'admin'
+  const dayOrder = operatingDayOrder(config.operatingDays)
   const [day, setDay] = useState(() => {
     const dow = new Date().getDay()
-    return CENTER_HOUR_UNITS[dow] ? dow : CENTER_DAY_ORDER[0]
+    return operatingDayOrder(config.operatingDays).includes(dow) ? dow : operatingDayOrder(config.operatingDays)[0]
   })
-  const [busy, setBusy] = useState(null) // 'toggle' | 'sync' | 'excel'
+  const [busy, setBusy] = useState(null) // 'toggle' | 'sync' | 'excel' | 'days'
   const [notice, setNotice] = useState(null) // { kind, text }
+
+  // 운영 요일이 바뀌어 현재 선택 요일이 빠지면 첫 운영 요일로 이동
+  useEffect(() => {
+    if (!dayOrder.includes(day)) setDay(dayOrder[0])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dayOrder.join(',')])
 
   const studentById = useMemo(
     () => new Map(allStudents.map((s) => [s.id, s])),
@@ -71,6 +79,40 @@ export default function CenterHoursSection({
     }
   }
 
+  // 운영 요일 토글 (관리자 전용) — 등록이 있는 요일을 닫을 땐 확인을 받는다
+  const handleToggleDay = async (d) => {
+    const isOn = dayOrder.includes(d)
+    const next = isOn
+      ? dayOrder.filter((x) => x !== d)
+      : CENTER_WEEK_ORDER.filter((x) => dayOrder.includes(x) || x === d)
+    if (next.length === 0) {
+      setNotice({ kind: 'error', text: '운영 요일은 최소 1일 이상이어야 합니다.' })
+      return
+    }
+    if (isOn) {
+      const count = new Set(
+        registrations.filter((r) => r.dayOfWeek === d).map((r) => r.studentId),
+      ).size
+      if (count > 0 && !window.confirm(
+        `${DAY_LABEL[d]}요일에 등록한 학생이 ${count}명 있습니다. 운영을 닫아도 기존 등록은 유지되지만 학생 화면에서 보이지 않게 됩니다. 계속할까요?`,
+      )) return
+    }
+    setBusy('days')
+    setNotice(null)
+    try {
+      await updateCenterHoursConfig({ operatingDays: next })
+      setNotice({
+        kind: 'ok',
+        text: `운영 요일을 ${operatingDayOrder(next).map((x) => DAY_LABEL[x]).join('·')}로 변경했습니다.`,
+      })
+      await reload()
+    } catch {
+      setNotice({ kind: 'error', text: '운영 요일 변경에 실패했습니다.' })
+    } finally {
+      setBusy(null)
+    }
+  }
+
   const handleSync = async () => {
     setBusy('sync')
     setNotice(null)
@@ -92,7 +134,7 @@ export default function CenterHoursSection({
     setBusy('excel')
     setNotice(null)
     try {
-      const sheets = buildCenterHoursSheets({ registrations, students: allStudents })
+      const sheets = buildCenterHoursSheets({ registrations, students: allStudents, dayOrder })
       await downloadCenterHoursWorkbook(sheets, todayStr())
       setNotice({ kind: 'ok', text: '출석부 엑셀을 다운로드했습니다.' })
     } catch {
@@ -152,6 +194,32 @@ export default function CenterHoursSection({
         </p>
       )}
 
+      {/* 운영 요일 설정 (관리자) — 임시 오픈(예: 이번 주 수·목)도 여기서 켠다 */}
+      {isAdmin && (
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-[11px] font-bold text-gray-400 mr-1">운영 요일</span>
+          {CENTER_WEEK_ORDER.map((d) => {
+            const on = dayOrder.includes(d)
+            return (
+              <button
+                key={d}
+                onClick={() => handleToggleDay(d)}
+                disabled={busy !== null}
+                title={on ? '클릭하여 운영 닫기' : '클릭하여 운영 열기'}
+                className={`w-9 h-9 rounded-xl text-xs font-bold transition-all disabled:opacity-40 ${
+                  on ? 'bg-indigo-500 text-white' : 'bg-white text-gray-300 shadow-sm'
+                }`}
+              >
+                {DAY_LABEL[d]}
+              </button>
+            )
+          })}
+          <span className="text-[11px] text-gray-400 ml-1">
+            학생 등록 화면·시간대별 현황·등하원 시간표에 바로 반영됩니다
+          </span>
+        </div>
+      )}
+
       {notice && (
         <p className={`text-sm rounded-xl p-3 ${
           notice.kind === 'ok' ? 'text-emerald-600 bg-emerald-50' : 'text-red-600 bg-red-50'
@@ -163,7 +231,7 @@ export default function CenterHoursSection({
 
       {/* 요일 선택 */}
       <div className="flex gap-1.5">
-        {CENTER_DAY_ORDER.map((d) => (
+        {dayOrder.map((d) => (
           <button
             key={d}
             onClick={() => setDay(d)}
@@ -217,6 +285,7 @@ export default function CenterHoursSection({
           students={editableStudents}
           registrations={registrations}
           capacity={config.capacity}
+          operatingDays={config.operatingDays}
           onSaved={reload}
           busyGlobal={busy}
         />
@@ -225,7 +294,7 @@ export default function CenterHoursSection({
   )
 }
 
-function StudentHoursEditor({ role, students, registrations, capacity, onSaved, busyGlobal }) {
+function StudentHoursEditor({ role, students, registrations, capacity, operatingDays, onSaved, busyGlobal }) {
   const [studentId, setStudentId] = useState('')
   const [selected, setSelected] = useState(() => new Set())
   const [dirty, setDirty] = useState(false)
@@ -303,6 +372,7 @@ function StudentHoursEditor({ role, students, registrations, capacity, onSaved, 
             selected={selected}
             othersCount={othersCount}
             capacity={capacity}
+            days={operatingDays}
             editable
             ignoreCapacity
             onToggle={(day, unit) => {

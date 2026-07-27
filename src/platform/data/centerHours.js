@@ -4,7 +4,9 @@
 // 16:45~17:00)을 건너뛴 1시간 단위. 단위 구성이 바뀌면 이 테이블만 수정한다 —
 // DB(center_hour_registrations)는 start/end 시각을 그대로 저장할 뿐이다.
 //
-// key = day_of_week (0=일 ~ 6=토, JS getDay 규약). 수(3)·목(4)은 미운영.
+// key = day_of_week (0=일 ~ 6=토, JS getDay 규약). 단위는 7일 전부 정의하고,
+// 실제 운영 요일은 admin_config('center_hours').operatingDays 설정이 정한다
+// (기본 월·화·금·토·일 — 2026-07 "이번 주는 수·목도 오픈" 요청으로 설정화).
 
 const WEEKDAY_UNITS = [
   { start: '16:00', end: '17:00' },
@@ -27,15 +29,31 @@ const WEEKEND_UNITS = [
 export const CENTER_HOUR_UNITS = {
   1: WEEKDAY_UNITS, // 월
   2: WEEKDAY_UNITS, // 화
+  3: WEEKDAY_UNITS, // 수
+  4: WEEKDAY_UNITS, // 목
   5: WEEKDAY_UNITS, // 금
   6: WEEKEND_UNITS, // 토
   0: WEEKEND_UNITS, // 일
 }
 
-// 화면·엑셀의 요일 표시 순서
-export const CENTER_DAY_ORDER = [1, 2, 5, 6, 0]
+// 화면·엑셀의 요일 표시 순서 (월~일 전체)
+export const CENTER_WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0]
+
+// 설정 미존재 시의 운영 요일 (기존 동작: 수·목 미운영)
+export const DEFAULT_OPERATING_DAYS = [1, 2, 5, 6, 0]
+
+export const CENTER_DAY_LABEL = { 0: '일', 1: '월', 2: '화', 3: '수', 4: '목', 5: '금', 6: '토' }
 
 export const CENTER_CAPACITY_DEFAULT = 40
+
+// 운영 요일 배열 → 월~일 표시 순서로 정렬 (잘못된 값 방어 포함)
+export function operatingDayOrder(operatingDays) {
+  const days = new Set(
+    (Array.isArray(operatingDays) ? operatingDays : []).filter((d) => CENTER_HOUR_UNITS[d]),
+  )
+  const ordered = CENTER_WEEK_ORDER.filter((d) => days.has(d))
+  return ordered.length > 0 ? ordered : CENTER_WEEK_ORDER.filter((d) => DEFAULT_OPERATING_DAYS.includes(d))
+}
 
 export const unitKey = (day, start) => `${day}#${start}`
 export const unitLabel = (u) => `${u.start}~${u.end}`

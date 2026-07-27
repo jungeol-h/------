@@ -4,16 +4,14 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CalendarClock, CheckCheck, Loader2, Lock } from 'lucide-react'
-import { unitKey } from '../data/centerHours.js'
+import { CENTER_DAY_LABEL as DAY_LABEL, DEFAULT_OPERATING_DAYS, unitKey } from '../data/centerHours.js'
 import { fetchCenterHours, saveCenterHours, isMigrationMissing } from './centerHoursApi.js'
 import { selectionToEntries, summarizeDays } from './centerHoursSelection.js'
 import CenterHourGrid from './CenterHourGrid.jsx'
 
-const DAY_LABEL = { 0: '일', 1: '월', 2: '화', 5: '금', 6: '토' }
-
 export default function StudentCenterHoursView({ student }) {
   const [state, setState] = useState({ loading: true, error: null, migrationNeeded: false })
-  const [config, setConfig] = useState({ isOpen: false, capacity: 40 })
+  const [config, setConfig] = useState({ isOpen: false, capacity: 40, operatingDays: DEFAULT_OPERATING_DAYS })
   const [othersCount, setOthersCount] = useState({})
   const [selected, setSelected] = useState(() => new Set())
   const [dirty, setDirty] = useState(false)
@@ -133,6 +131,7 @@ export default function StudentCenterHoursView({ student }) {
         othersCount={othersCount}
         capacity={config.capacity}
         editable={config.isOpen}
+        days={config.operatingDays}
         onToggle={handleToggle}
       />
 

@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import { buildCenterHoursSheets } from './centerHoursExcel.js'
 import { selectionToEntries, summarizeDays } from './centerHoursSelection.js'
-import { CENTER_HOUR_UNITS, CENTER_DAY_ORDER, unitKey } from '../data/centerHours.js'
+import {
+  CENTER_HOUR_UNITS, CENTER_WEEK_ORDER, DEFAULT_OPERATING_DAYS, operatingDayOrder, unitKey,
+} from '../data/centerHours.js'
 
 const students = [
   { id: 's1', name: '김하나', school: '안동중', grade: '중2' },
@@ -86,9 +88,9 @@ describe('summarizeDays', () => {
 })
 
 describe('CENTER_HOUR_UNITS 정의 자체 점검', () => {
-  it('운영 요일은 5일이고 각 요일 6단위, 단위는 시간 순', () => {
-    expect(CENTER_DAY_ORDER).toEqual([1, 2, 5, 6, 0])
-    for (const day of CENTER_DAY_ORDER) {
+  it('7일 전부 단위가 정의되고 각 요일 6단위, 단위는 시간 순', () => {
+    expect(CENTER_WEEK_ORDER).toEqual([1, 2, 3, 4, 5, 6, 0])
+    for (const day of CENTER_WEEK_ORDER) {
       const units = CENTER_HOUR_UNITS[day]
       expect(units).toHaveLength(6)
       for (let i = 1; i < units.length; i++) {
@@ -96,5 +98,21 @@ describe('CENTER_HOUR_UNITS 정의 자체 점검', () => {
       }
       for (const u of units) expect(u.end > u.start).toBe(true)
     }
+  })
+})
+
+describe('operatingDayOrder', () => {
+  it('기본 운영 요일은 월·화·금·토·일 순서로 정렬된다', () => {
+    expect(operatingDayOrder(DEFAULT_OPERATING_DAYS)).toEqual([1, 2, 5, 6, 0])
+  })
+
+  it('수·목을 추가하면 월~일 표시 순서를 지킨다', () => {
+    expect(operatingDayOrder([0, 6, 5, 4, 3, 2, 1])).toEqual([1, 2, 3, 4, 5, 6, 0])
+  })
+
+  it('잘못된 값·빈 배열은 기본 운영 요일로 대체한다', () => {
+    expect(operatingDayOrder([])).toEqual([1, 2, 5, 6, 0])
+    expect(operatingDayOrder(null)).toEqual([1, 2, 5, 6, 0])
+    expect(operatingDayOrder([7, 9])).toEqual([1, 2, 5, 6, 0])
   })
 })

@@ -9,8 +9,7 @@ import {
   fetchReservations,
   fetchUserNames,
 } from '../../booking/bookingApi.js'
-import { fetchStudentCenterHours } from '../../centerHours/centerHoursApi.js'
-import { CENTER_HOUR_UNITS } from '../../data/centerHours.js'
+import { fetchCenterHoursConfig, fetchStudentCenterHours } from '../../centerHours/centerHoursApi.js'
 import { todayStr } from '../../utils/dateUtils.js'
 
 // 오늘 확정 예약 → 표시용 아이템 목록 (시간순)
@@ -37,7 +36,9 @@ async function loadTodayReservations(studentId, today) {
 
 // 오늘 요일의 이용시간 등록 → { isOperatingDay, units, checkIn, checkOut }
 async function loadTodayCenterHours(studentId, dayOfWeek) {
-  const isOperatingDay = Boolean(CENTER_HOUR_UNITS[dayOfWeek])
+  // 운영 요일은 admin_config 설정이 정한다 (임시 수·목 오픈 등)
+  const config = await fetchCenterHoursConfig()
+  const isOperatingDay = config.operatingDays.includes(dayOfWeek)
   if (!isOperatingDay) return { isOperatingDay, units: [] }
   const rows = await fetchStudentCenterHours(studentId)
   const units = rows

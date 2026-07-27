@@ -34,6 +34,18 @@ views/ components/               역할별 화면 (Student/Educator/Admin)
 count 파생 (취소 시 정원 복원 자동 성립). 동시성 방어: 학생 advisory lock → 슬롯
 FOR UPDATE(id 정렬 순) → 부분 UNIQUE 인덱스.
 
+## 타임블럭 템플릿 · 강사 셀프 개설 (2026-07-27 클라이언트 요청)
+
+- "일정마다 타임테이블 설정을 매번 다시 한다" 해소 — 요일·운영시간·휴식 프리셋을
+  **타임블럭 템플릿**(A 평일형 16~22시 / B 주말형 12:30~19시 기본, 관리자가 추가·삭제)으로
+  `admin_config('booking_timetable_templates')` 한 행에 저장하고 TimetableWizard가
+  불러온다. 슬롯 단위(40분/20분)는 여전히 프로그램(slotMinutes) 소관.
+- **강사 셀프 개설**: 강사 '내 슬롯'의 "내 타임테이블 일괄 생성"이 같은 위저드를
+  `lockEducatorId`(본인 고정, 배정 프로그램만)로 연다. `createSlotBatch`가 status
+  파라미터('draft'|'open')를 받아 즉시 공개 생성을 지원한다 — 강사의 단일 슬롯
+  open 생성(NewSlotModal)과 같은 권한 모델이라 RPC 확장 없이 성립. 템플릿
+  저장·삭제는 관리자 전용(UI 게이트), 강사는 불러오기만.
+
 ## 해석 결정 (클라이언트 확인 필요 시 여기부터)
 
 - **당일 접수창**(운영 시작 1시간 전~종료 1시간 전, 명세 6.1)은 **당일 슬롯에만** 적용.

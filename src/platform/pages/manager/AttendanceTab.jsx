@@ -274,6 +274,7 @@ export default function AttendanceTab() {
               registrations={centerHours.registrations}
               board={board}
               dateStr={dateStr}
+              operatingDays={centerHours.config.operatingDays}
             />
           )}
         </div>

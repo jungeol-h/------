@@ -23,7 +23,7 @@ export function BookingProvider({ children }) {
   const { currentUser } = useAuth()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [config, setConfig] = useState({ programs: [], subjects: [], educators: [], openPeriods: [] })
+  const [config, setConfig] = useState({ programs: [], subjects: [], educators: [], openPeriods: [], templates: [] })
   const [slots, setSlots] = useState([])
   const [reservations, setReservations] = useState([])
   const [records, setRecords] = useState([])
@@ -199,6 +199,7 @@ export function BookingProvider({ children }) {
       deleteOpenPeriod: (id) => api.deleteOpenPeriod(id, actor).then(refetch),
       createSlot: (input) => api.createSlot(input, actor).then((r) => refetch().then(() => r)),
       createSlotBatch: (input) => api.createSlotBatch(input, actor).then((r) => refetch().then(() => r)),
+      saveTimetableTemplates: (templates) => api.saveTimetableTemplates(templates, actor).then(refetch),
 
       resolveNotification: async (id) => {
         await api.resolveNotification(id)

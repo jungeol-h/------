@@ -4,7 +4,7 @@
 
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
+import { CalendarPlus, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import ModalShell from '../../components/common/ModalShell.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useBooking } from '../BookingContext.jsx'
@@ -17,6 +17,7 @@ import {
 import { bookingMessage } from '../bookingMessages.js'
 import BookingNotificationsBell from '../components/BookingNotificationsBell.jsx'
 import SlotEditorModal from '../components/SlotEditorModal.jsx'
+import TimetableWizard from '../components/TimetableWizard.jsx'
 import RecordFormModal from '../components/RecordFormModal.jsx'
 import GroupAssignModal from '../components/GroupAssignModal.jsx'
 
@@ -147,6 +148,7 @@ export default function EducatorBookingView({ isAdmin = false }) {
   const [editSlot, setEditSlot] = useState(null)
   const [recordTarget, setRecordTarget] = useState(null)
   const [newSlotOpen, setNewSlotOpen] = useState(false)
+  const [wizardOpen, setWizardOpen] = useState(false)
   const [groupModal, setGroupModal] = useState(null) // { program, existingSlot? }
   const [attFail, setAttFail] = useState(null)
 
@@ -210,13 +212,22 @@ export default function EducatorBookingView({ isAdmin = false }) {
         <p className="text-sm font-bold text-gray-700">{weekDates[0]} ~ {weekDates[6]}</p>
         <button type="button" onClick={() => setWeekStart(addDaysStr(weekStart, 7))} className="p-2 rounded-lg bg-gray-100"><ChevronRight size={16} /></button>
       </div>
-      <button
-        type="button"
-        onClick={() => setNewSlotOpen(true)}
-        className="w-full h-10 rounded-xl border border-dashed border-blue-300 text-blue-600 text-xs font-bold flex items-center justify-center gap-1"
-      >
-        <Plus size={14} /> 예약 가능 시간 추가
-      </button>
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={() => setNewSlotOpen(true)}
+          className="h-10 rounded-xl border border-dashed border-blue-300 text-blue-600 text-xs font-bold flex items-center justify-center gap-1"
+        >
+          <Plus size={14} /> 시간 하나 추가
+        </button>
+        <button
+          type="button"
+          onClick={() => setWizardOpen(true)}
+          className="h-10 rounded-xl border border-dashed border-indigo-300 text-indigo-600 text-xs font-bold flex items-center justify-center gap-1"
+        >
+          <CalendarPlus size={14} /> 내 타임테이블 일괄 생성
+        </button>
+      </div>
       {weekDates.map((d) => {
         const daySlots = weekSlots.filter((s) => s.date === d)
         if (daySlots.length === 0) return null
@@ -527,6 +538,12 @@ export default function EducatorBookingView({ isAdmin = false }) {
           subjects={config.subjects}
           educatorId={myId}
           onClose={() => setNewSlotOpen(false)}
+        />
+      )}
+      {wizardOpen && (
+        <TimetableWizard
+          lockEducatorId={isAdmin ? null : myId}
+          onClose={() => setWizardOpen(false)}
         />
       )}
       {groupModal && (

@@ -36,11 +36,16 @@ CenterHoursSection.jsx           관리자·매니저 명단·설정 섹션 — 
 - **정원(40)·잠금 최종 검증은 RPC(`center_save_hours`) 안.** 클라 잔여 표시는 안내용.
   admin/manager 역할이면 정원·잠금을 건너뛴다(대리 수정). 저장은 학생 단위
   전면 교체 + 전역 advisory lock 직렬화.
-- 설정은 `admin_config('center_hours')` = `{"isOpen", "capacity"}`. 잠그면 학생은 읽기 전용.
+- 설정은 `admin_config('center_hours')` = `{"isOpen", "capacity", "operatingDays"}`.
+  잠그면 학생은 읽기 전용. **운영 요일(operatingDays, JS getDay int 배열)은 이
+  설정이 단일 진실원이다** (2026-07-27 "이번 주는 수·목도 오픈" 요청으로 설정화 —
+  `scripts/add-center-operating-days.sql`). 관리자 출결 탭의 운영 요일 토글이 수정하며,
+  단위 시각표(`data/centerHours.js`)는 7일 전부 정의돼 있고 어떤 요일을 노출할지만
+  설정이 정한다. 코드의 `DEFAULT_OPERATING_DAYS`와 RPC의 fallback은 월·화·금·토·일.
 - **등·하원 시간표(attendance_schedules)는 이용시간의 파생물이다** — 별도 편집
-  UI가 없고, `center_save_hours`가 저장 시 그 학생의 운영요일 행을 자동 교체한다
-  (첫 단위 시작=등원·마지막 끝=하원, 키오스크 지각·결석 판정 기준. v2, 2026-07-18).
-  비운영 요일(수·목) 행과 등록 없는 학생은 건드리지 않는다.
+  UI가 없고, `center_save_hours`가 저장 시 그 학생의 "운영 요일 ∪ 등록 요일" 행을
+  자동 교체한다 (첫 단위 시작=등원·마지막 끝=하원, 키오스크 지각·결석 판정 기준.
+  v3, 2026-07-27). 그 밖의 요일 행과 등록 없는 학생은 건드리지 않는다.
   `center_sync_attendance_schedules`(일괄 보정)는 시드 SQL을 RPC 없이 직접 넣은
   직후 등 보정용으로만 남아 있다.
 
