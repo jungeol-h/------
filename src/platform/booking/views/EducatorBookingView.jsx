@@ -18,6 +18,7 @@ import { bookingMessage } from '../bookingMessages.js'
 import BookingNotificationsBell from '../components/BookingNotificationsBell.jsx'
 import SlotEditorModal from '../components/SlotEditorModal.jsx'
 import TimetableWizard from '../components/TimetableWizard.jsx'
+import AvailabilityRulesSection from '../components/AvailabilityRulesSection.jsx'
 import RecordFormModal from '../components/RecordFormModal.jsx'
 import GroupAssignModal from '../components/GroupAssignModal.jsx'
 
@@ -207,7 +208,10 @@ export default function EducatorBookingView({ isAdmin = false }) {
 
   const renderSlots = () => (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
+      {/* 선언 패러다임 — 주간 가용시간이 기본, 아래 주간 목록은 파생 결과의 달력 뷰 */}
+      <AvailabilityRulesSection educatorId={isAdmin ? null : myId} />
+
+      <div className="flex items-center justify-between pt-2">
         <button type="button" onClick={() => setWeekStart(addDaysStr(weekStart, -7))} className="p-2 rounded-lg bg-gray-100"><ChevronLeft size={16} /></button>
         <p className="text-sm font-bold text-gray-700">{weekDates[0]} ~ {weekDates[6]}</p>
         <button type="button" onClick={() => setWeekStart(addDaysStr(weekStart, 7))} className="p-2 rounded-lg bg-gray-100"><ChevronRight size={16} /></button>
@@ -225,7 +229,7 @@ export default function EducatorBookingView({ isAdmin = false }) {
           onClick={() => setWizardOpen(true)}
           className="h-10 rounded-xl border border-dashed border-indigo-300 text-indigo-600 text-xs font-bold flex items-center justify-center gap-1"
         >
-          <CalendarPlus size={14} /> 내 타임테이블 일괄 생성
+          <CalendarPlus size={14} /> 기간 한정 일괄 생성
         </button>
       </div>
       {weekDates.map((d) => {
@@ -249,6 +253,7 @@ export default function EducatorBookingView({ isAdmin = false }) {
                       {s.startTime}~{s.endTime}
                       <span className="ml-1.5 text-xs font-semibold text-gray-500">{programOf(s.programId)?.name}</span>
                       {s.subjectId && <span className="ml-1 text-xs text-emerald-600">{subjectName(s.subjectId)}</span>}
+                      {s.ruleId && <span className="ml-1 text-[10px] font-bold text-indigo-400">자동</span>}
                       {!s.isPublic && <span className="ml-1 text-[10px] text-gray-400">비공개</span>}
                     </p>
                     <p className="text-xs text-gray-500 mt-0.5 truncate">

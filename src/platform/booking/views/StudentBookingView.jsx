@@ -3,7 +3,7 @@
 // 사전 검증(bookingRules)과 RPC가 같은 코드 체계 → 어느 쪽에서 거절돼도 동일 안내문.
 
 import { useMemo, useState } from 'react'
-import { CalendarPlus, ListChecks } from 'lucide-react'
+import { CalendarClock, CalendarPlus, ListChecks } from 'lucide-react'
 import ModalShell from '../../components/common/ModalShell.jsx'
 import { todayStr } from '../../utils/dateUtils.js'
 import { useBooking } from '../BookingContext.jsx'
@@ -12,6 +12,53 @@ import { bookingMessage, immediateLockWarning } from '../bookingMessages.js'
 import BookingNotificationsBell from '../components/BookingNotificationsBell.jsx'
 import MyReservationList from '../components/MyReservationList.jsx'
 import WeeklySlotPicker from '../components/WeeklySlotPicker.jsx'
+
+const fmtDateTime = (iso) => {
+  const d = new Date(iso)
+  return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
+// 사전예약형 접수기간 배너 — 탭한 뒤 에러로 알리는 대신 상태를 미리 보여준다.
+// (수시형 프로그램에는 렌더하지 않음 — 어포인트먼트 문법에는 접수 창구 개념이 없다)
+function OpenPeriodBanner({ program, openPeriods }) {
+  const now = new Date()
+  const periods = openPeriods.filter((p) => p.programId === program.id)
+  const active = periods.find((p) => now >= new Date(p.openFrom) && now <= new Date(p.openUntil))
+  const upcoming = periods
+    .filter((p) => now < new Date(p.openFrom))
+    .sort((a, b) => new Date(a.openFrom) - new Date(b.openFrom))[0]
+
+  if (active) {
+    return (
+      <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-3 text-xs text-emerald-700 flex items-start gap-2">
+        <CalendarClock size={14} className="flex-shrink-0 mt-0.5" />
+        <span>
+          <b>지금 접수 중</b> — {active.targetStart} ~ {active.targetEnd} 상담분,{' '}
+          {fmtDateTime(active.openUntil)}까지 신청할 수 있어요.
+        </span>
+      </div>
+    )
+  }
+  if (upcoming) {
+    return (
+      <div className="rounded-xl bg-blue-50 border border-blue-100 p-3 text-xs text-blue-700 flex items-start gap-2">
+        <CalendarClock size={14} className="flex-shrink-0 mt-0.5" />
+        <span>
+          <b>접수 예정</b> — {upcoming.targetStart} ~ {upcoming.targetEnd} 상담분은{' '}
+          {fmtDateTime(upcoming.openFrom)}부터 신청할 수 있어요. 일정은 미리 볼 수 있습니다.
+        </span>
+      </div>
+    )
+  }
+  return (
+    <div className="rounded-xl bg-gray-50 border border-gray-100 p-3 text-xs text-gray-500 flex items-start gap-2">
+      <CalendarClock size={14} className="flex-shrink-0 mt-0.5" />
+      <span>
+        지금은 <b>{program.name}</b> 접수기간이 아닙니다. 다음 오픈 일정은 센터 공지를 확인해 주세요.
+      </span>
+    </div>
+  )
+}
 
 export default function StudentBookingView({ student }) {
   const booking = useBooking()
@@ -271,6 +318,10 @@ export default function StudentBookingView({ student }) {
               </div>
             )}
           </div>
+
+          {program?.requiresOpenPeriod && (
+            <OpenPeriodBanner program={program} openPeriods={config.openPeriods} />
+          )}
 
           {failCode && (
             <div className="rounded-xl bg-red-50 border border-red-100 p-3 text-xs text-red-600">

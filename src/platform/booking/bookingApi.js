@@ -81,6 +81,7 @@ export function toBookingSlot(row) {
     educatorId: row.educator_id ?? null,
     subjectId: row.subject_id ?? null,
     batchId: row.batch_id ?? null,
+    ruleId: row.rule_id ?? null, // 가용시간 규칙 파생 슬롯 (add-booking-availability.sql)
     date: row.date,
     startTime: toHHMM(row.start_time),
     endTime: toHHMM(row.end_time),
@@ -89,6 +90,28 @@ export function toBookingSlot(row) {
     isPublic: row.is_public ?? true,
     note: row.note ?? '',
     createdBy: row.created_by ?? null,
+    createdAt: row.created_at,
+  }
+}
+
+// 강사 주간 가용시간 규칙 (booking_availability_rules)
+export function toBookingAvailabilityRule(row) {
+  return {
+    id: row.id,
+    educatorId: row.educator_id,
+    programId: row.program_id,
+    subjectId: row.subject_id ?? null,
+    weekdays: row.weekdays ?? [],
+    dayStart: toHHMM(row.day_start),
+    dayEnd: toHHMM(row.day_end),
+    breakStart: toHHMM(row.break_start),
+    breakEnd: toHHMM(row.break_end),
+    capacity: row.capacity ?? null,
+    isPublic: row.is_public ?? true,
+    excludeDates: row.exclude_dates ?? [],
+    active: row.active ?? true,
+    horizonDays: row.horizon_days ?? 28,
+    generatedUntil: row.generated_until ?? null,
     createdAt: row.created_at,
   }
 }
@@ -295,6 +318,20 @@ export async function fetchBookingNameMaps() {
   return { programNames: toMap(programs.data), subjectNames: toMap(subjects.data) }
 }
 
+// 가용시간 규칙 조회 — 강사는 본인분, 관리자는 전체.
+// 마이그레이션(add-booking-availability.sql) 미적용이면 null 반환 —
+// 화면은 규칙 섹션만 안내 카드로 대체하고 예약 기능은 그대로 동작한다.
+export async function fetchAvailabilityRules({ educatorId } = {}) {
+  let q = supabase.from('booking_availability_rules').select('*').order('created_at')
+  if (educatorId) q = q.eq('educator_id', educatorId)
+  const { data, error } = await q
+  if (error) {
+    if (error.code === '42P01' || /does not exist/i.test(error.message ?? '')) return null
+    throw error
+  }
+  return (data ?? []).map(toBookingAvailabilityRule)
+}
+
 export async function fetchNotifications(recipientId, { limit = 100 } = {}) {
   const { data, error } = await supabase
     .from('booking_notifications')
@@ -380,6 +417,31 @@ export function rpcSetSlotStatus({ slotIds, status, actorId, actorRole }) {
     p_slot_ids: slotIds, p_status: status,
     p_actor_id: actorId, p_actor_role: actorRole,
   }, 'bookingSetSlotStatus')
+}
+
+// 가용시간 규칙 저장·삭제 — 정리·재파생·감사까지 RPC가 원자 처리.
+// rule은 camel 입력을 받아 여기서 snake로 변환한다 (id 없으면 생성).
+export function rpcSaveAvailabilityRule({ rule, del = false, actorId, actorRole }) {
+  return callRpc('booking_save_availability_rule', {
+    p_rule: {
+      id: rule.id ?? makeId('bkar'),
+      educator_id: rule.educatorId,
+      program_id: rule.programId,
+      subject_id: rule.subjectId ?? '',
+      weekdays: rule.weekdays ?? [],
+      day_start: rule.dayStart,
+      day_end: rule.dayEnd,
+      break_start: rule.breakStart ?? '',
+      break_end: rule.breakEnd ?? '',
+      capacity: rule.capacity ?? '',
+      is_public: rule.isPublic ?? true,
+      exclude_dates: rule.excludeDates ?? [],
+      active: rule.active ?? true,
+      horizon_days: rule.horizonDays ?? 28,
+    },
+    p_delete: del,
+    p_actor_id: actorId, p_actor_role: actorRole,
+  }, 'bookingSaveAvailabilityRule')
 }
 
 // ─── 클라이언트 직접 쓰기 (경합 없는 설정·기록 계열) ────────────

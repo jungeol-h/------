@@ -24,6 +24,8 @@ export function BookingProvider({ children }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [config, setConfig] = useState({ programs: [], subjects: [], educators: [], openPeriods: [], templates: [] })
+  // null = 가용시간 마이그레이션 미적용 (규칙 섹션만 안내 카드로 대체)
+  const [availabilityRules, setAvailabilityRules] = useState([])
   const [slots, setSlots] = useState([])
   const [reservations, setReservations] = useState([])
   const [records, setRecords] = useState([])
@@ -83,10 +85,18 @@ export function BookingProvider({ children }) {
         return { slots: slotRows, reservations: resRows, records: [], counts }
       }
 
-      const [cfg, notif, roleData] = await Promise.all([
+      // 가용시간 규칙 — 관리자·viewer는 전체, 강사는 본인분 (학생·학부모는 불필요)
+      const fetchRules = () => {
+        if (role === 'admin' || role === 'viewer') return api.fetchAvailabilityRules()
+        if (EDUCATOR_ROLES.includes(role)) return api.fetchAvailabilityRules({ educatorId: userId })
+        return Promise.resolve([])
+      }
+
+      const [cfg, notif, roleData, rules] = await Promise.all([
         api.fetchBookingConfig(),
         api.fetchNotifications(userId),
         fetchRoleData(),
+        fetchRules(),
       ])
       const { slots: nextSlots, reservations: nextReservations, records: nextRecords } = roleData
       let nextCounts = roleData.counts
@@ -108,7 +118,7 @@ export function BookingProvider({ children }) {
       const names = await api.fetchUserNames(nameIds)
 
       return {
-        cfg, notif, names,
+        cfg, notif, names, rules,
         slots: nextSlots, reservations: nextReservations,
         records: nextRecords, counts: nextCounts,
       }
@@ -121,6 +131,7 @@ export function BookingProvider({ children }) {
       const payload = await fetchAll()
       if (!payload || !aliveRef.current) return
       setConfig(payload.cfg)
+      setAvailabilityRules(payload.rules)
       setSlots(payload.slots)
       setReservations(payload.reservations)
       setRecords(payload.records)
@@ -174,7 +185,7 @@ export function BookingProvider({ children }) {
     }
     return {
       loading, error, refetch,
-      config, slots, reservations, records, slotCounts, notifications, userNames,
+      config, availabilityRules, slots, reservations, records, slotCounts, notifications, userNames,
       actor,
 
       reserve: (p) => api.rpcReserve({ ...p, actorId: userId, actorRole: role }).then(afterWrite),
@@ -184,6 +195,7 @@ export function BookingProvider({ children }) {
       setAttendance: (p) => api.rpcSetAttendance({ ...p, actorId: userId, actorRole: role }).then(afterWrite),
       updateSlot: (p) => api.rpcUpdateSlot({ ...p, actorId: userId, actorRole: role }).then(afterWrite),
       setSlotStatus: (p) => api.rpcSetSlotStatus({ ...p, actorId: userId, actorRole: role }).then(afterWrite),
+      saveAvailabilityRule: (p) => api.rpcSaveAvailabilityRule({ ...p, actorId: userId, actorRole: role }).then(afterWrite),
 
       saveRecord: (input) => api.saveRecord(input, actor).then((r) => refetch().then(() => r)),
       createProgram: (input) => api.createProgram(input, actor).then((r) => refetch().then(() => r)),
@@ -211,8 +223,8 @@ export function BookingProvider({ children }) {
       },
       fetchAuditLogs: api.fetchAuditLogs,
     }
-  }, [loading, error, refetch, config, slots, reservations, records, slotCounts,
-      notifications, userNames, actor, userId, role])
+  }, [loading, error, refetch, config, availabilityRules, slots, reservations, records,
+      slotCounts, notifications, userNames, actor, userId, role])
 
   return <BookingContext.Provider value={value}>{children}</BookingContext.Provider>
 }

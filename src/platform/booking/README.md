@@ -34,17 +34,34 @@ views/ components/               역할별 화면 (Student/Educator/Admin)
 count 파생 (취소 시 정원 복원 자동 성립). 동시성 방어: 학생 advisory lock → 슬롯
 FOR UPDATE(id 정렬 순) → 부분 UNIQUE 인덱스.
 
-## 타임블럭 템플릿 · 강사 셀프 개설 (2026-07-27 클라이언트 요청)
+## 어포인트먼트 모델 전환 (2026-07-27 — 도메인 재해석)
 
-- "일정마다 타임테이블 설정을 매번 다시 한다" 해소 — 요일·운영시간·휴식 프리셋을
-  **타임블럭 템플릿**(A 평일형 16~22시 / B 주말형 12:30~19시 기본, 관리자가 추가·삭제)으로
-  `admin_config('booking_timetable_templates')` 한 행에 저장하고 TimetableWizard가
-  불러온다. 슬롯 단위(40분/20분)는 여전히 프로그램(slotMinutes) 소관.
-- **강사 셀프 개설**: 강사 '내 슬롯'의 "내 타임테이블 일괄 생성"이 같은 위저드를
-  `lockEducatorId`(본인 고정, 배정 프로그램만)로 연다. `createSlotBatch`가 status
-  파라미터('draft'|'open')를 받아 즉시 공개 생성을 지원한다 — 강사의 단일 슬롯
-  open 생성(NewSlotModal)과 같은 권한 모델이라 RPC 확장 없이 성립. 템플릿
-  저장·삭제는 관리자 전용(UI 게이트), 강사는 불러오기만.
+이 도메인의 본질은 '소규모 센터의 강사 어포인트먼트 예약'(병원·Calendly류)이고,
+수강신청형 장치(오픈기간·상태 전환·일괄 생성)는 사전예약형 프로그램(컨설팅)에만
+필요한 특수 케이스라는 재해석에 따라 역할별 UX를 한 모델로 정렬했다:
+
+- **강사 = 가용시간 선언** (`booking_availability_rules`, `AvailabilityRulesSection`):
+  "월·수 16~20시 코칭" 반복 규칙을 저장하면 RPC가 내일~지평(기본 4주)까지
+  예약공개 슬롯을 유지하고 pg_cron('booking-extend-availability', KST 00:20)이
+  매일 연장한다. `scripts/add-booking-availability.sql` — **파생 의미론(규칙 저장 시
+  미예약 슬롯 재생성 / cron은 추가만 / 개별 휴무는 exclude_dates로)은 그 파일
+  헤더가 정본.** 파생 슬롯은 booking_slots.rule_id로 역추적('자동' 배지).
+- **관리자 = 같은 문법의 전체 뷰**: 타임테이블 메뉴 상단에 전 강사 규칙 관리
+  (같은 컴포넌트), 위저드는 "기간 한정 일괄 생성"(방학 특강 등)으로 강등.
+- **학생·학부모 = 이미 어포인트먼트 문법** (프로그램→교과·강사→주간 그리드).
+  사전예약형만 접수기간 배너(접수 중/예정/기간 아님)를 사전 노출해
+  OUT_OF_OPEN_PERIOD를 탭 후 에러가 아니라 상태로 읽게 했다. 학부모는
+  StudentBookingView 재사용이라 자동 일관.
+
+### 타임블럭 템플릿 · 기간 한정 일괄 생성
+
+- 요일·운영시간·휴식 프리셋 **타임블럭 템플릿**(A 평일형 16~22시 / B 주말형
+  12:30~19시 기본, 관리자가 추가·삭제)을 `admin_config('booking_timetable_templates')`
+  한 행에 저장 — TimetableWizard·가용시간 모달이 공용으로 불러온다. 슬롯 단위
+  (40분/20분)는 여전히 프로그램(slotMinutes) 소관.
+- 위저드는 `lockEducatorId`(강사 본인 고정)·status('draft'|'open') 지원 —
+  강사의 단일 슬롯 open 생성(NewSlotModal)과 같은 권한 모델이라 RPC 확장 없이
+  성립. 템플릿 저장·삭제는 관리자 전용(UI 게이트), 강사는 불러오기만.
 
 ## 해석 결정 (클라이언트 확인 필요 시 여기부터)
 

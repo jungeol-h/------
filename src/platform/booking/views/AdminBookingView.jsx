@@ -16,6 +16,7 @@ import ReservationSearch from '../components/ReservationSearch.jsx'
 import AuditLogList from '../components/AuditLogList.jsx'
 import ProgramFormModal from '../components/ProgramFormModal.jsx'
 import TimetableWizard from '../components/TimetableWizard.jsx'
+import AvailabilityRulesSection from '../components/AvailabilityRulesSection.jsx'
 import OpenPeriodEditor from '../components/OpenPeriodEditor.jsx'
 import SlotEditorModal from '../components/SlotEditorModal.jsx'
 
@@ -81,12 +82,15 @@ function TimetableMenu() {
 
   return (
     <div className="space-y-3">
+      {/* 선언 패러다임 — 강사별 반복 규칙이 기본, 아래 위저드는 기간 한정 일괄 생성용 */}
+      <AvailabilityRulesSection />
+
       <button
         type="button"
         onClick={() => setWizardOpen(true)}
-        className="w-full h-10 rounded-xl border border-dashed border-blue-300 text-blue-600 text-xs font-bold flex items-center justify-center gap-1"
+        className="w-full h-10 rounded-xl border border-dashed border-blue-300 text-blue-600 text-xs font-bold flex items-center justify-center gap-1 mt-2"
       >
-        <Plus size={14} /> 타임테이블 생성
+        <Plus size={14} /> 기간 한정 타임테이블 일괄 생성
       </button>
 
       <div className="grid grid-cols-2 gap-2">
