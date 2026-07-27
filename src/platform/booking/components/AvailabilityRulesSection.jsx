@@ -6,11 +6,12 @@
 // 규칙을 다시 저장하면 미예약 파생 슬롯이 재생성되기 때문.
 
 import { useMemo, useState } from 'react'
-import { CalendarClock, Pencil, Plus, Trash2 } from 'lucide-react'
+import { CalendarClock, CalendarPlus, Pencil, Repeat, Trash2 } from 'lucide-react'
 import ModalShell from '../../components/common/ModalShell.jsx'
 import { useBooking } from '../BookingContext.jsx'
 import { bookingMessage } from '../bookingMessages.js'
 import { generateSlots } from '../slotGeneration.js'
+import TimetableWizard from './TimetableWizard.jsx'
 
 const FIELD = 'h-10 px-3 rounded-lg border border-gray-200 text-sm'
 const WEEKDAYS = [
@@ -262,9 +263,12 @@ function RuleModal({ rule, educatorId, onClose }) {
   )
 }
 
+// "예약 가능 시간"의 단일 홈 — 사용자 의도 기준 두 진입점만 노출한다:
+// [+ 매주 반복](가용시간 규칙) / [+ 특정 날짜](일괄 생성 모달, intent='dated').
 export default function AvailabilityRulesSection({ educatorId = null }) {
   const { config, availabilityRules, userNames, saveAvailabilityRule } = useBooking()
   const [editing, setEditing] = useState(null) // rule | 'new' | null
+  const [datedOpen, setDatedOpen] = useState(false)
   const [busyId, setBusyId] = useState(null)
   const [notice, setNotice] = useState(null)
 
@@ -321,9 +325,9 @@ export default function AvailabilityRulesSection({ educatorId = null }) {
       <div className="flex items-center gap-2">
         <CalendarClock size={15} className="text-indigo-400" />
         <h4 className="text-sm font-bold text-gray-700">
-          {educatorId ? '내 주간 가용시간' : '강사 주간 가용시간'}
+          {educatorId ? '내 예약 가능 시간' : '강사 예약 가능 시간'}
         </h4>
-        <span className="text-[11px] text-gray-400">저장하면 4주 앞까지 자동 유지·연장</span>
+        <span className="text-[11px] text-gray-400">매주 반복은 4주 앞까지 자동 유지·연장</span>
       </div>
 
       {notice && (
@@ -387,19 +391,42 @@ export default function AvailabilityRulesSection({ educatorId = null }) {
         </div>
       ))}
 
-      <button
-        type="button"
-        onClick={() => setEditing('new')}
-        className="w-full h-10 rounded-xl border border-dashed border-indigo-300 text-indigo-600 text-xs font-bold flex items-center justify-center gap-1"
-      >
-        <Plus size={14} /> 가용시간 추가
-      </button>
+      {rules.length === 0 && (
+        <p className="text-[11px] text-gray-400 bg-white rounded-xl shadow-sm p-3">
+          아직 등록된 반복 시간이 없습니다. 매주 같은 요일·시간에 예약을 받으려면
+          &lsquo;매주 반복&rsquo;, 하루나 짧은 기간만 열려면 &lsquo;특정 날짜&rsquo;를 누르세요.
+        </p>
+      )}
+
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={() => setEditing('new')}
+          className="h-10 rounded-xl border border-dashed border-indigo-300 text-indigo-600 text-xs font-bold flex items-center justify-center gap-1"
+        >
+          <Repeat size={13} /> 매주 반복 추가
+        </button>
+        <button
+          type="button"
+          onClick={() => setDatedOpen(true)}
+          className="h-10 rounded-xl border border-dashed border-blue-300 text-blue-600 text-xs font-bold flex items-center justify-center gap-1"
+        >
+          <CalendarPlus size={13} /> 특정 날짜 추가
+        </button>
+      </div>
 
       {editing && (
         <RuleModal
           rule={editing === 'new' ? null : editing}
           educatorId={educatorId}
           onClose={() => setEditing(null)}
+        />
+      )}
+      {datedOpen && (
+        <TimetableWizard
+          intent="dated"
+          lockEducatorId={educatorId}
+          onClose={() => setDatedOpen(false)}
         />
       )}
     </div>

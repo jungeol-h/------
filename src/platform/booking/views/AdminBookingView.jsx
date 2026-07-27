@@ -32,10 +32,11 @@ const FIELD = 'h-10 px-3 rounded-lg border border-gray-200 text-sm'
 // admin도 강사로 배정될 수 있다 (예: 황광희 원장이 직접 상담 진행)
 const EDUCATOR_ROLES = ['manager', 'instructor', 'consultant', 'admin']
 
-// ─── 타임테이블 메뉴: 슬롯 목록 + 일괄 상태 전환 ────────────────
+// ─── 타임테이블 메뉴: 강사 예약 가능 시간 + 접수제 준비 + 슬롯 목록 ──
 function TimetableMenu() {
   const { config, slots, reservations, userNames, setSlotStatus } = useBooking()
-  const [wizardOpen, setWizardOpen] = useState(false)
+  const [prebookOpen, setPrebookOpen] = useState(false)
+  const hasPrebookProgram = config.programs.some((p) => p.active && p.requiresOpenPeriod)
   const [filters, setFilters] = useState({
     programId: '', status: '', from: todayStr(), to: addDaysStr(todayStr(), 30),
   })
@@ -82,17 +83,30 @@ function TimetableMenu() {
 
   return (
     <div className="space-y-3">
-      {/* 선언 패러다임 — 강사별 반복 규칙이 기본, 아래 위저드는 기간 한정 일괄 생성용 */}
+      {/* 상시 운영 = 강사 예약 가능 시간 (매주 반복 + 특정 날짜) — 단일 홈 */}
       <AvailabilityRulesSection />
 
-      <button
-        type="button"
-        onClick={() => setWizardOpen(true)}
-        className="w-full h-10 rounded-xl border border-dashed border-blue-300 text-blue-600 text-xs font-bold flex items-center justify-center gap-1 mt-2"
-      >
-        <Plus size={14} /> 기간 한정 타임테이블 일괄 생성
-      </button>
+      {/* 접수제(사전예약형)만의 캠페인 운영 — 해당 프로그램이 있을 때만 노출 */}
+      {hasPrebookProgram && (
+        <div className="bg-white rounded-2xl shadow-sm p-4 mt-2 flex items-center gap-3">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-gray-700">접수제 슬롯 준비</p>
+            <p className="text-[11px] text-gray-400 mt-0.5">
+              사전예약형 프로그램(컨설팅 등)의 월 배치 — 작성중으로 만들어 검토 후,
+              접수 시작에 맞춰 아래 목록에서 일괄 공개합니다.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setPrebookOpen(true)}
+            className="flex-shrink-0 px-3 h-9 rounded-xl bg-blue-600 text-white text-xs font-bold flex items-center gap-1"
+          >
+            <Plus size={13} /> 슬롯 준비
+          </button>
+        </div>
+      )}
 
+      <p className="text-xs font-bold text-gray-400 pt-2">슬롯 목록</p>
       <div className="grid grid-cols-2 gap-2">
         <select value={filters.programId} onChange={setF('programId')} className={FIELD}>
           <option value="">전체 프로그램</option>
@@ -156,7 +170,7 @@ function TimetableMenu() {
         )}
       </div>
 
-      {wizardOpen && <TimetableWizard onClose={() => setWizardOpen(false)} />}
+      {prebookOpen && <TimetableWizard intent="prebook" onClose={() => setPrebookOpen(false)} />}
       {editSlot && (
         <SlotEditorModal
           slot={editSlot}

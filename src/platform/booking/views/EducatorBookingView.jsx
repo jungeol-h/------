@@ -4,8 +4,7 @@
 
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { CalendarPlus, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
-import ModalShell from '../../components/common/ModalShell.jsx'
+import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useBooking } from '../BookingContext.jsx'
 import { addDaysStr, todayStrKst } from '../bookingRules.js'
@@ -17,7 +16,6 @@ import {
 import { bookingMessage } from '../bookingMessages.js'
 import BookingNotificationsBell from '../components/BookingNotificationsBell.jsx'
 import SlotEditorModal from '../components/SlotEditorModal.jsx'
-import TimetableWizard from '../components/TimetableWizard.jsx'
 import AvailabilityRulesSection from '../components/AvailabilityRulesSection.jsx'
 import RecordFormModal from '../components/RecordFormModal.jsx'
 import GroupAssignModal from '../components/GroupAssignModal.jsx'
@@ -35,98 +33,6 @@ const WEEKDAY = ['일', '월', '화', '수', '목', '금', '토']
 function dowOf(dateStr) {
   const [y, m, d] = dateStr.split('-').map(Number)
   return WEEKDAY[new Date(y, m - 1, d).getDay()]
-}
-
-// 새 예약 가능 슬롯 등록 (명세 3.3 — 강사의 예약 가능 슬롯 등록)
-function NewSlotModal({ programs, subjects, educatorId, onClose }) {
-  const { createSlot } = useBooking()
-  const [form, setForm] = useState({
-    programId: programs[0]?.id ?? '',
-    subjectId: null,
-    date: todayStr(),
-    startTime: '16:00',
-    capacity: null,
-    note: '',
-  })
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState(null)
-  const program = programs.find((p) => p.id === form.programId)
-  const subjectOptions = subjects.filter((s) => s.programId === form.programId && s.active)
-  const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
-
-  const submit = async () => {
-    if (!program || busy) return
-    const [h, m] = form.startTime.split(':').map(Number)
-    const total = h * 60 + m + program.slotMinutes
-    const endTime = `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
-    setBusy(true)
-    setError(null)
-    try {
-      await createSlot({
-        programId: program.id,
-        educatorId,
-        subjectId: program.usesSubject ? form.subjectId ?? subjectOptions[0]?.id ?? null : null,
-        date: form.date,
-        startTime: form.startTime,
-        endTime,
-        capacity: Number(form.capacity) || program.defaultCapacity,
-        status: 'open',
-        isPublic: true,
-        note: form.note,
-      })
-      onClose()
-    } catch {
-      setError('저장에 실패했습니다. 다시 시도해 주세요.')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <ModalShell title="예약 가능 시간 추가" onClose={onClose}>
-      <div className="grid grid-cols-2 gap-2">
-        <label className="text-xs text-gray-500 col-span-2">
-          프로그램
-          <select value={form.programId} onChange={set('programId')} className={`${FIELD} w-full mt-1`}>
-            {programs.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
-        </label>
-        {program?.usesSubject && (
-          <label className="text-xs text-gray-500 col-span-2">
-            교과
-            <select value={form.subjectId ?? ''} onChange={set('subjectId')} className={`${FIELD} w-full mt-1`}>
-              {subjectOptions.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-          </label>
-        )}
-        <label className="text-xs text-gray-500">
-          날짜
-          <input type="date" value={form.date} onChange={set('date')} className={`${FIELD} w-full mt-1`} />
-        </label>
-        <label className="text-xs text-gray-500">
-          시작 ({program?.slotMinutes ?? ''}분)
-          <input type="time" value={form.startTime} onChange={set('startTime')} className={`${FIELD} w-full mt-1`} />
-        </label>
-        <label className="text-xs text-gray-500">
-          정원 (기본 {program?.defaultCapacity ?? 1})
-          <input type="number" min="1" value={form.capacity ?? ''} onChange={set('capacity')} className={`${FIELD} w-full mt-1`} />
-        </label>
-        <label className="text-xs text-gray-500">
-          비고
-          <input type="text" value={form.note} onChange={set('note')} className={`${FIELD} w-full mt-1`} />
-        </label>
-      </div>
-      {error && <p className="text-xs text-red-500 bg-red-50 rounded-lg p-2">{error}</p>}
-      <button
-        type="button"
-        onClick={submit}
-        disabled={busy || !program}
-        className="w-full h-12 rounded-xl bg-blue-600 text-white font-bold disabled:opacity-50"
-      >
-        {busy ? '저장 중...' : '추가'}
-      </button>
-    </ModalShell>
-  )
 }
 
 export default function EducatorBookingView({ isAdmin = false }) {
@@ -148,8 +54,6 @@ export default function EducatorBookingView({ isAdmin = false }) {
   const [attDate, setAttDate] = useState(todayStr())
   const [editSlot, setEditSlot] = useState(null)
   const [recordTarget, setRecordTarget] = useState(null)
-  const [newSlotOpen, setNewSlotOpen] = useState(false)
-  const [wizardOpen, setWizardOpen] = useState(false)
   const [groupModal, setGroupModal] = useState(null) // { program, existingSlot? }
   const [attFail, setAttFail] = useState(null)
 
@@ -208,29 +112,14 @@ export default function EducatorBookingView({ isAdmin = false }) {
 
   const renderSlots = () => (
     <div className="space-y-3">
-      {/* 선언 패러다임 — 주간 가용시간이 기본, 아래 주간 목록은 파생 결과의 달력 뷰 */}
+      {/* 예약 가능 시간의 단일 홈 — 매주 반복(규칙) + 특정 날짜 추가.
+          아래 주간 목록은 그 결과를 확인·수정하는 달력 뷰다 */}
       <AvailabilityRulesSection educatorId={isAdmin ? null : myId} />
 
       <div className="flex items-center justify-between pt-2">
         <button type="button" onClick={() => setWeekStart(addDaysStr(weekStart, -7))} className="p-2 rounded-lg bg-gray-100"><ChevronLeft size={16} /></button>
         <p className="text-sm font-bold text-gray-700">{weekDates[0]} ~ {weekDates[6]}</p>
         <button type="button" onClick={() => setWeekStart(addDaysStr(weekStart, 7))} className="p-2 rounded-lg bg-gray-100"><ChevronRight size={16} /></button>
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        <button
-          type="button"
-          onClick={() => setNewSlotOpen(true)}
-          className="h-10 rounded-xl border border-dashed border-blue-300 text-blue-600 text-xs font-bold flex items-center justify-center gap-1"
-        >
-          <Plus size={14} /> 시간 하나 추가
-        </button>
-        <button
-          type="button"
-          onClick={() => setWizardOpen(true)}
-          className="h-10 rounded-xl border border-dashed border-indigo-300 text-indigo-600 text-xs font-bold flex items-center justify-center gap-1"
-        >
-          <CalendarPlus size={14} /> 기간 한정 일괄 생성
-        </button>
       </div>
       {weekDates.map((d) => {
         const daySlots = weekSlots.filter((s) => s.date === d)
@@ -535,20 +424,6 @@ export default function EducatorBookingView({ isAdmin = false }) {
               name: studentName(x.studentId),
             }))}
           onClose={() => setRecordTarget(null)}
-        />
-      )}
-      {newSlotOpen && (
-        <NewSlotModal
-          programs={myPrograms}
-          subjects={config.subjects}
-          educatorId={myId}
-          onClose={() => setNewSlotOpen(false)}
-        />
-      )}
-      {wizardOpen && (
-        <TimetableWizard
-          lockEducatorId={isAdmin ? null : myId}
-          onClose={() => setWizardOpen(false)}
         />
       )}
       {groupModal && (

@@ -1,9 +1,11 @@
-// 타임테이블 일괄 생성 마법사 (관리자·강사 공용) — 명세 5.2·5.3 + 2026-07-27 개선.
-// 타임블럭 템플릿(A/B/C… — 요일·운영시간·휴식 프리셋, admin_config 저장)을 불러와
-// 기간·강사만 고르면 되도록 한다 ("일정마다 매번 설정을 다시 해야 한다" 해소).
-// 슬롯 단위(40분/20분)는 프로그램(slotMinutes)이 정한다.
-// lockEducatorId: 강사 셀프 개설 모드 — 담당 강사를 본인으로 고정하고 배정된
-// 프로그램만 노출. 생성 상태(작성중/즉시 예약공개)는 체크박스로 선택한다.
+// 특정 날짜·기간의 슬롯 일괄 생성 모달 (관리자·강사 공용) — 명세 5.2·5.3.
+// "매주 반복"은 가용시간 규칙(AvailabilityRulesSection)이 담당하고, 이 모달은
+// 날짜가 정해진 두 의도만 다룬다 (사용자 어휘 기준으로 진입점 분리, 2026-07-27):
+//  - intent='dated'   특정 날짜(하루~짧은 기간)에 예약 시간 추가 — 즉시 공개 기본
+//  - intent='prebook' 접수제(사전예약형) 프로그램의 슬롯 준비 — 작성중 생성 후
+//                     검토·일괄 공개, 오픈기간과 세트 (관리자 전용 진입)
+// 타임블럭 템플릿(요일·시간창 프리셋)을 공유하고, 슬롯 단위는 프로그램 소관.
+// lockEducatorId: 강사 모드 — 본인 고정, 배정된 프로그램만.
 
 import { useMemo, useState } from 'react'
 import { X } from 'lucide-react'
@@ -21,37 +23,40 @@ const WEEKDAYS = [
   { value: 0, label: '일' },
 ]
 
-export default function TimetableWizard({ onClose, lockEducatorId = null }) {
+export default function TimetableWizard({ onClose, lockEducatorId = null, intent = 'dated' }) {
   const { config, userNames, createSlotBatch, saveTimetableTemplates, actor } = useBooking()
   const isAdmin = actor.role === 'admin'
   const templates = config.templates ?? []
+  const isPrebook = intent === 'prebook'
 
-  // 강사 모드: 배정된 프로그램만 (관리자는 전체 활성 프로그램)
+  // 강사 모드: 배정된 프로그램만 / 접수제 모드: 사전예약형 프로그램만
   const programs = useMemo(() => {
-    const active = config.programs.filter((p) => p.active)
-    if (!lockEducatorId) return active
+    let list = config.programs.filter((p) => p.active)
+    if (isPrebook) list = list.filter((p) => p.requiresOpenPeriod)
+    if (!lockEducatorId) return list
     const mine = new Set(
       config.educators
         .filter((e) => e.educatorId === lockEducatorId && e.active)
         .map((e) => e.programId),
     )
-    return active.filter((p) => mine.has(p.id))
-  }, [config.programs, config.educators, lockEducatorId])
+    return list.filter((p) => mine.has(p.id))
+  }, [config.programs, config.educators, lockEducatorId, isPrebook])
 
   const [form, setForm] = useState({
     programId: programs[0]?.id ?? '',
     educatorId: lockEducatorId ?? '',
     subjectId: '',
     from: todayStr(),
-    to: addDaysStr(todayStr(), 27),
-    weekdays: [1, 2, 3, 4, 5],
+    // dated: 하루가 기본 (기간으로 늘릴 수 있음) / prebook: 4주 배치가 기본
+    to: isPrebook ? addDaysStr(todayStr(), 27) : todayStr(),
+    weekdays: isPrebook ? [1, 2, 3, 4, 5] : [0, 1, 2, 3, 4, 5, 6],
     dayStart: '16:00',
     dayEnd: '21:00',
     capacity: null,
     breakStart: '',
     breakEnd: '',
     excludeDates: '', // 휴무일 (쉼표 구분, 명세 5.2)
-    publishNow: !!lockEducatorId, // 강사 셀프 개설은 즉시 공개가 기본
+    publishNow: !isPrebook, // dated는 즉시 공개, prebook은 검토 후 공개가 기본
   })
   const [appliedTemplateId, setAppliedTemplateId] = useState(null)
   const [savingTemplate, setSavingTemplate] = useState(false)
@@ -129,12 +134,18 @@ export default function TimetableWizard({ onClose, lockEducatorId = null }) {
     [form.excludeDates],
   )
 
+  // 하루짜리는 요일 필터 무시 (generateSlots에서 빈 배열 = 전 요일)
+  const effectiveWeekdays = useMemo(
+    () => (form.from === form.to ? [] : form.weekdays),
+    [form.from, form.to, form.weekdays],
+  )
+
   const preview = useMemo(() => {
     if (!program) return []
     return generateSlots({
       from: form.from,
       to: form.to,
-      weekdays: form.weekdays,
+      weekdays: effectiveWeekdays,
       dayStart: form.dayStart,
       dayEnd: form.dayEnd,
       slotMinutes: program.slotMinutes,
@@ -146,7 +157,7 @@ export default function TimetableWizard({ onClose, lockEducatorId = null }) {
         : [],
       excludeDates,
     })
-  }, [program, form, excludeDates])
+  }, [program, form, excludeDates, effectiveWeekdays])
 
   const previewDays = useMemo(() => new Set(preview.map((s) => s.date)).size, [preview])
 
@@ -162,7 +173,7 @@ export default function TimetableWizard({ onClose, lockEducatorId = null }) {
         programId: program.id,
         status: form.publishNow ? 'open' : 'draft',
         params: {
-          from: form.from, to: form.to, weekdays: form.weekdays,
+          from: form.from, to: form.to, weekdays: effectiveWeekdays,
           day_start: form.dayStart, day_end: form.dayEnd,
           slot_minutes: program.slotMinutes,
           educator_id: form.educatorId || null,
@@ -180,18 +191,28 @@ export default function TimetableWizard({ onClose, lockEducatorId = null }) {
     }
   }
 
-  if (lockEducatorId && programs.length === 0) {
+  const title = isPrebook ? '접수제 슬롯 준비' : '특정 날짜 예약시간 추가'
+
+  if (programs.length === 0) {
     return (
-      <ModalShell title="타임테이블 생성" onClose={onClose} maxWidth="max-w-xl">
+      <ModalShell title={title} onClose={onClose} maxWidth="max-w-xl">
         <p className="py-8 text-center text-sm text-gray-400">
-          배정된 프로그램이 없습니다. 관리자에게 프로그램 배정을 요청해 주세요.
+          {isPrebook
+            ? '접수제(사전예약형) 프로그램이 없습니다. 프로그램 설정에서 사전예약을 켜 주세요.'
+            : '배정된 프로그램이 없습니다. 관리자에게 프로그램 배정을 요청해 주세요.'}
         </p>
       </ModalShell>
     )
   }
 
   return (
-    <ModalShell title="타임테이블 생성" onClose={onClose} maxWidth="max-w-xl">
+    <ModalShell title={title} onClose={onClose} maxWidth="max-w-xl">
+      {isPrebook && (
+        <p className="rounded-xl bg-blue-50 p-3 text-xs text-blue-700">
+          접수제 슬롯은 <b>작성중</b>으로 만들어 검토한 뒤, 슬롯 목록에서 접수 시작에 맞춰
+          일괄 <b>예약공개</b>로 전환합니다. 접수기간은 프로그램 메뉴의 예약 오픈기간에서 등록하세요.
+        </p>
+      )}
       {/* 타임블럭 템플릿 — 요일·운영시간·휴식 프리셋 */}
       <div>
         <p className="text-xs text-gray-500 mb-1">타임블럭 템플릿 (클릭하면 요일·시간이 채워집니다)</p>
@@ -295,11 +316,11 @@ export default function TimetableWizard({ onClose, lockEducatorId = null }) {
           </label>
         )}
         <label className="text-xs text-gray-500">
-          시작일
+          날짜 (시작)
           <input type="date" value={form.from} onChange={set('from')} className={`${FIELD} w-full mt-1`} />
         </label>
         <label className="text-xs text-gray-500">
-          종료일
+          날짜 (종료 — 하루면 시작과 동일)
           <input type="date" value={form.to} onChange={set('to')} className={`${FIELD} w-full mt-1`} />
         </label>
         <label className="text-xs text-gray-500">
@@ -344,34 +365,40 @@ export default function TimetableWizard({ onClose, lockEducatorId = null }) {
         </label>
       </div>
 
-      <div>
-        <p className="text-xs text-gray-500 mb-1">운영 요일</p>
-        <div className="flex gap-1.5">
-          {WEEKDAYS.map((d) => (
-            <button
-              key={d.value}
-              type="button"
-              onClick={() => toggleDay(d.value)}
-              className={`w-9 h-9 rounded-lg text-xs font-bold border ${
-                form.weekdays.includes(d.value)
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'bg-white text-gray-500 border-gray-200'
-              }`}
-            >
-              {d.label}
-            </button>
-          ))}
+      {/* 하루짜리 dated에는 요일 선택이 무의미 — 기간일 때만 노출 */}
+      {form.from !== form.to && (
+        <div>
+          <p className="text-xs text-gray-500 mb-1">기간 중 운영 요일</p>
+          <div className="flex gap-1.5">
+            {WEEKDAYS.map((d) => (
+              <button
+                key={d.value}
+                type="button"
+                onClick={() => toggleDay(d.value)}
+                className={`w-9 h-9 rounded-lg text-xs font-bold border ${
+                  form.weekdays.includes(d.value)
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white text-gray-500 border-gray-200'
+                }`}
+              >
+                {d.label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
-      <label className="flex items-center gap-2 text-xs text-gray-600">
-        <input
-          type="checkbox"
-          checked={form.publishNow}
-          onChange={(e) => setForm((f) => ({ ...f, publishNow: e.target.checked }))}
-        />
-        생성 즉시 예약공개 (미체크 시 작성중으로 생성 — 검토 후 공개)
-      </label>
+      {/* 접수제는 항상 작성중 생성 (검토 → 접수 시작에 일괄 공개) — 선택지 자체를 숨긴다 */}
+      {!isPrebook && (
+        <label className="flex items-center gap-2 text-xs text-gray-600">
+          <input
+            type="checkbox"
+            checked={form.publishNow}
+            onChange={(e) => setForm((f) => ({ ...f, publishNow: e.target.checked }))}
+          />
+          생성 즉시 예약공개 (미체크 시 작성중으로 생성 — 검토 후 공개)
+        </label>
+      )}
 
       <div className="rounded-xl bg-gray-50 p-3 text-xs text-gray-600">
         미리보기: <b>{previewDays}일 × 슬롯 {preview.length}개</b>가{' '}
