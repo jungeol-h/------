@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { X, CheckCheck } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
-import StudentCombobox from '../counseling/StudentCombobox.jsx'
+import MultiStudentSelect from '../common/MultiStudentSelect.jsx'
 import { AttachmentField } from '../counseling/AttachmentField.jsx'
 import {
   uploadTaskFiles, removeTaskFiles, validateTaskFile,
@@ -10,15 +10,18 @@ import {
 } from '../../lib/taskFiles.js'
 
 // 과제 부여 모달 — 교과강사/컨설턴트/매니저/관리자가 학생에게 과제를 배정한다.
-// fixedStudent가 있으면 해당 학생 고정(학생상세), 없으면 students 목록에서 선택.
+// fixedStudent가 있으면 해당 학생 고정(학생상세), 없으면 students 목록에서
+// 다중 선택 — 같은 과제가 선택한 학생 수만큼 개별 생성된다(일괄 부여).
 // task가 있으면 수정 모드 — 학생 고정·필드 프리필 후 updateTask 호출.
 export default function TaskFormModal({ students = [], fixedStudent, task, onClose, onSaved }) {
-  const { addTask, updateTask, data } = useData()
+  const { addTasks, updateTask, data } = useData()
   const { currentUser } = useAuth()
   const isEdit = !!task
   const lockedStudent = isEdit ? data.students.find((s) => s.id === task.studentId) : fixedStudent
 
-  const [studentId, setStudentId] = useState(task?.studentId ?? fixedStudent?.id ?? '')
+  const [studentIds, setStudentIds] = useState(() =>
+    task?.studentId ? [task.studentId] : fixedStudent?.id ? [fixedStudent.id] : []
+  )
   const [title, setTitle] = useState(task?.title ?? '')
   const [subject, setSubject] = useState(task?.subject ?? '')
   const [dueDate, setDueDate] = useState(task?.dueDate ?? '')
@@ -28,25 +31,37 @@ export default function TaskFormModal({ students = [], fixedStudent, task, onClo
   const [existingAttachments, setExistingAttachments] = useState(task?.attachments ?? [])
   const [attachFiles, setAttachFiles] = useState([]) // 업로드 대기 File[]
   const [saving, setSaving] = useState(false)
+  const [progress, setProgress] = useState(null) // { done, total } — 대용량 업로드 체감용
 
   const fieldClass = 'w-full border border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300'
 
-  const canSave = !saving && title.trim() && studentId && dueDate
+  const canSave = !saving && title.trim() && studentIds.length > 0 && dueDate
 
   const handleSave = async () => {
     if (!canSave) return
     setSaving(true)
     try {
-      const uploaded = attachFiles.length > 0 ? await uploadTaskFiles(attachFiles, currentUser?.id) : []
+      const uploaded = attachFiles.length > 0
+        ? await uploadTaskFiles(attachFiles, currentUser?.id, (done, total) => setProgress({ done, total }))
+        : []
       const attachments = [...existingAttachments, ...uploaded]
       if (isEdit) {
         await updateTask(task.id, { title, subject, dueDate, dueTime: dueTime || '23:59', method, content, attachments })
-        // 수정에서 제거된 첨부의 실파일 정리 (best-effort)
+        // 수정에서 제거된 첨부의 실파일 정리 (best-effort).
+        // 일괄 부여로 만들어진 형제 과제가 같은 실파일을 참조하므로,
+        // 다른 과제가 아직 참조하는 경로는 지우지 않는다.
         const keptPaths = new Set(existingAttachments.map((a) => a.path))
-        removeTaskFiles((task.attachments ?? []).filter((a) => !keptPaths.has(a.path)).map((a) => a.path))
+        const removed = (task.attachments ?? [])
+          .filter((a) => !keptPaths.has(a.path))
+          .map((a) => a.path)
+          .filter((path) => !data.tasks.some(
+            (t) => t.id !== task.id && (t.attachments ?? []).some((a) => a.path === path)
+          ))
+        removeTaskFiles(removed)
       } else {
-        await addTask({
-          studentId,
+        // 첨부 실파일은 한 벌만 업로드하고 전 학생의 과제가 메타로 공유한다.
+        await addTasks({
+          studentIds,
           title,
           subject,
           dueDate,
@@ -64,6 +79,7 @@ export default function TaskFormModal({ students = [], fixedStudent, task, onClo
       // 저장 실패는 전역 Toast가 표면화한다.
     } finally {
       setSaving(false)
+      setProgress(null)
     }
   }
 
@@ -82,11 +98,12 @@ export default function TaskFormModal({ students = [], fixedStudent, task, onClo
             {lockedStudent.name} 학생
           </div>
         ) : (
-          <StudentCombobox
+          <MultiStudentSelect
             students={students}
-            value={studentId}
-            onChange={setStudentId}
-            placeholder="학생 검색..."
+            value={studentIds}
+            onChange={setStudentIds}
+            label="대상 학생"
+            placeholder="학생 검색해서 추가..."
           />
         )}
 
@@ -168,7 +185,9 @@ export default function TaskFormModal({ students = [], fixedStudent, task, onClo
             className="flex-1 py-3 bg-emerald-500 text-white rounded-xl font-bold hover:bg-emerald-600 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <CheckCheck size={16} />
-            저장
+            {saving
+              ? progress && progress.total > 1 ? `업로드 중... ${progress.done}/${progress.total}` : '저장 중...'
+              : !isEdit && studentIds.length > 1 ? `${studentIds.length}명에게 부여` : '저장'}
           </button>
         </div>
       </div>

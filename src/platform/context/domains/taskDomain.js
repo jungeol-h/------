@@ -129,6 +129,40 @@ export function useTaskDomain(data, setData) {
     [setData]
   )
 
+  // 과제 일괄 부여 — 같은 과제를 여러 학생에게 한 번에. 학생 수만큼 행을 만들어
+  // 단일 insert (부분 생성 없이 전건 성공/전건 실패). 첨부 메타는 전 행이 공유한다
+  // (storage 실파일은 한 벌 — deleteTask는 실파일을 지우지 않으므로 안전,
+  //  수정 모드의 첨부 제거는 TaskFormModal이 형제 참조를 확인한 뒤 지운다).
+  const addTasks = useCallback(
+    async ({ studentIds, title, subject, dueDate, dueTime, assignerId, assignerName, method, content, attachments }) => {
+      const rows = studentIds.map((studentId) => ({
+        id: makeId('t'),
+        student_id: studentId,
+        title,
+        subject,
+        due_date: dueDate,
+        due_time: dueTime || '23:59',
+        status: 'pending',
+        assigner_id: assignerId ?? null,
+        assigner_name: assignerName ?? null,
+        method: method || null,
+        content: content || null,
+        attachments: attachments ?? [],
+        submissions: [],
+      }))
+      const { error } = await withWriteRetry(
+        () => supabase.from('tasks').insert(rows),
+        { label: 'addTasks' }
+      )
+      if (error) throw error
+      setData((prev) => ({
+        ...prev,
+        tasks: [...rows.map(toTask), ...prev.tasks],
+      }))
+    },
+    [setData]
+  )
+
   // 과제 수정 (제목/과목/마감일/마감시간/수행방법/과제 내용)
   const updateTask = useCallback(
     async (id, patch) => {
@@ -187,5 +221,5 @@ export function useTaskDomain(data, setData) {
     [setData]
   )
 
-  return { toggleTask, addTask, updateTask, setTaskSubmissions, deleteTask, addTodoItem, updateTodoItem, toggleTodo }
+  return { toggleTask, addTask, addTasks, updateTask, setTaskSubmissions, deleteTask, addTodoItem, updateTodoItem, toggleTodo }
 }
