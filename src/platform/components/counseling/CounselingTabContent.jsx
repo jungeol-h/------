@@ -9,25 +9,27 @@ import {
 } from '../../data/counselingTypes.js'
 import { educatorDisplayName } from '../../utils/educatorName.js'
 import StudentCombobox from './StudentCombobox.jsx'
-import CounselingFormModal from './CounselingFormModal.jsx'
+import MultiStudentSelect from '../common/MultiStudentSelect.jsx'
+import CounselingFormModal, { COUNSELING_MAX_STUDENTS } from './CounselingFormModal.jsx'
 import CounselingContentFields from './CounselingContentFields.jsx'
 import CounselingRecordBody from './CounselingRecordBody.jsx'
 import UrgentReportModal from './UrgentReportModal.jsx'
 import MonthlyReportModal from './MonthlyReportModal.jsx'
 import { AttachmentField, AttachmentChips } from './AttachmentField.jsx'
-import { uploadCounselingPdfs, removeCounselingFiles } from '../../lib/counselingFiles.js'
+import { uploadCounselingPdfs, removeCounselingFiles, filterUnreferencedPaths } from '../../lib/counselingFiles.js'
 import { todayStr } from '../../utils/dateUtils.js'
 
 const EMPTY_FIELDS = { topic: '', diagnosis: '', advice: '', followUp: '', note: '', nextAppointment: '' }
 
 // 매니저/관리자 상담 탭 공용 본문.
-// 상단에 인라인 작성 폼(버튼→모달 없이 바로 입력), 아래에 기존 상담 리스트.
+// 상단에 인라인 작성 폼(버튼→모달 없이 바로 입력, 학생 다중 선택 시 학생별
+// 기록 fan-out — 첨부 실파일은 공유), 아래에 기존 상담 리스트.
 // 두 역할의 차이는 props로만 분기: 작성 대상(students)·노출 기록(records)·작성자 표시(showAuthor).
 // readOnly=true면 작성 폼과 카드 수정/삭제 버튼을 숨긴다(열람 전용 역할).
 export default function CounselingTabContent({ students, records, showAuthor = false, authorId, readOnly = false }) {
   const { addCounselingRecord, deleteCounselingRecord, data } = useData()
   const { currentUser } = useAuth()
-  const [studentId, setStudentId] = useState('')
+  const [studentIds, setStudentIds] = useState([]) // 다중 선택 — 학생별 기록 fan-out
   const [type, setType] = useState(COUNSELING_TYPES[0])
   const [targetType, setTargetType] = useState('student')
   const [date, setDate] = useState(todayStr())
@@ -100,7 +102,10 @@ export default function CounselingTabContent({ students, records, showAuthor = f
     if (!window.confirm('이 상담 기록을 삭제할까요?')) return
     try {
       await deleteCounselingRecord(record.id)
-      removeCounselingFiles(record.attachments?.map((a) => a.path)) // 실파일 정리 (best-effort)
+      // 실파일 정리 (best-effort) — fan-out 형제 기록이 참조하는 path는 남긴다
+      removeCounselingFiles(filterUnreferencedPaths(
+        record.attachments?.map((a) => a.path), data.counselingRecords, record.id
+      ))
     } catch {
       // 실패는 전역 Toast가 표면화한다.
     }
@@ -109,7 +114,7 @@ export default function CounselingTabContent({ students, records, showAuthor = f
   const fieldClass =
     'border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300'
 
-  const canSave = !saving && fields.topic.trim() && studentId
+  const canSave = !saving && fields.topic.trim() && studentIds.length > 0
 
   const handleSave = async () => {
     if (!canSave) return
@@ -117,9 +122,21 @@ export default function CounselingTabContent({ students, records, showAuthor = f
     try {
       const content = composeCounselingContent(fields)
       const attachments = attachFiles.length > 0 ? await uploadCounselingPdfs(attachFiles, authorId) : []
-      await addCounselingRecord({ studentId, authorId, content, type, targetType, fields, attachments, startTime, endTime, date })
+      // 학생별 fan-out — 첨부 실파일은 한 벌만 업로드하고 메타를 공유한다.
+      let savedCount = 0
+      try {
+        for (const sid of studentIds) {
+          await addCounselingRecord({ studentId: sid, authorId, content, type, targetType, fields, attachments, startTime, endTime, date })
+          savedCount += 1
+        }
+      } catch (err) {
+        if (savedCount > 0) {
+          alert(`오류로 ${studentIds.length}명 중 ${savedCount}명까지만 저장됐습니다. 목록을 확인한 뒤 나머지 학생만 다시 작성해주세요.`)
+        }
+        throw err
+      }
       // 성공 시 폼 초기화(학생/유형은 연속 작성 편의를 위해 유지하지 않고 비움).
-      setStudentId('')
+      setStudentIds([])
       setType(COUNSELING_TYPES[0])
       setTargetType('student')
       setDate(todayStr())
@@ -153,10 +170,13 @@ export default function CounselingTabContent({ students, records, showAuthor = f
         <h2 className="text-base font-bold text-gray-900">새 상담 기록</h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <StudentCombobox
+          <MultiStudentSelect
             students={students}
-            value={studentId}
-            onChange={setStudentId}
+            value={studentIds}
+            onChange={setStudentIds}
+            max={COUNSELING_MAX_STUDENTS}
+            label="피상담 학생"
+            placeholder="학생 검색해서 추가..."
           />
 
           <div className="grid grid-cols-2 gap-3">
@@ -232,7 +252,7 @@ export default function CounselingTabContent({ students, records, showAuthor = f
             className="py-2.5 px-6 bg-emerald-500 text-white rounded-xl font-bold hover:bg-emerald-600 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <CheckCheck size={16} />
-            저장
+            {studentIds.length > 1 ? `${studentIds.length}명 기록 저장` : '저장'}
           </button>
         </div>
       </section>

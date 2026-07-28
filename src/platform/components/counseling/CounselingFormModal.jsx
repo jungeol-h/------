@@ -9,18 +9,24 @@ import {
 } from '../../data/counselingTypes.js'
 import CounselingContentFields from './CounselingContentFields.jsx'
 import { AttachmentField } from './AttachmentField.jsx'
-import { uploadCounselingPdfs, removeCounselingFiles } from '../../lib/counselingFiles.js'
+import { uploadCounselingPdfs, removeCounselingFiles, filterUnreferencedPaths } from '../../lib/counselingFiles.js'
+import MultiStudentSelect from '../common/MultiStudentSelect.jsx'
 import { todayStr } from '../../utils/dateUtils.js'
 
 // 상담 작성 모달 — 매니저/관리자/학생상세에서 재사용. 코칭 모달(ManagerHomeTab) 패턴 차용.
-// fixedStudent가 있으면 해당 학생 고정, 없으면 students 목록에서 선택.
+// fixedStudent가 있으면 해당 학생 고정, 없으면 students 목록에서 다중 선택(최대 6명) —
+// 같은 내용의 상담기록이 학생별로 각각 생성된다(fan-out, 첨부 실파일은 공유).
 // record가 있으면 수정 모드 — 학생 고정·내용/type 프리필 후 updateCounselingRecord 호출.
 // 구 기록(단일 comment) 수정 시엔 comment를 진단 칸에 프리필한다.
+export const COUNSELING_MAX_STUDENTS = 6
+
 export default function CounselingFormModal({ students = [], fixedStudent, record, authorId, onClose, onSaved }) {
   const { addCounselingRecord, updateCounselingRecord, data } = useData()
   const isEdit = !!record
   const editStudent = isEdit ? data.students.find((s) => s.id === record.studentId) : null
-  const [studentId, setStudentId] = useState(record?.studentId ?? fixedStudent?.id ?? '')
+  const [studentIds, setStudentIds] = useState(() =>
+    record?.studentId ? [record.studentId] : fixedStudent?.id ? [fixedStudent.id] : []
+  )
   const [type, setType] = useState(record?.type ?? COUNSELING_TYPES[0])
   const [targetType, setTargetType] = useState(record?.targetType ?? 'student')
   const [date, setDate] = useState(record?.date ?? todayStr())
@@ -48,11 +54,25 @@ export default function CounselingFormModal({ students = [], fixedStudent, recor
       const attachments = [...existingAttachments, ...uploaded]
       if (isEdit) {
         await updateCounselingRecord(record.id, { content, type, targetType, fields, attachments, startTime, endTime, date })
-        // 수정에서 제거된 첨부의 실파일 정리 (best-effort)
+        // 수정에서 제거된 첨부의 실파일 정리 (best-effort).
+        // fan-out 형제 기록이 같은 실파일을 참조할 수 있어 미참조 path만 지운다.
         const keptPaths = new Set(existingAttachments.map((a) => a.path))
-        removeCounselingFiles((record.attachments ?? []).filter((a) => !keptPaths.has(a.path)).map((a) => a.path))
+        const removed = (record.attachments ?? []).filter((a) => !keptPaths.has(a.path)).map((a) => a.path)
+        removeCounselingFiles(filterUnreferencedPaths(removed, data.counselingRecords, record.id))
       } else {
-        await addCounselingRecord({ studentId, authorId, content, type, targetType, fields, attachments, startTime, endTime, date })
+        // 학생별 fan-out — 첨부 실파일은 한 벌만 업로드하고 메타를 공유한다.
+        let savedCount = 0
+        try {
+          for (const sid of studentIds) {
+            await addCounselingRecord({ studentId: sid, authorId, content, type, targetType, fields, attachments, startTime, endTime, date })
+            savedCount += 1
+          }
+        } catch (err) {
+          if (savedCount > 0) {
+            alert(`오류로 ${studentIds.length}명 중 ${savedCount}명까지만 저장됐습니다. 목록을 확인한 뒤 나머지 학생만 다시 작성해주세요.`)
+          }
+          throw err
+        }
       }
       onSaved?.()
       onClose()
@@ -70,18 +90,14 @@ export default function CounselingFormModal({ students = [], fixedStudent, recor
             {(isEdit ? editStudent?.name : fixedStudent?.name) ?? '학생'} 학생
           </div>
         ) : (
-          <select
-            value={studentId}
-            onChange={e => setStudentId(e.target.value)}
-            className={fieldClass}
-          >
-            <option value="" disabled>학생 선택</option>
-            {students.map(s => (
-              <option key={s.id} value={s.id}>
-                {s.name} ({s.school ?? ''} {s.grade ?? ''})
-              </option>
-            ))}
-          </select>
+          <MultiStudentSelect
+            students={students}
+            value={studentIds}
+            onChange={setStudentIds}
+            max={COUNSELING_MAX_STUDENTS}
+            label="피상담 학생"
+            placeholder="학생 검색해서 추가..."
+          />
         )}
 
         <div className="grid grid-cols-2 gap-3">
@@ -163,11 +179,11 @@ export default function CounselingFormModal({ students = [], fixedStudent, recor
           </button>
           <button
             onClick={handleSave}
-            disabled={saving || !fields.topic.trim() || !studentId}
+            disabled={saving || !fields.topic.trim() || studentIds.length === 0}
             className="flex-1 py-3 bg-emerald-500 text-white rounded-xl font-bold hover:bg-emerald-600 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <CheckCheck size={16} />
-            저장
+            {!isEdit && studentIds.length > 1 ? `${studentIds.length}명 기록 저장` : '저장'}
           </button>
         </div>
     </ModalShell>

@@ -23,7 +23,7 @@ import { COUNSELING_TYPE_LABELS, COUNSELING_TARGET_LABELS } from '../../data/cou
 import CounselingFormModal from '../../components/counseling/CounselingFormModal.jsx'
 import CounselingRecordBody from '../../components/counseling/CounselingRecordBody.jsx'
 import { AttachmentChips } from '../../components/counseling/AttachmentField.jsx'
-import { removeCounselingFiles } from '../../lib/counselingFiles.js'
+import { removeCounselingFiles, filterUnreferencedPaths } from '../../lib/counselingFiles.js'
 import { educatorDisplayName } from '../../utils/educatorName.js'
 import TaskFormModal from '../../components/tasks/TaskFormModal.jsx'
 import TaskFileChips from '../../components/tasks/TaskFileChips.jsx'
@@ -630,7 +630,10 @@ function CounselingSection({ studentId, data, currentUser, canWrite = true }) {
     if (!window.confirm('이 상담 기록을 삭제할까요?')) return
     try {
       await deleteCounselingRecord(record.id)
-      removeCounselingFiles(record.attachments?.map((a) => a.path)) // 실파일 정리 (best-effort)
+      // 실파일 정리 (best-effort) — fan-out 형제 기록이 참조하는 path는 남긴다
+      removeCounselingFiles(filterUnreferencedPaths(
+        record.attachments?.map((a) => a.path), data.counselingRecords, record.id
+      ))
     } catch {
       // 실패는 전역 Toast가 표면화한다.
     }
