@@ -11,8 +11,10 @@ export const toUser = (row) => ({
   grade: row.grade ?? '',
   className: row.class_name ?? '',
   gender: row.gender ?? null,
-  password: row.password ?? '',
-  parentPassword: row.parent_password ?? '',
+  // 비밀번호(해시 포함)는 앱 모델에 싣지 않는다 — localStorage 세션에 노출되기 때문.
+  phone: row.phone ?? '',
+  parentPhone: row.parent_phone ?? '',
+  passwordChangedAt: row.password_changed_at ?? null,
   selfIndex: row.self_index ?? 70,
   riskLevel: row.risk_level ?? 'normal',
   status: row.status ?? 'active',

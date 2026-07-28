@@ -24,8 +24,9 @@ export default function StudentFormModal({
   const [className, setClassName] = useState(initial?.className ?? '')
   const [school, setSchool] = useState(initial?.school ?? '')
   const [loginId, setLoginId] = useState(initial?.loginId ?? '')
-  const [password, setPassword] = useState(initial?.password ?? '')
-  const [parentPassword, setParentPassword] = useState(initial?.parentPassword ?? '')
+  const [phone, setPhone] = useState(initial?.phone ?? '')
+  const [parentPhone, setParentPhone] = useState(initial?.parentPhone ?? '')
+  const [resetPassword, setResetPassword] = useState(false) // edit 모드: 저장 시 비밀번호를 연락처로 초기화
   const [managerId, setManagerId] = useState(initialManagerId ?? '')
   const [enrolledAt, setEnrolledAt] = useState(initial?.enrolledAt ?? '')
   const [saving, setSaving] = useState(false)
@@ -41,19 +42,19 @@ export default function StudentFormModal({
     setDupMatches(null)
     setDupConfirmed(false)
   }
-  const handlePasswordChange = (e) => {
-    setPassword(normalizePhone(e.target.value))
+  const handlePhoneChange = (e) => {
+    setPhone(normalizePhone(e.target.value))
     setDupMatches(null)
     setDupConfirmed(false)
   }
-  const handleParentPwChange = (e) => {
-    setParentPassword(normalizePhone(e.target.value))
+  const handleParentPhoneChange = (e) => {
+    setParentPhone(normalizePhone(e.target.value))
     setDupMatches(null)
     setDupConfirmed(false)
   }
 
   const canSubmit =
-    cleanText(name) && grade && cleanText(loginId) && password
+    cleanText(name) && grade && cleanText(loginId) && phone
 
   const handleSubmit = async () => {
     setErrorMsg('')
@@ -63,8 +64,8 @@ export default function StudentFormModal({
     const loginIdClean = cleanText(loginId)
     const schoolClean = cleanText(school)
     const classNameClean = cleanText(className)
-    const pwClean = normalizePhone(password)
-    const parentPwClean = normalizePhone(parentPassword)
+    const phoneClean = normalizePhone(phone)
+    const parentPhoneClean = normalizePhone(parentPhone)
 
     // ── 2단계: 검증 ──
     if (!nameClean) {
@@ -83,16 +84,16 @@ export default function StudentFormModal({
       setErrorMsg('로그인 ID는 한글·영문·숫자·밑줄(_)만 사용할 수 있습니다.')
       return
     }
-    if (!pwClean) {
-      setErrorMsg('비밀번호를 입력하세요.')
+    if (!phoneClean) {
+      setErrorMsg('학생 연락처를 입력하세요.')
       return
     }
-    if (!isValidPhone(pwClean)) {
-      setErrorMsg('비밀번호는 010으로 시작하는 11자리 숫자여야 합니다.')
+    if (!isValidPhone(phoneClean)) {
+      setErrorMsg('학생 연락처는 010으로 시작하는 11자리 숫자여야 합니다.')
       return
     }
-    if (parentPwClean && !isValidPhone(parentPwClean)) {
-      setErrorMsg('학부모 비밀번호는 010으로 시작하는 11자리 숫자여야 합니다.')
+    if (parentPhoneClean && !isValidPhone(parentPhoneClean)) {
+      setErrorMsg('학부모 연락처는 010으로 시작하는 11자리 숫자여야 합니다.')
       return
     }
     if (gender && gender !== 'M' && gender !== 'F') {
@@ -101,7 +102,7 @@ export default function StudentFormModal({
     }
 
     const matches = findDuplicateStudents(students, {
-      name: nameClean, password: pwClean, parentPassword: parentPwClean,
+      name: nameClean, phone: phoneClean, parentPhone: parentPhoneClean,
       excludeId: isEdit ? initial?.id : undefined,
     })
     if (matches.length > 0 && !dupConfirmed) {
@@ -119,8 +120,9 @@ export default function StudentFormModal({
         className: classNameClean,
         school: schoolClean,
         loginId: loginIdClean,
-        password: pwClean,
-        parentPassword: parentPwClean,
+        phone: phoneClean,
+        parentPhone: parentPhoneClean,
+        resetPassword: isEdit ? resetPassword : undefined,
         managerId: managerId || null,
         enrolledAt: enrolledAt || null,
       })
@@ -261,13 +263,13 @@ export default function StudentFormModal({
 
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="block text-[11px] font-bold text-gray-500 mb-1">비밀번호 *</label>
+              <label className="block text-[11px] font-bold text-gray-500 mb-1">학생 연락처 *</label>
               <input
                 type="tel"
                 inputMode="numeric"
                 autoComplete="off"
-                value={password}
-                onChange={handlePasswordChange}
+                value={phone}
+                onChange={handlePhoneChange}
                 maxLength={11}
                 className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
                 placeholder="01012345678"
@@ -275,19 +277,38 @@ export default function StudentFormModal({
               <p className="mt-1 text-[10px] text-gray-400">- 자동 제거됨 · 11자리</p>
             </div>
             <div>
-              <label className="block text-[11px] font-bold text-gray-500 mb-1">학부모 비밀번호</label>
+              <label className="block text-[11px] font-bold text-gray-500 mb-1">학부모 연락처</label>
               <input
                 type="tel"
                 inputMode="numeric"
                 autoComplete="off"
-                value={parentPassword}
-                onChange={handleParentPwChange}
+                value={parentPhone}
+                onChange={handleParentPhoneChange}
                 maxLength={11}
                 className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
                 placeholder="01012345678"
               />
             </div>
           </div>
+
+          {isEdit ? (
+            <label className="flex items-start gap-2 rounded-lg border border-gray-200 px-3 py-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={resetPassword}
+                onChange={(e) => setResetPassword(e.target.checked)}
+                className="w-4 h-4 mt-0.5"
+              />
+              <span className="text-xs text-gray-600">
+                <span className="font-bold text-gray-700 block">비밀번호 초기화</span>
+                저장 시 비밀번호가 학생 연락처로 재설정되고, 학생은 다음 로그인 때 새 비밀번호를 정합니다.
+              </span>
+            </label>
+          ) : (
+            <p className="text-[10px] text-gray-400">
+              초기 비밀번호는 학생 연락처와 같게 설정되며, 학생이 첫 로그인 때 직접 바꿉니다.
+            </p>
+          )}
 
           <div>
             <label className="block text-[11px] font-bold text-gray-500 mb-1">담당 매니저</label>

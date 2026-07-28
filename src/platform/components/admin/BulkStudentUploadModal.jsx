@@ -68,9 +68,10 @@ export default function BulkStudentUploadModal({ onClose }) {
         school: r.school,
         grade: r.grade,
         className: r.grade, // 반 미지정 시 학년과 동일 (시드 관행)
-        // 비밀번호 = 학생 전화번호. 형식 오류면 자리표시 값 — 수정 화면에서 바로잡는다.
-        password: r.phoneValid ? r.phone : '00000000000',
-        parentPassword: r.parentPhoneValid ? r.parentPhone : '',
+        // 초기 비밀번호 = 학생 연락처(도메인에서 해시). 형식 오류면 연락처 없이 등록 —
+        // 수정 화면에서 바로잡은 뒤 '비밀번호 초기화'로 로그인 가능해진다.
+        phone: r.phoneValid ? r.phone : '',
+        parentPhone: r.parentPhoneValid ? r.parentPhone : '',
         gender: r.gender,
         status: r.status,
         groups: [group],
@@ -95,7 +96,8 @@ export default function BulkStudentUploadModal({ onClose }) {
             )}
           </p>
           <p className="text-xs text-gray-500">
-            학생 로그인: 아이디 = 이름(동명이인은 이름(학교)), 비밀번호 = 학생 전화번호.
+            학생 로그인: 아이디 = 이름(동명이인은 이름(학교)), 초기 비밀번호 = 학생 전화번호.
+            첫 로그인 때 새 비밀번호를 정하게 됩니다.
           </p>
           <button
             onClick={onClose}

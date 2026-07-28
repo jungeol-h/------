@@ -3,7 +3,7 @@
 // 지표는 getStudentIndicatorMap으로 1-pass 계산. viewer의 /viewer/students에서 readOnly로 재사용.
 
 import { useState, useMemo, useCallback } from 'react'
-import { User, AlertCircle, Plus, Upload, MoreVertical, Pencil, UserX, UserCheck, Search, ArrowUp, ArrowDown, Trash2 } from 'lucide-react'
+import { User, AlertCircle, Plus, Upload, MoreVertical, Pencil, UserX, UserCheck, Search, ArrowUp, ArrowDown, Trash2, ClipboardList } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
 import { getMindStatus } from '../../context/selectors/riskDetection.js'
 import { getStudentIndicatorMap } from '../../context/selectors/studentIndicators.js'
@@ -18,6 +18,7 @@ import EducatorGroupModal from '../../components/admin/EducatorGroupModal.jsx'
 import EducatorFormModal from '../../components/admin/EducatorFormModal.jsx'
 import ModalShell from '../../components/common/ModalShell.jsx'
 import BulkStudentUploadModal from '../../components/admin/BulkStudentUploadModal.jsx'
+import TaskFormModal from '../../components/tasks/TaskFormModal.jsx'
 import { GROUP_OPTIONS } from '../../data/groups.js'
 import { STUDENT_STATUS_OPTIONS, STUDENT_STATUS_LABELS, isActiveStudent } from '../../data/studentStatus.js'
 import DownloadPdfButton from '../../pdf/components/DownloadPdfButton.jsx'
@@ -49,6 +50,7 @@ export default function UserManagementTab({ readOnly = false }) {
   const [menuOpenId, setMenuOpenId] = useState(null)
   const [showParentModal, setShowParentModal] = useState(false)
   const [showBulkModal, setShowBulkModal] = useState(false)
+  const [showTaskModal, setShowTaskModal] = useState(false) // 과제 내기 — 학생 다중 선택 일괄 부여
   const [query, setQuery] = useState('')
   const [filterGroup, setFilterGroup] = useState('all') // 'all' | GROUP_OPTIONS 값
   const [groupEditTarget, setGroupEditTarget] = useState(null) // 소속 편집 대상 교육자
@@ -245,6 +247,13 @@ export default function UserManagementTab({ readOnly = false }) {
             {!readOnly && (
               <>
                 <button
+                  onClick={() => setShowTaskModal(true)}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-blue-600 text-blue-700 text-xs font-semibold hover:bg-blue-50"
+                >
+                  <ClipboardList size={14} />
+                  과제 내기
+                </button>
+                <button
                   onClick={() => setShowBulkModal(true)}
                   className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-emerald-600 text-emerald-700 text-xs font-semibold hover:bg-emerald-50"
                 >
@@ -373,8 +382,8 @@ export default function UserManagementTab({ readOnly = false }) {
                   <span className="text-center text-xs text-gray-500 truncate px-1">
                     {mgr ? mgr.name : <span className="text-orange-400">미배정</span>}
                   </span>
-                  <span className="text-center text-[11px] text-gray-600 whitespace-nowrap">{formatPhone(s.password) || '-'}</span>
-                  <span className="text-center text-[11px] text-gray-600 whitespace-nowrap">{formatPhone(s.parentPassword) || '-'}</span>
+                  <span className="text-center text-[11px] text-gray-600 whitespace-nowrap">{formatPhone(s.phone) || '-'}</span>
+                  <span className="text-center text-[11px] text-gray-600 whitespace-nowrap">{formatPhone(s.parentPhone) || '-'}</span>
                   <span className={`text-center text-xs font-semibold ${
                     (ind?.absentCount ?? 0) >= ATTENDANCE_CAUTION_ABSENT_THRESHOLD ? 'text-red-600' : 'text-gray-600'
                   }`} title="최근 30일 결석 횟수">
@@ -616,6 +625,13 @@ export default function UserManagementTab({ readOnly = false }) {
 
       {!readOnly && showBulkModal && (
         <BulkStudentUploadModal onClose={() => setShowBulkModal(false)} />
+      )}
+
+      {!readOnly && showTaskModal && (
+        <TaskFormModal
+          students={activeStudents}
+          onClose={() => setShowTaskModal(false)}
+        />
       )}
 
       {!readOnly && groupEditTarget && (

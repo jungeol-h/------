@@ -3,8 +3,8 @@
 // parseStudentSheet(aoa, { existingLoginIds, existingStudents })
 // - aoa: 시트 전체를 문자열 2차원 배열로 (빈 셀은 ''/null 허용)
 // - existingLoginIds: 이미 DB에 있는 login_id 집합 (학생+교직원 전부)
-// - existingStudents: 기존 학생 전체(퇴원·신청취소 포함) — { name, school, password,
-//   parentPassword, status } 형태. 전화번호·이름 기반 동일인 검사에 쓴다.
+// - existingStudents: 기존 학생 전체(퇴원·신청취소 포함) — { name, school, phone,
+//   parentPhone, status } 형태. 전화번호·이름 기반 동일인 검사에 쓴다.
 //
 // 반환: { ok, error?, headerRowIndex?, rows?: [행], summary? }
 // 행: { name, school, grade, phone, phoneValid, parentPhone, parentPhoneValid,
@@ -133,20 +133,20 @@ export function parseStudentSheet(aoa, { existingLoginIds, existingStudents } = 
   })
 
   // 기존 학생(퇴원·취소 포함)과 동일인 검사 — login_id가 달라도(오타·변형) 잡는다.
-  // 전화번호 일치가 최우선 근거: 비밀번호 = 학생 전화번호 관례.
+  // 전화번호(users.phone) 일치가 최우선 근거.
   const students = existingStudents ?? []
   const statusOf = (s) => STUDENT_STATUS_LABELS[s.status] ?? s.status ?? '재원'
   parsed.forEach((r) => {
     if (!r.include) return
     const hit = students.find(
       (s) =>
-        (r.phoneValid && s.password === r.phone) ||
+        (r.phoneValid && s.phone === r.phone) ||
         (s.name === r.name && s.school && s.school === r.school) ||
-        (s.name === r.name && r.parentPhoneValid && s.parentPassword === r.parentPhone)
+        (s.name === r.name && r.parentPhoneValid && s.parentPhone === r.parentPhone)
     )
     if (hit) {
       r.include = false
-      const why = r.phoneValid && hit.password === r.phone ? '전화번호 일치' : '이름 일치'
+      const why = r.phoneValid && hit.phone === r.phone ? '전화번호 일치' : '이름 일치'
       r.note = `기존 학생과 동일인으로 보임(${hit.name} · ${statusOf(hit)} · ${why}) — 복귀면 기존 계정을 재원으로 복구, 동명이인이면 학생 추가에서 수동 등록`
     }
   })

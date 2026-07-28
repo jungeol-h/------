@@ -108,8 +108,8 @@ describe('parseStudentSheet', () => {
 describe('parseStudentSheet — 기존 학생 동일인 검사 (existingStudents)', () => {
   // 2026-07 중복 사고 유형: 이름 오타(김다민→김다인)여도 전화번호가 같으면 동일인
   const existingStudents = [
-    { name: '김다인', school: '단성중', password: '01084355192', parentPassword: '01026315192', status: 'active' },
-    { name: '강은성', school: '안동여중', password: '01020401766', parentPassword: '01020471766', status: 'withdrawn' },
+    { name: '김다인', school: '단성중', phone: '01084355192', parentPhone: '01026315192', status: 'active' },
+    { name: '강은성', school: '안동여중', phone: '01020401766', parentPhone: '01020471766', status: 'withdrawn' },
   ]
 
   it('이름이 달라도 전화번호가 같으면 제외한다', () => {

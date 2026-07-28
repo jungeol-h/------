@@ -9,14 +9,15 @@ import { supabase } from '../../lib/supabase.js'
 import { toUser } from '../../lib/supabaseHelpers.js'
 import { makeId } from '../dataModel.js'
 import { withWriteRetry } from '../../lib/supabaseRetry.js'
+import { hashPassword, INITIAL_COST } from '../../lib/passwords.js'
 
 // UI에서 생성/수정 가능한 역할 화이트리스트 (admin 제외)
 export const EDUCATOR_MANAGED_ROLES = ['manager', 'instructor', 'consultant', 'viewer']
 
 export function useEducatorDomain(setData) {
-  // 교직원 신규 추가 — insert 성공 즉시 로그인 가능 (평문 비교 로그인)
+  // 교직원 신규 추가 — 초기 비밀번호 = 본인 연락처(해시), 첫 로그인 시 강제 재설정
   const createEducator = useCallback(
-    async ({ name, role, loginId, password, subject, groups }) => {
+    async ({ name, role, loginId, phone, subject, groups }) => {
       if (!EDUCATOR_MANAGED_ROLES.includes(role)) {
         throw new Error('허용되지 않은 역할입니다.')
       }
@@ -24,7 +25,9 @@ export function useEducatorDomain(setData) {
       const row = {
         id,
         login_id: loginId,
-        password,
+        password: await hashPassword(phone, INITIAL_COST),
+        password_changed_at: null,
+        phone: phone || null,
         name,
         role,
         subject: subject ?? '',
@@ -49,7 +52,8 @@ export function useEducatorDomain(setData) {
     [setData]
   )
 
-  // 교직원 정보 수정 — patch에 있는 키만 부분 업데이트
+  // 교직원 정보 수정 — patch에 있는 키만 부분 업데이트.
+  // patch.resetPassword가 참이면 비밀번호를 초기값(=연락처)으로 되돌린다.
   const updateEducator = useCallback(
     async (id, patch) => {
       if (patch.role !== undefined && !EDUCATOR_MANAGED_ROLES.includes(patch.role)) {
@@ -58,10 +62,14 @@ export function useEducatorDomain(setData) {
       const snake = {}
       if (patch.name !== undefined) snake.name = patch.name
       if (patch.loginId !== undefined) snake.login_id = patch.loginId
-      if (patch.password !== undefined) snake.password = patch.password
+      if (patch.phone !== undefined) snake.phone = patch.phone || null
       if (patch.role !== undefined) snake.role = patch.role
       if (patch.subject !== undefined) snake.subject = patch.subject
       if (patch.groups !== undefined) snake.group_names = patch.groups
+      if (patch.resetPassword) {
+        snake.password = await hashPassword(patch.phone, INITIAL_COST)
+        snake.password_changed_at = null
+      }
       if (Object.keys(snake).length === 0) return
 
       // admin 계정 방어 — role 조건으로 수정 대상을 관리 역할로 한정
@@ -78,6 +86,8 @@ export function useEducatorDomain(setData) {
         throw new Error('관리자 계정은 여기서 수정할 수 없습니다.')
       }
       const localPatch = { ...patch }
+      delete localPatch.resetPassword
+      if (patch.resetPassword) localPatch.passwordChangedAt = null
       setData((prev) => ({
         ...prev,
         educators: prev.educators.map((e) =>

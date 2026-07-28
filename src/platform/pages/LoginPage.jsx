@@ -118,8 +118,8 @@ export default function LoginPage() {
         {/* 안내 */}
         <div className="mt-5 px-4 py-3 bg-white/60 rounded-xl text-xs text-gray-500 space-y-1">
           <p className="font-medium text-gray-600">로그인 안내</p>
-          <p>• 학생 초기 비밀번호: 생년월일 8자리 (예: 20100315)</p>
-          <p>• 비밀번호를 모를 경우 담당 선생님에게 문의하세요</p>
+          <p>• 초기 비밀번호: 본인 전화번호 (첫 로그인 때 새 비밀번호를 정합니다)</p>
+          <p>• 비밀번호를 잊었다면 담당 선생님에게 초기화를 요청하세요</p>
         </div>
 
         <p className="text-center text-xs text-gray-400 mt-5">

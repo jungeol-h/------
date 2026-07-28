@@ -7,16 +7,20 @@ import { supabase } from '../../lib/supabase.js'
 import { toUser, toParentChild } from '../../lib/supabaseHelpers.js'
 import { makeId } from '../dataModel.js'
 import { withWriteRetry } from '../../lib/supabaseRetry.js'
+import { hashPassword, INITIAL_COST } from '../../lib/passwords.js'
 
 export function useParentDomain(setData) {
-  // 학부모 신규 추가 (계정 + 자녀 매핑)
+  // 학부모 신규 추가 (계정 + 자녀 매핑) — 초기 비밀번호 = 본인 연락처(해시),
+  // 첫 로그인 시 강제 재설정
   const addParent = useCallback(
-    async ({ name, loginId, password, childIds = [] }) => {
+    async ({ name, loginId, phone, childIds = [] }) => {
       const id = makeId('p')
       const row = {
         id,
         login_id: loginId,
-        password,
+        password: await hashPassword(phone, INITIAL_COST),
+        password_changed_at: null,
+        phone: phone || null,
         name,
         role: 'parent',
         status: 'active',
@@ -55,13 +59,18 @@ export function useParentDomain(setData) {
     [setData]
   )
 
-  // 학부모 계정 정보 수정 (자녀 매핑은 setParentChildren에서 별도 처리)
+  // 학부모 계정 정보 수정 (자녀 매핑은 setParentChildren에서 별도 처리).
+  // resetPassword가 참이면 비밀번호를 초기값(=연락처)으로 되돌린다.
   const updateParent = useCallback(
-    async (id, { name, loginId, password }) => {
+    async (id, { name, loginId, phone, resetPassword }) => {
       const snake = {}
       if (name !== undefined) snake.name = name
       if (loginId !== undefined) snake.login_id = loginId
-      if (password !== undefined) snake.password = password
+      if (phone !== undefined) snake.phone = phone || null
+      if (resetPassword) {
+        snake.password = await hashPassword(phone, INITIAL_COST)
+        snake.password_changed_at = null
+      }
       if (Object.keys(snake).length === 0) return
       const { error } = await withWriteRetry(
         () => supabase.from('users').update(snake).eq('id', id),
@@ -74,7 +83,8 @@ export function useParentDomain(setData) {
       const localPatch = {}
       if (name !== undefined) localPatch.name = name
       if (loginId !== undefined) localPatch.loginId = loginId
-      if (password !== undefined) localPatch.password = password
+      if (phone !== undefined) localPatch.phone = phone
+      if (resetPassword) localPatch.passwordChangedAt = null
       setData((prev) => ({
         ...prev,
         parents: (prev.parents ?? []).map((p) =>

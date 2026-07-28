@@ -52,7 +52,8 @@ DB 스키마 변경은 **Supabase Studio SQL Editor에서 수동 실행**한다 
 | `add-booking-science-educators.sql` | 예약 교과 컨설팅에 '과학' 교과 추가 + 최돈권(수학)·박영균(과학) 상담사 배정 (계정은 seed-staff-accounts로 기존재, 역할 변경 없음) | 적용됨 (2026-07-20) |
 | `add-task-attachments.sql` | 과제 파일 첨부(양방향): tasks.attachments(강사 문제/자료 메타) + tasks.submissions(학생 제출 메타) + 'task-files' 버킷(이미지/PDF) | 적용됨 (2026-07-23) |
 | `add-quiz-question-points.sql` | quiz_questions.points (서술형 배점 — 교사가 0~배점 점수 입력 채점, 단답형·기존 데이터는 1점) | 적용됨 (2026-07-23) |
-| `add-student-dedup-guard.sql` | 학생 중복 등록 DB 백스톱: 부분 unique 인덱스 users(name, password) WHERE role='student' (자리표시 비밀번호 제외). 2026-07-24 동일인 5쌍 중복 정리 후 재발 방지 — 프론트 검사(studentDedup.js·studentImport.js)와 세트 | 적용됨 (2026-07-24) |
+| `add-student-dedup-guard.sql` | 학생 중복 등록 DB 백스톱: 부분 unique 인덱스 users(name, password) WHERE role='student' (자리표시 비밀번호 제외). 2026-07-24 동일인 5쌍 중복 정리 후 재발 방지 — 프론트 검사(studentDedup.js·studentImport.js)와 세트. **인덱스는 add-password-security에서 (name, phone) 기반으로 교체됨** | 적용됨 (2026-07-24) |
+| `add-password-security.sql` | 비밀번호 보안 1단계: users.phone/parent_phone(연락처 분리) + password_changed_at(강제 재설정 플래그) + 겸용 전화번호 복사 + 중복 방지 인덱스를 (name, phone)으로 교체. 해시화는 클라이언트가 수행(로그인 시 투명 업그레이드 + 강제 재설정 모달). 전환 완료 후 parent_password drop·평문 fallback 제거 예정 | 적용됨 (2026-07-29, Studio) |
 
 ## 시드·일회성 유틸 (재실행 금지 또는 불필요)
 

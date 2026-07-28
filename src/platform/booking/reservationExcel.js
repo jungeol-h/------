@@ -1,6 +1,6 @@
 // 예약현황 엑셀용 순수 시트 빌더 + 다운로드 (centerHoursExcel 관례).
 // 상담사별 시트로 나누고 맨 앞에 '전체' 시트를 둔다. 학생·학부모 연락처는
-// users.password / parent_password에 저장된 전화번호를 파생 표시한다 (formatPhone 관례).
+// users.phone / parent_phone에 저장된 전화번호를 표시한다 (formatPhone 관례).
 
 import { formatPhone } from '../utils/formatPhone.js'
 import { reservationDisplayStatus } from './bookingStatus.js'
@@ -30,8 +30,8 @@ export function buildReservationSheets({ reservations = [], students = [], userN
       r.slot.subjectId ? subjectName(r.slot.subjectId) : '',
       educatorName(r.slot.educatorId),
       student?.name ?? userNames[r.studentId]?.name ?? r.studentId,
-      formatPhone(student?.password),
-      formatPhone(student?.parentPassword),
+      formatPhone(student?.phone),
+      formatPhone(student?.parentPhone),
       reservationDisplayStatus(r, r.slot).label,
     ]
   }

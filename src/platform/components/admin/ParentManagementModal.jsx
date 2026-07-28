@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { X, Plus, Pencil, Trash2, Search, Save, Users } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
+import { normalizePhone, isValidPhone } from './userFormUtils.js'
 
 const LOGIN_ID_RE = /^[가-힣A-Za-z0-9_]+$/
 const INVISIBLE_RE = new RegExp('\\u200B|\\u200C|\\u200D|\\uFEFF|\\u00A0', 'g')
@@ -17,7 +18,8 @@ function humanizeError(err) {
 function ParentForm({ mode, initial, initialChildIds = [], activeStudents, onSubmit, onCancel }) {
   const [name, setName] = useState(initial?.name ?? '')
   const [loginId, setLoginId] = useState(initial?.loginId ?? '')
-  const [password, setPassword] = useState(initial?.password ?? '')
+  const [phone, setPhone] = useState(initial?.phone ?? '')
+  const [resetPassword, setResetPassword] = useState(false) // edit 모드: 저장 시 비밀번호를 연락처로 초기화
   const [childIds, setChildIds] = useState(initialChildIds)
   const [query, setQuery] = useState('')
   const [saving, setSaving] = useState(false)
@@ -42,7 +44,7 @@ function ParentForm({ mode, initial, initialChildIds = [], activeStudents, onSub
     )
   }
 
-  const canSubmit = cleanText(name) && cleanText(loginId) && (isEdit || password)
+  const canSubmit = cleanText(name) && cleanText(loginId) && phone
 
   const handleSubmit = async () => {
     setErrorMsg('')
@@ -53,14 +55,19 @@ function ParentForm({ mode, initial, initialChildIds = [], activeStudents, onSub
     if (!LOGIN_ID_RE.test(loginIdClean)) {
       return setErrorMsg('로그인 ID는 한글·영문·숫자·밑줄(_)만 사용할 수 있습니다.')
     }
-    if (!isEdit && !password) return setErrorMsg('비밀번호를 입력하세요.')
+    const phoneClean = normalizePhone(phone)
+    if (!phoneClean) return setErrorMsg('연락처를 입력하세요.')
+    if (!isValidPhone(phoneClean)) {
+      return setErrorMsg('연락처는 010으로 시작하는 11자리 숫자여야 합니다.')
+    }
 
     setSaving(true)
     try {
       await onSubmit({
         name: nameClean,
         loginId: loginIdClean,
-        password: password || undefined,
+        phone: phoneClean,
+        resetPassword: isEdit ? resetPassword : undefined,
         childIds,
       })
     } catch (err) {
@@ -95,18 +102,38 @@ function ParentForm({ mode, initial, initialChildIds = [], activeStudents, onSub
       </div>
 
       <div>
-        <label className="block text-[11px] font-bold text-gray-500 mb-1">
-          비밀번호 {isEdit ? '(변경 시에만 입력)' : '*'}
-        </label>
+        <label className="block text-[11px] font-bold text-gray-500 mb-1">연락처 *</label>
         <input
-          type="text"
+          type="tel"
+          inputMode="numeric"
           autoComplete="off"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          value={phone}
+          onChange={(e) => setPhone(normalizePhone(e.target.value))}
+          maxLength={11}
           className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
-          placeholder={isEdit ? '변경하지 않으려면 비워두세요' : '비밀번호'}
+          placeholder="01012345678"
         />
+        {!isEdit && (
+          <p className="mt-1 text-[10px] text-gray-400">
+            초기 비밀번호는 연락처와 같게 설정되며, 첫 로그인 때 본인이 직접 바꿉니다.
+          </p>
+        )}
       </div>
+
+      {isEdit && (
+        <label className="flex items-start gap-2 rounded-lg border border-gray-200 px-3 py-2 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={resetPassword}
+            onChange={(e) => setResetPassword(e.target.checked)}
+            className="w-4 h-4 mt-0.5"
+          />
+          <span className="text-xs text-gray-600">
+            <span className="font-bold text-gray-700 block">비밀번호 초기화</span>
+            저장 시 비밀번호가 연락처로 재설정되고, 다음 로그인 때 새 비밀번호를 정합니다.
+          </span>
+        </label>
+      )}
 
       <div>
         <label className="block text-[11px] font-bold text-gray-500 mb-1">
@@ -187,13 +214,13 @@ export default function ParentManagementModal({ onClose }) {
       .map((l) => data.students.find((s) => s.id === l.studentId))
       .filter(Boolean)
 
-  const handleCreate = async ({ name, loginId, password, childIds }) => {
-    await addParent({ name, loginId, password, childIds })
+  const handleCreate = async ({ name, loginId, phone, childIds }) => {
+    await addParent({ name, loginId, phone, childIds })
     setView('list')
   }
 
-  const handleEdit = async (parentId, { name, loginId, password, childIds }) => {
-    await updateParent(parentId, { name, loginId, password })
+  const handleEdit = async (parentId, { name, loginId, phone, resetPassword, childIds }) => {
+    await updateParent(parentId, { name, loginId, phone, resetPassword })
     await setParentChildren(parentId, childIds)
     setView('list')
   }

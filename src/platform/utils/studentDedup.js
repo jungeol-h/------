@@ -2,29 +2,29 @@
 // 전체 상태)과 대조한다. 2026-07 실데이터에서 이름 오타·아이디 변형으로
 // login_id 검사만 뚫고 동일인이 5쌍 중복 등록된 사고의 재발 방지용.
 //
-// 판정 근거는 전화번호가 최우선이다: 비밀번호 = 학생 전화번호, 학부모
-// 비밀번호 = 학부모 전화번호 관례이므로 번호 일치는 이름이 달라도(오타)
-// 동일인일 가능성이 높다. 이름만 같은 것은 동명이인일 수 있어 약한 신호.
+// 판정 근거는 전화번호가 최우선이다: 학생 연락처(users.phone)·학부모
+// 연락처(users.parent_phone) 일치는 이름이 달라도(오타) 동일인일 가능성이
+// 높다. 이름만 같은 것은 동명이인일 수 있어 약한 신호.
 
 import { STUDENT_STATUS_LABELS } from '../data/studentStatus.js'
 
-// 일괄 등록에서 전화번호 형식 오류 시 넣는 자리표시 비밀번호 — 번호 비교에서 제외
+// 일괄 등록에서 전화번호 형식 오류 시 넣던 자리표시 값 — 번호 비교에서 제외
 export const PLACEHOLDER_PHONE = '00000000000'
 
 const validPhone = (v) => v && v !== PLACEHOLDER_PHONE && /^010\d{8}$/.test(v)
 
 // students: 관리자 컨텍스트의 전체 학생(toUser 형태, 퇴원·취소 포함 — fetchForAdmin이 보장)
-// input: { name, password, parentPassword, excludeId? } — 정규화된 값(cleanText/normalizePhone 후)
+// input: { name, phone, parentPhone, excludeId? } — 정규화된 값(cleanText/normalizePhone 후)
 // 반환: [{ student, reasons: string[], samePerson: boolean }] — samePerson=true 는
 //   동일인 가능성이 높은 매치(학생 번호 일치, 또는 이름+학부모 번호 일치)
-export function findDuplicateStudents(students, { name, password, parentPassword, excludeId } = {}) {
+export function findDuplicateStudents(students, { name, phone, parentPhone, excludeId } = {}) {
   const matches = []
   for (const s of students ?? []) {
     if (s.role !== 'student' && s.role !== undefined) continue
     if (excludeId && s.id === excludeId) continue
 
-    const phoneHit = validPhone(password) && s.password === password
-    const parentHit = validPhone(parentPassword) && s.parentPassword === parentPassword
+    const phoneHit = validPhone(phone) && s.phone === phone
+    const parentHit = validPhone(parentPhone) && s.parentPhone === parentPhone
     const nameHit = !!name && s.name === name
 
     if (!phoneHit && !parentHit && !nameHit) continue

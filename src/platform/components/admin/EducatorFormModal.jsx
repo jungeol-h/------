@@ -1,6 +1,6 @@
 // 교직원 계정 추가/수정 모달 — StudentFormModal의 자체 오버레이 패턴을 따른다
 // (ModalShell 미사용은 의도된 예외: 데스크톱 중앙 정렬 + 고정 헤더/푸터).
-// login_id = 이름, 비밀번호 = 전화번호(숫자만) 관례 (seed-staff-accounts.sql).
+// login_id = 이름 관례. 초기 비밀번호 = 본인 연락처(해시 저장), 첫 로그인 시 강제 재설정.
 
 import { useState } from 'react'
 import { X, Save } from 'lucide-react'
@@ -24,7 +24,8 @@ export default function EducatorFormModal({ mode = 'create', initial, onSubmit, 
   const [loginId, setLoginId] = useState(initial?.loginId ?? '')
   // create 모드에서 이름 입력이 login_id 기본값으로 따라가는지 여부 — 수동 수정 시 끊는다
   const [loginIdTouched, setLoginIdTouched] = useState(mode === 'edit')
-  const [password, setPassword] = useState(initial?.password ?? '')
+  const [phone, setPhone] = useState(initial?.phone ?? '')
+  const [resetPassword, setResetPassword] = useState(false) // edit 모드: 저장 시 비밀번호를 연락처로 초기화
   const [subject, setSubject] = useState(initial?.subject ?? '')
   const [groups, setGroups] = useState(() => new Set(initial?.groups ?? []))
   const [saving, setSaving] = useState(false)
@@ -40,7 +41,7 @@ export default function EducatorFormModal({ mode = 'create', initial, onSubmit, 
     setLoginIdTouched(true)
     setLoginId(e.target.value)
   }
-  const handlePasswordChange = (e) => setPassword(normalizePhone(e.target.value))
+  const handlePhoneChange = (e) => setPhone(normalizePhone(e.target.value))
   const toggleGroup = (g) => {
     setGroups((prev) => {
       const next = new Set(prev)
@@ -50,14 +51,14 @@ export default function EducatorFormModal({ mode = 'create', initial, onSubmit, 
     })
   }
 
-  const canSubmit = cleanText(name) && role && cleanText(loginId) && password
+  const canSubmit = cleanText(name) && role && cleanText(loginId) && phone
 
   const handleSubmit = async () => {
     setErrorMsg('')
 
     const nameClean = cleanText(name)
     const loginIdClean = cleanText(loginId)
-    const pwClean = normalizePhone(password)
+    const phoneClean = normalizePhone(phone)
 
     if (!nameClean) {
       setErrorMsg('이름을 입력하세요.')
@@ -71,12 +72,12 @@ export default function EducatorFormModal({ mode = 'create', initial, onSubmit, 
       setErrorMsg('로그인 ID는 한글·영문·숫자·밑줄(_)만 사용할 수 있습니다.')
       return
     }
-    if (!pwClean) {
-      setErrorMsg('비밀번호를 입력하세요.')
+    if (!phoneClean) {
+      setErrorMsg('연락처를 입력하세요.')
       return
     }
-    if (!isValidPhone(pwClean)) {
-      setErrorMsg('비밀번호는 010으로 시작하는 11자리 숫자여야 합니다.')
+    if (!isValidPhone(phoneClean)) {
+      setErrorMsg('연락처는 010으로 시작하는 11자리 숫자여야 합니다.')
       return
     }
 
@@ -86,7 +87,8 @@ export default function EducatorFormModal({ mode = 'create', initial, onSubmit, 
         name: nameClean,
         role,
         loginId: loginIdClean,
-        password: pwClean,
+        phone: phoneClean,
+        resetPassword: isEdit ? resetPassword : undefined,
         subject: role === 'instructor' ? subject : '',
         groups: [...groups],
       })
@@ -190,19 +192,38 @@ export default function EducatorFormModal({ mode = 'create', initial, onSubmit, 
           </div>
 
           <div>
-            <label className="block text-[11px] font-bold text-gray-500 mb-1">비밀번호 (연락처) *</label>
+            <label className="block text-[11px] font-bold text-gray-500 mb-1">연락처 *</label>
             <input
               type="tel"
               inputMode="numeric"
               autoComplete="off"
-              value={password}
-              onChange={handlePasswordChange}
+              value={phone}
+              onChange={handlePhoneChange}
               maxLength={11}
               className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
               placeholder="01012345678"
             />
-            <p className="mt-1 text-[10px] text-gray-400">관례: 본인 전화번호 · - 자동 제거됨 · 11자리</p>
+            <p className="mt-1 text-[10px] text-gray-400">- 자동 제거됨 · 11자리</p>
           </div>
+
+          {isEdit ? (
+            <label className="flex items-start gap-2 rounded-lg border border-gray-200 px-3 py-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={resetPassword}
+                onChange={(e) => setResetPassword(e.target.checked)}
+                className="w-4 h-4 mt-0.5"
+              />
+              <span className="text-xs text-gray-600">
+                <span className="font-bold text-gray-700 block">비밀번호 초기화</span>
+                저장 시 비밀번호가 연락처로 재설정되고, 다음 로그인 때 새 비밀번호를 정합니다.
+              </span>
+            </label>
+          ) : (
+            <p className="text-[10px] text-gray-400">
+              초기 비밀번호는 연락처와 같게 설정되며, 첫 로그인 때 본인이 직접 바꿉니다.
+            </p>
+          )}
 
           {errorMsg && (
             <div className="bg-red-50 border border-red-100 rounded-lg px-3 py-2 text-xs text-red-700">

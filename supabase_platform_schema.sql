@@ -9,13 +9,13 @@
 CREATE TABLE IF NOT EXISTS users (
   id              TEXT PRIMARY KEY,         -- 's001', 'm01', 'a01'
   login_id        TEXT UNIQUE NOT NULL,     -- 학생: 이름, 교육자: 아이디
-  password        TEXT NOT NULL,            -- 학생: 010+전화번호 8자리
+  password        TEXT NOT NULL,            -- bcrypt 해시 (초기값 = 본인 연락처, add-password-security.sql 참고)
   name            TEXT NOT NULL,
   role            TEXT NOT NULL,            -- 'student' | 'manager' | 'admin'
   school          TEXT,
   grade           TEXT,                     -- '중1' | '중2' | '중3'
   class_name      TEXT,                     -- '중1' | '중2S' | '중2A' | '중3'
-  parent_password TEXT,                     -- 학부모 전화번호 010+8자리
+  parent_password TEXT,                     -- (구) 학부모 전화번호 겸용 — parent_phone으로 분리됨, 전환 완료 후 drop 예정
   gender          TEXT,                     -- 'M' | 'F' | NULL
   self_index      INTEGER DEFAULT 70,
   risk_level      TEXT DEFAULT 'normal',    -- 'normal' | 'warning' | 'danger'
@@ -28,6 +28,9 @@ CREATE TABLE IF NOT EXISTS users (
 ALTER TABLE users ADD COLUMN IF NOT EXISTS class_name      TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS parent_password TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS gender          TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS phone           TEXT;  -- 학생/본인 연락처 (add-password-security.sql)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS parent_phone    TEXT;  -- 학부모 연락처
+ALTER TABLE users ADD COLUMN IF NOT EXISTS password_changed_at TIMESTAMPTZ;  -- null = 첫 로그인 시 강제 재설정
 ALTER TABLE users DROP CONSTRAINT IF EXISTS users_gender_check;
 ALTER TABLE users ADD CONSTRAINT users_gender_check CHECK (gender IN ('M', 'F') OR gender IS NULL);
 
