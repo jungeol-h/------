@@ -8,7 +8,9 @@
 import { supabase } from './supabase.js'
 
 const BUCKET = 'task-files'
-export const MAX_TASK_FILE_MB = 10
+// 100MB까지 허용 (2026-07 클라이언트 요청). Supabase 프로젝트 설정의
+// 글로벌 업로드 한도(Settings > Storage)가 이 값 이상이어야 실제로 통과한다.
+export const MAX_TASK_FILE_MB = 100
 export const MAX_TASK_FILES = 5
 
 const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
@@ -31,8 +33,10 @@ export function isImageTaskFile(att) {
 }
 
 // File[] 업로드 → 메타 배열 [{ path, name, size }]
-export async function uploadTaskFiles(files, uploaderId) {
+// onProgress(done, total): 파일 단위 진행 콜백 — 대용량(100MB) 업로드 체감용
+export async function uploadTaskFiles(files, uploaderId, onProgress) {
   const uploaded = []
+  onProgress?.(0, files.length)
   for (const file of files) {
     const ext = (file.name.match(/\.([a-zA-Z0-9]+)$/)?.[1] ?? 'bin').toLowerCase()
     const path = `${uploaderId || 'unknown'}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
@@ -41,6 +45,7 @@ export async function uploadTaskFiles(files, uploaderId) {
       .upload(path, file, { contentType: file.type || undefined })
     if (error) throw error
     uploaded.push({ path, name: file.name, size: file.size })
+    onProgress?.(uploaded.length, files.length)
   }
   return uploaded
 }

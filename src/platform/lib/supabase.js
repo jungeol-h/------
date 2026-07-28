@@ -7,9 +7,10 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 // 나간 fetch가 에러도 없이 영원히 pending으로 남을 수 있다 (초기 로딩이 안 끝나는 원인).
 // 모든 요청에 타임아웃 상한을 걸어 "무한 대기"를 "실패"로 전환한다 — 실패는
 // DataContext의 재시도와 _fetchErrors UI가 받아서 처리한다.
-// storage는 대용량 파일 업로드가 있어 상한을 넉넉히 둔다.
+// storage는 대용량 파일 업로드가 있어 상한을 넉넉히 둔다
+// (과제 제출 100MB — 느린 회선에서 수 분 걸릴 수 있음).
 const REST_TIMEOUT_MS = 15_000
-const STORAGE_TIMEOUT_MS = 120_000
+const STORAGE_TIMEOUT_MS = 600_000
 
 function fetchWithTimeout(input, init = {}) {
   if (typeof AbortSignal?.timeout !== 'function') return fetch(input, init)

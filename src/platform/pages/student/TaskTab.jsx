@@ -42,6 +42,7 @@ function SubmissionArea({ task, onError }) {
   const { setTaskSubmissions } = useData()
   const inputRef = useRef(null)
   const [busy, setBusy] = useState(false)
+  const [progress, setProgress] = useState(null) // { done, total } — 대용량 업로드 체감용
   const submissions = task.submissions ?? []
 
   const handlePick = async (e) => {
@@ -64,12 +65,13 @@ function SubmissionArea({ task, onError }) {
     if (valid.length === 0) return
     setBusy(true)
     try {
-      const uploaded = await uploadTaskFiles(valid, task.studentId)
+      const uploaded = await uploadTaskFiles(valid, task.studentId, (done, total) => setProgress({ done, total }))
       await setTaskSubmissions(task.id, [...submissions, ...uploaded])
     } catch {
       onError?.()
     } finally {
       setBusy(false)
+      setProgress(null)
     }
   }
 
@@ -116,7 +118,9 @@ function SubmissionArea({ task, onError }) {
         className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-gray-200 text-xs text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-40"
       >
         {busy ? <Upload size={13} className="animate-pulse" /> : <Paperclip size={13} />}
-        {busy ? '업로드 중...' : submissions.length > 0 ? '파일 추가 제출' : '과제 제출하기'}
+        {busy
+          ? progress && progress.total > 1 ? `업로드 중... ${progress.done}/${progress.total}` : '업로드 중...'
+          : submissions.length > 0 ? '파일 추가 제출' : '과제 제출하기'}
       </button>
       {submissions.length === 0 && (
         <p className="text-[10px] text-gray-400 text-center">이미지·PDF · 최대 {MAX_TASK_FILES}개 · 개당 {MAX_TASK_FILE_MB}MB</p>
