@@ -61,6 +61,7 @@ DB 스키마 변경은 **Supabase Studio SQL Editor에서 수동 실행**한다 
 | 파일 | 내용 |
 |---|---|
 | `seed-test-accounts.sql` / `seed-staff-accounts.sql` | 베타 계정·교직원 7명 시드 (적용됨). 황광희(admin)는 FK CASCADE 때문에 delete-then-insert 금지 — 조건부 insert 유지 |
+| `seed-test-cast.sql` | **전 역할 테스트 캐스트**: 테스트관리자·매니저·강사·컨설턴트·열람자·학부모 6계정 + 황준걸중1~3 재활용(비밀번호·연락처·그룹 갱신). 공통 비밀번호 `테스트1234`(bcrypt, 재설정 면제), 직원은 group_names=['테스트']로 실데이터와 격리, 학부모 링크·강사 배정·평일 15~21시 출결 시간표 포함. 로컬 dev 빠른 로그인 패널(DevQuickLogin)과 세트. upsert 멱등 — 재실행 안전 | **미적용 — Studio 실행 필요** |
 | `seed-quiz-content.sql` | 확인평가 초기 문항 시드 (적용됨) |
 | `seed-external-program.sql` | 외부(외생) 상담 프로그램 시드 — **외부학생 명단 수령 후 실행 예정 (보류 중, 2026-07-20 실DB 재확인: cp-2026-andong 없음)**. 클라이언트가 앱 UI로 프로그램("133 찾아가는 컨설팅")을 직접 생성해 운영 중(학생 0명) — 시드 실행 시 프로그램 중복 생성 주의, 명단은 기존 UI 프로그램에 등록하는 편이 자연스러움 |
 | `seed-navi4-students.sql` | 안동NAVI 4기 학생 77명 시드 (신청서 엑셀 기반, 신청취소 5명 status='cancelled') — **적용됨 (2026-07-17, REST로 삽입)**. 재실행해도 안전(on conflict do nothing). 이후 명단은 앱의 관리자 → 학생 → 일괄 등록으로 처리 가능 |

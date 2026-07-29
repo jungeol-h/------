@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { GraduationCap, Eye, EyeOff, Loader, Download } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
+import DevQuickLogin from '../components/dev/DevQuickLogin.jsx'
 
 const ROLE_PATHS = {
   student: '/student',
@@ -114,6 +115,9 @@ export default function LoginPage() {
             {loading ? '로그인 중...' : '로그인'}
           </button>
         </form>
+
+        {/* 개발 전용 — 프로덕션 빌드에서는 코드째 제거된다 */}
+        {import.meta.env.DEV && <DevQuickLogin />}
 
         {/* 안내 */}
         <div className="mt-5 px-4 py-3 bg-white/60 rounded-xl text-xs text-gray-500 space-y-1">
