@@ -61,8 +61,8 @@ END $$;
 
 -- ----------------------------------------------------------------
 -- 4. RPC: 키오스크 번호 매칭
---    password(010+8자리) 뒷 4자리로 active 학생 검색.
---    password 원문은 반환하지 않는다 (클라이언트 노출 금지).
+--    phone(연락처 전용 컬럼, add-password-security) 뒷 4자리로 active 학생 검색.
+--    (구현이 password 뒷 4자리였던 시절이 있었다 — 해시 전환 후 fix-kiosk-phone-lookup.sql로 교체)
 -- ----------------------------------------------------------------
 CREATE OR REPLACE FUNCTION kiosk_find_students(p_digits TEXT)
 RETURNS TABLE (
@@ -83,7 +83,7 @@ LANGUAGE sql SECURITY DEFINER AS $$
    AND ar.date = (now() AT TIME ZONE 'Asia/Seoul')::date
   WHERE u.role = 'student'
     AND u.status = 'active'
-    AND right(u.password, 4) = p_digits
+    AND right(u.phone, 4) = p_digits
   ORDER BY u.name;
 $$;
 

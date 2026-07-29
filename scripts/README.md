@@ -54,6 +54,7 @@ DB 스키마 변경은 **Supabase Studio SQL Editor에서 수동 실행**한다 
 | `add-quiz-question-points.sql` | quiz_questions.points (서술형 배점 — 교사가 0~배점 점수 입력 채점, 단답형·기존 데이터는 1점) | 적용됨 (2026-07-23) |
 | `add-student-dedup-guard.sql` | 학생 중복 등록 DB 백스톱: 부분 unique 인덱스 users(name, password) WHERE role='student' (자리표시 비밀번호 제외). 2026-07-24 동일인 5쌍 중복 정리 후 재발 방지 — 프론트 검사(studentDedup.js·studentImport.js)와 세트. **인덱스는 add-password-security에서 (name, phone) 기반으로 교체됨** | 적용됨 (2026-07-24) |
 | `add-password-security.sql` | 비밀번호 보안 1단계: users.phone/parent_phone(연락처 분리) + password_changed_at(강제 재설정 플래그) + 겸용 전화번호 복사 + 중복 방지 인덱스를 (name, phone)으로 교체. 해시화는 클라이언트가 수행(로그인 시 투명 업그레이드 + 강제 재설정 모달). 전환 완료 후 parent_password drop·평문 fallback 제거 예정 | 적용됨 (2026-07-29, Studio) |
+| `fix-kiosk-phone-lookup.sql` | **긴급 핫픽스**: kiosk_find_students 매칭을 right(password,4) → right(phone,4)로 교체. 해시 전환 후 키오스크가 학생을 못 찾던 라이브 장애 해소 (add-password-security 후속 누락분) | **미적용 — Studio 즉시 실행 필요** |
 
 ## 시드·일회성 유틸 (재실행 금지 또는 불필요)
 

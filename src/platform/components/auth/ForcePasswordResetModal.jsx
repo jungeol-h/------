@@ -8,11 +8,13 @@ import { useAuth } from '../../context/AuthContext.jsx'
 import { validateNewPassword, PASSWORD_MIN_LENGTH } from '../../lib/passwords.js'
 
 export default function ForcePasswordResetModal() {
-  const { currentUser, completeForcedReset, logout } = useAuth()
+  const { currentUser, completeForcedReset, logout, syncPasswordChangedAt } = useAuth()
   const [pw, setPw] = useState('')
   const [pw2, setPw2] = useState('')
   const [saving, setSaving] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
+  // 다른 기기에서 이미 재설정을 마친 경우 — 입력값을 버리고 안내만 한다
+  const [doneElsewhereAt, setDoneElsewhereAt] = useState(null)
 
   const canSave = !saving && pw && pw2
 
@@ -32,11 +34,40 @@ export default function ForcePasswordResetModal() {
     }
     setSaving(true)
     try {
-      await completeForcedReset(pw)
+      const res = await completeForcedReset(pw)
+      if (res?.alreadyReset) {
+        setDoneElsewhereAt(res.changedAt)
+        setSaving(false)
+      }
     } catch (err) {
       setErrorMsg(err?.message ?? '저장 중 오류가 발생했습니다. 다시 시도해주세요.')
       setSaving(false)
     }
+  }
+
+  if (doneElsewhereAt) {
+    return (
+      <div className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center px-4">
+        <div className="bg-white rounded-2xl w-full max-w-sm p-5 space-y-4">
+          <div className="text-center space-y-1.5">
+            <div className="inline-flex items-center justify-center w-12 h-12 bg-blue-50 rounded-2xl">
+              <KeyRound size={24} className="text-blue-500" />
+            </div>
+            <h3 className="font-bold text-gray-900 text-base">이미 비밀번호를 설정했어요</h3>
+            <p className="text-xs text-gray-500 leading-relaxed">
+              다른 기기에서 먼저 설정한 비밀번호가 그대로 유지돼요.
+              방금 입력한 값이 아니라 <b>먼저 설정한 비밀번호</b>로 로그인해 주세요.
+            </p>
+          </div>
+          <button
+            onClick={() => syncPasswordChangedAt(doneElsewhereAt)}
+            className="w-full py-3 rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-semibold text-sm transition-colors"
+          >
+            확인
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
