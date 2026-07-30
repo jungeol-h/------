@@ -14,12 +14,15 @@ import { addDaysStr, minutesToTime, overlaps, timeToMinutes } from './bookingRul
 //   educatorId, subjectId, isPublic, note  슬롯 공통 속성 (선택)
 //   breaks          [{ start: 'HH:MM', end: 'HH:MM' }] 휴식·예약 불가시간 (선택)
 //   excludeDates    ['YYYY-MM-DD'] 휴무일 (선택)
+//   blocked         [{ date, startTime, endTime }] 이미 점유된 시간대 (선택) —
+//                   같은 강사의 기존 슬롯(강사지정예약 포함)과 겹치는 슬롯은 만들지
+//                   않는다. SQL의 _booking_generate_rule_slots와 같은 의미론.
 // 반환: [{ date, startTime, endTime, capacity, educatorId, subjectId, isPublic, note }]
 export function generateSlots(params) {
   const {
     from, to, weekdays = [], dayStart, dayEnd, slotMinutes, capacity = 1,
     educatorId = null, subjectId = null, isPublic = true, note = '',
-    breaks = [], excludeDates = [],
+    breaks = [], excludeDates = [], blocked = [],
   } = params
 
   if (!from || !to || from > to) return []
@@ -41,6 +44,10 @@ export function generateSlots(params) {
       const endTime = minutesToTime(t + slotMinutes)
       const hitsBreak = breaks.some((b) => overlaps(startTime, endTime, b.start, b.end))
       if (hitsBreak) continue
+      const hitsBlocked = blocked.some(
+        (b) => b.date === date && overlaps(startTime, endTime, b.startTime, b.endTime),
+      )
+      if (hitsBlocked) continue
       slots.push({ date, startTime, endTime, capacity, educatorId, subjectId, isPublic, note })
     }
   }

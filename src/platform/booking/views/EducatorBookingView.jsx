@@ -19,6 +19,7 @@ import SlotEditorModal from '../components/SlotEditorModal.jsx'
 import AvailabilityRulesSection from '../components/AvailabilityRulesSection.jsx'
 import RecordFormModal from '../components/RecordFormModal.jsx'
 import GroupAssignModal from '../components/GroupAssignModal.jsx'
+import DesignatedReserveModal from '../components/DesignatedReserveModal.jsx'
 
 const MENUS = [
   { key: 'slots', label: '내 슬롯' },
@@ -55,6 +56,7 @@ export default function EducatorBookingView({ isAdmin = false }) {
   const [editSlot, setEditSlot] = useState(null)
   const [recordTarget, setRecordTarget] = useState(null)
   const [groupModal, setGroupModal] = useState(null) // { program, existingSlot? }
+  const [designatedOpen, setDesignatedOpen] = useState(false)
   const [attFail, setAttFail] = useState(null)
 
   const myId = currentUser?.id
@@ -115,6 +117,18 @@ export default function EducatorBookingView({ isAdmin = false }) {
       {/* 예약 가능 시간의 단일 홈 — 매주 반복(규칙) + 특정 날짜 추가.
           아래 주간 목록은 그 결과를 확인·수정하는 달력 뷰다 */}
       <AvailabilityRulesSection educatorId={isAdmin ? null : myId} />
+
+      {/* 강사지정예약 — 학생·시간 지정 고정 예약 (반복 가능). 지정된 시간대에는
+          타임테이블이 예약 가능 시간을 만들지 않는다 (2026-07-30 클라이언트 요청) */}
+      {myPrograms.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setDesignatedOpen(true)}
+          className="w-full h-10 rounded-xl border border-dashed border-indigo-300 text-indigo-600 text-xs font-bold flex items-center justify-center gap-1"
+        >
+          <Plus size={14} /> 강사지정예약 — 학생·시간을 지정해 고정
+        </button>
+      )}
 
       <div className="flex items-center justify-between pt-2">
         <button type="button" onClick={() => setWeekStart(addDaysStr(weekStart, -7))} className="p-2 rounded-lg bg-gray-100"><ChevronLeft size={16} /></button>
@@ -433,6 +447,13 @@ export default function EducatorBookingView({ isAdmin = false }) {
           subjectOptions={config.subjects.filter((s) => s.programId === groupModal.program.id && s.active)}
           existingSlot={groupModal.existingSlot}
           onClose={() => setGroupModal(null)}
+        />
+      )}
+      {designatedOpen && (
+        <DesignatedReserveModal
+          educatorId={myId}
+          programs={myPrograms}
+          onClose={() => setDesignatedOpen(false)}
         />
       )}
     </div>

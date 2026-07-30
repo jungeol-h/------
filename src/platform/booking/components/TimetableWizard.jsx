@@ -10,6 +10,7 @@
 import { useMemo, useState } from 'react'
 import { X } from 'lucide-react'
 import ModalShell from '../../components/common/ModalShell.jsx'
+import TimeField from '../../components/common/TimeField.jsx'
 import { todayStr } from '../../utils/dateUtils.js'
 import { makeId } from '../../context/dataModel.js'
 import { addDaysStr } from '../bookingRules.js'
@@ -26,7 +27,7 @@ const WEEKDAYS = [
 export default function TimetableWizard({
   onClose, lockEducatorId = null, intent = 'dated', lockProgramId = null,
 }) {
-  const { config, userNames, createSlotBatch, saveTimetableTemplates, actor } = useBooking()
+  const { config, userNames, slots, createSlotBatch, saveTimetableTemplates, actor } = useBooking()
   const isAdmin = actor.role === 'admin'
   const templates = config.templates ?? []
   const isPrebook = intent === 'prebook'
@@ -73,6 +74,7 @@ export default function TimetableWizard({
   const subjectOptions = config.subjects.filter((s) => s.programId === form.programId && s.active)
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
+  const setTime = (key) => (v) => setForm((f) => ({ ...f, [key]: v }))
   const toggleDay = (d) => {
     setAppliedTemplateId(null)
     setForm((f) => ({
@@ -144,6 +146,15 @@ export default function TimetableWizard({
     [form.from, form.to, form.weekdays],
   )
 
+  // 담당 강사의 기존 슬롯(강사지정예약 포함, 취소 제외)과 겹치는 시간은 만들지
+  // 않는다 — SQL 규칙 파생(_booking_generate_rule_slots)과 같은 의미론 (2026-07-30)
+  const blocked = useMemo(
+    () => (form.educatorId
+      ? slots.filter((s) => s.educatorId === form.educatorId && s.status !== 'cancelled')
+      : []),
+    [slots, form.educatorId],
+  )
+
   const preview = useMemo(() => {
     if (!program) return []
     return generateSlots({
@@ -160,10 +171,29 @@ export default function TimetableWizard({
         ? [{ start: form.breakStart, end: form.breakEnd }]
         : [],
       excludeDates,
+      blocked,
     })
-  }, [program, form, excludeDates, effectiveWeekdays])
+  }, [program, form, excludeDates, effectiveWeekdays, blocked])
 
   const previewDays = useMemo(() => new Set(preview.map((s) => s.date)).size, [preview])
+
+  // 겹침으로 제외된 슬롯 수 — 미리보기에 안내
+  const blockedCount = useMemo(() => {
+    if (!program || blocked.length === 0) return 0
+    const without = generateSlots({
+      from: form.from,
+      to: form.to,
+      weekdays: effectiveWeekdays,
+      dayStart: form.dayStart,
+      dayEnd: form.dayEnd,
+      slotMinutes: program.slotMinutes,
+      breaks: form.breakStart && form.breakEnd
+        ? [{ start: form.breakStart, end: form.breakEnd }]
+        : [],
+      excludeDates,
+    })
+    return without.length - preview.length
+  }, [program, form, excludeDates, effectiveWeekdays, blocked, preview])
 
   const submit = async () => {
     if (!program || busy) return
@@ -335,29 +365,27 @@ export default function TimetableWizard({
         </label>
         <label className="text-xs text-gray-500">
           운영 시작
-          <input
-            type="time"
+          <TimeField
             value={form.dayStart}
-            onChange={(e) => { setAppliedTemplateId(null); set('dayStart')(e) }}
+            onChange={(v) => { setAppliedTemplateId(null); setTime('dayStart')(v) }}
             className={`${FIELD} w-full mt-1`}
           />
         </label>
         <label className="text-xs text-gray-500">
           운영 종료
-          <input
-            type="time"
+          <TimeField
             value={form.dayEnd}
-            onChange={(e) => { setAppliedTemplateId(null); set('dayEnd')(e) }}
+            onChange={(v) => { setAppliedTemplateId(null); setTime('dayEnd')(v) }}
             className={`${FIELD} w-full mt-1`}
           />
         </label>
         <label className="text-xs text-gray-500">
           휴식 시작 (선택)
-          <input type="time" value={form.breakStart} onChange={set('breakStart')} className={`${FIELD} w-full mt-1`} />
+          <TimeField value={form.breakStart} onChange={setTime('breakStart')} className={`${FIELD} w-full mt-1`} />
         </label>
         <label className="text-xs text-gray-500">
           휴식 종료 (선택)
-          <input type="time" value={form.breakEnd} onChange={set('breakEnd')} className={`${FIELD} w-full mt-1`} />
+          <TimeField value={form.breakEnd} onChange={setTime('breakEnd')} className={`${FIELD} w-full mt-1`} />
         </label>
         <label className="text-xs text-gray-500">
           슬롯 정원 (기본 {program?.defaultCapacity ?? 1})
@@ -413,6 +441,11 @@ export default function TimetableWizard({
       <div className="rounded-xl bg-gray-50 p-3 text-xs text-gray-600">
         미리보기: <b>{previewDays}일 × 슬롯 {preview.length}개</b>가{' '}
         <b>{form.publishNow ? '예약공개' : '작성중'}</b> 상태로 생성됩니다.
+        {blockedCount > 0 && (
+          <span className="block mt-1 text-orange-500">
+            강사의 기존 슬롯·지정 예약과 겹치는 {blockedCount}개는 만들지 않습니다.
+          </span>
+        )}
         {preview.length > 0 && (
           <span className="block mt-1 text-gray-400">
             예: {preview[0].date} {preview[0].startTime}~{preview[0].endTime} ...

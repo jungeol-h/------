@@ -389,6 +389,15 @@ describe('generateSlots', () => {
     expect(generateSlots({ from: NEXT_DAY, to: DAY, dayStart: '16:00', dayEnd: '20:00', slotMinutes: 20 })).toEqual([])
     expect(generateSlots({ from: DAY, to: DAY, dayStart: '20:00', dayEnd: '16:00', slotMinutes: 20 })).toEqual([])
   })
+  it('blocked(기존 슬롯·강사지정예약)와 겹치는 슬롯은 만들지 않는다', () => {
+    const slots = generateSlots({
+      from: DAY, to: NEXT_DAY, weekdays: [2, 3], dayStart: '16:00', dayEnd: '17:00', slotMinutes: 20,
+      blocked: [{ date: DAY, startTime: '16:10', endTime: '16:30' }], // 16:00·16:20 블록과 겹침
+    })
+    expect(slots.filter((s) => s.date === DAY).map((s) => s.startTime)).toEqual(['16:40'])
+    // 다른 날짜는 영향 없음
+    expect(slots.filter((s) => s.date === NEXT_DAY)).toHaveLength(3)
+  })
 })
 
 // ─── 헬퍼 경계 ────────────────────────────────────────────────
