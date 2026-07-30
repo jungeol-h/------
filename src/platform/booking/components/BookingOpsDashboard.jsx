@@ -3,13 +3,17 @@
 
 // 파생 계산은 React Compiler가 자동 메모이즈한다 — 수동 useMemo는 클로저 의존성
 // 추론과 충돌해 컴파일 스킵을 유발하므로 쓰지 않는다.
+import { useNavigate } from 'react-router-dom'
 import { todayStr } from '../../utils/dateUtils.js'
 import { useBooking } from '../BookingContext.jsx'
+import { useData } from '../../context/DataContext.jsx'
 import { overlaps, todayStrKst } from '../bookingRules.js'
 import { recordState } from '../bookingStatus.js'
 
 export default function BookingOpsDashboard() {
   const { config, slots, reservations, records, userNames } = useBooking()
+  const { data } = useData()
+  const navigate = useNavigate()
   const today = todayStr()
 
   const studentName = (id) => userNames[id]?.name ?? id
@@ -45,9 +49,18 @@ export default function BookingOpsDashboard() {
   })()
 
   // ─── 미처리 업무 ────────────────────────────────────────────
+  // 상담이 실제로 이뤄진 흔적(예약 상담기록 done, 또는 같은 학생·같은 날짜의 일반
+  // 상담기록)이 있으면 출결 미처리 목록에서 제외한다 — 출결 처리와 기록 작성이
+  // 별도 경로라 "기록을 다 썼는데 계속 미처리로 뜬다"는 민원이 있었다 (2026-07-30).
   const kstToday = todayStrKst()
+  const counselingRecords = data.counselingRecords ?? []
+  const looksHandled = (r) => {
+    if (records.some((x) => x.reservationId === r.id && x.status === 'done')) return true
+    return counselingRecords.some((c) => c.studentId === r.studentId && c.date === r.slot.date)
+  }
   const pendingAttendance = reservations
     .filter((r) => r.status === 'confirmed' && r.attendanceStatus === 'pending' && r.slot && r.slot.date < kstToday)
+    .filter((r) => !looksHandled(r))
     .sort((a, b) => (a.slot.date < b.slot.date ? -1 : 1))
 
   const recordIssues = (() => {
@@ -158,11 +171,17 @@ export default function BookingOpsDashboard() {
     return Math.round((new Date(ty, tm - 1, td) - new Date(y, m - 1, d)) / 86_400_000)
   }
 
+  // 누르면 해당 학생의 기록 페이지로 이동 (2026-07-30 클라이언트 요청)
   const resLine = (r) => (
-    <div key={r.id} className="bg-white rounded-lg shadow-sm px-3 py-2 text-xs text-gray-600 flex justify-between">
+    <button
+      key={r.id}
+      type="button"
+      onClick={() => navigate(`/admin/student/${r.studentId}`)}
+      className="w-full bg-white rounded-lg shadow-sm px-3 py-2 text-xs text-gray-600 flex justify-between gap-2 text-left hover:bg-blue-50/50"
+    >
       <span>{r.slot.date} {r.slot.startTime} · {studentName(r.studentId)} · {programName(r.programId)}</span>
-      <span className="text-gray-400">{educatorName(r.slot.educatorId)} · {daysSince(r.slot.date)}일 경과</span>
-    </div>
+      <span className="text-gray-400 flex-shrink-0">{educatorName(r.slot.educatorId)} · {daysSince(r.slot.date)}일 경과</span>
+    </button>
   )
 
   return (
