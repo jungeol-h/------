@@ -6,7 +6,8 @@ import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
   // docs/에는 보관된 과거 레포(빌드 산출물 포함)가 있어 lint 대상에서 제외한다.
-  globalIgnores(['dist', 'docs']),
+  // .claude/에는 에이전트 워크트리 사본이 생길 수 있어 함께 제외한다.
+  globalIgnores(['dist', 'docs', '.claude']),
   {
     files: ['**/*.{js,jsx}'],
     extends: [

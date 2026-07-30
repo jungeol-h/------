@@ -3,6 +3,7 @@
 
 import { useMemo, useState } from 'react'
 import ModalShell from '../../components/common/ModalShell.jsx'
+import TimeField from '../../components/common/TimeField.jsx'
 import { useData } from '../../context/DataContext.jsx'
 import { useBooking } from '../BookingContext.jsx'
 import { bookingMessage } from '../bookingMessages.js'
@@ -35,6 +36,7 @@ export default function GroupAssignModal({ program, educatorId, subjectOptions, 
   const [busy, setBusy] = useState(false)
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
+  const setTime = (key) => (v) => setForm((f) => ({ ...f, [key]: v }))
   const toggle = (id) => setSelected((prev) => {
     const next = new Set(prev)
     if (next.has(id)) next.delete(id)
@@ -105,11 +107,11 @@ export default function GroupAssignModal({ program, educatorId, subjectOptions, 
           </label>
           <label className="text-xs text-gray-500">
             시작
-            <input type="time" value={form.startTime} onChange={set('startTime')} className={`${FIELD} w-full mt-1`} />
+            <TimeField value={form.startTime} onChange={setTime('startTime')} className={`${FIELD} w-full mt-1`} />
           </label>
           <label className="text-xs text-gray-500">
             종료 (기본 {program.slotMinutes}분)
-            <input type="time" value={form.endTime} onChange={set('endTime')} placeholder={endTime} className={`${FIELD} w-full mt-1`} />
+            <TimeField value={form.endTime} onChange={setTime('endTime')} placeholder={endTime} className={`${FIELD} w-full mt-1`} />
           </label>
           {program.usesSubject && (
             <label className="text-xs text-gray-500">

@@ -10,6 +10,7 @@ import {
 import { educatorDisplayName } from '../../utils/educatorName.js'
 import StudentCombobox from './StudentCombobox.jsx'
 import MultiStudentSelect from '../common/MultiStudentSelect.jsx'
+import TimeField from '../common/TimeField.jsx'
 import CounselingFormModal, { COUNSELING_MAX_STUDENTS } from './CounselingFormModal.jsx'
 import CounselingContentFields from './CounselingContentFields.jsx'
 import CounselingRecordBody from './CounselingRecordBody.jsx'
@@ -223,19 +224,17 @@ export default function CounselingTabContent({ students, records, showAuthor = f
           </div>
           <div>
             <label className="text-xs text-gray-500 mb-1 block">시작시간</label>
-            <input
-              type="time"
+            <TimeField
               value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
+              onChange={setStartTime}
               className={`${fieldClass} w-full`}
             />
           </div>
           <div>
             <label className="text-xs text-gray-500 mb-1 block">종료시간</label>
-            <input
-              type="time"
+            <TimeField
               value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
+              onChange={setEndTime}
               className={`${fieldClass} w-full`}
             />
           </div>

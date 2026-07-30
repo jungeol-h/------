@@ -3,6 +3,7 @@ import { CheckCheck, Pencil, Trash2 } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
 import ModalShell from '../common/ModalShell.jsx'
+import TimeField from '../common/TimeField.jsx'
 import {
   MANAGEMENT_WORK_TYPES, MANAGEMENT_WORK_TYPE_LABELS,
 } from '../../data/workRecordTypes.js'
@@ -26,6 +27,7 @@ const fieldClass =
 // 관리보고 폼 필드 그룹 — 작성 섹션과 수정 모달이 공유.
 function ManagementFields({ value, onChange }) {
   const set = (key) => (e) => onChange({ ...value, [key]: e.target.value })
+  const setTime = (key) => (v) => onChange({ ...value, [key]: v })
   return (
     <>
       <div className="grid grid-cols-2 gap-3">
@@ -45,11 +47,11 @@ function ManagementFields({ value, onChange }) {
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="text-xs text-gray-500 mb-1 block">시작시간</label>
-          <input type="time" value={value.startTime} onChange={set('startTime')} className={`${fieldClass} w-full`} />
+          <TimeField value={value.startTime} onChange={setTime('startTime')} className={`${fieldClass} w-full`} />
         </div>
         <div>
           <label className="text-xs text-gray-500 mb-1 block">종료시간</label>
-          <input type="time" value={value.endTime} onChange={set('endTime')} className={`${fieldClass} w-full`} />
+          <TimeField value={value.endTime} onChange={setTime('endTime')} className={`${fieldClass} w-full`} />
         </div>
       </div>
       <div>

@@ -15,6 +15,7 @@ import { toDateStr } from '../../utils/dateUtils.js'
 import { getAttendanceSummary } from '../../context/selectors/attendanceStats.js'
 import { buildReflectionData } from '../../context/selectors/reflectionReport.js'
 import DownloadPdfButton from '../../pdf/components/DownloadPdfButton.jsx'
+import TimeField from '../../components/common/TimeField.jsx'
 import { buildFilename, nowDateTime } from '../../pdf/utils/formatters.js'
 import { authorOf } from '../../pdf/config/meta.js'
 import {
@@ -685,10 +686,9 @@ function PlanTab({ studentId, records }) {
                     <span className="text-[11px] font-bold text-gray-500">
                       시작 시각 (선택) — 입력하면 홈 화면 학습계획표에 표시돼요
                     </span>
-                    <input
-                      type="time"
+                    <TimeField
                       value={rowValue(row, 'startTime') ?? ''}
-                      onChange={(e) => updateFieldValue(row, 'startTime', e.target.value)}
+                      onChange={(v) => updateFieldValue(row, 'startTime', v)}
                       className="w-full h-10 px-3 rounded-lg border border-gray-200 bg-white text-sm focus:outline-none focus:border-blue-400"
                     />
                   </label>

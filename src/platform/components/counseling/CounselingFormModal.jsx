@@ -11,6 +11,7 @@ import CounselingContentFields from './CounselingContentFields.jsx'
 import { AttachmentField } from './AttachmentField.jsx'
 import { uploadCounselingPdfs, removeCounselingFiles, filterUnreferencedPaths } from '../../lib/counselingFiles.js'
 import MultiStudentSelect from '../common/MultiStudentSelect.jsx'
+import TimeField from '../common/TimeField.jsx'
 import { todayStr } from '../../utils/dateUtils.js'
 
 // 상담 작성 모달 — 매니저/관리자/학생상세에서 재사용. 코칭 모달(ManagerHomeTab) 패턴 차용.
@@ -143,19 +144,17 @@ export default function CounselingFormModal({ students = [], fixedStudent, recor
           </div>
           <div>
             <label className="text-xs text-gray-500 mb-1 block">시작시간</label>
-            <input
-              type="time"
+            <TimeField
               value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
+              onChange={setStartTime}
               className={fieldClass}
             />
           </div>
           <div>
             <label className="text-xs text-gray-500 mb-1 block">종료시간</label>
-            <input
-              type="time"
+            <TimeField
               value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
+              onChange={setEndTime}
               className={fieldClass}
             />
           </div>

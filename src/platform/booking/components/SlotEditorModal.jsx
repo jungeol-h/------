@@ -5,6 +5,7 @@
 
 import { useState } from 'react'
 import ModalShell from '../../components/common/ModalShell.jsx'
+import TimeField from '../../components/common/TimeField.jsx'
 import { useBooking } from '../BookingContext.jsx'
 import { bookingMessage } from '../bookingMessages.js'
 import { SLOT_STATUS } from '../bookingStatus.js'
@@ -29,6 +30,7 @@ export default function SlotEditorModal({ slot, program, onClose, isAdmin = fals
   const [busy, setBusy] = useState(false)
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
+  const setTime = (key) => (v) => setForm((f) => ({ ...f, [key]: v }))
   const needsReason = affected.length > 0
 
   const submit = async (del = false) => {
@@ -87,11 +89,11 @@ export default function SlotEditorModal({ slot, program, onClose, isAdmin = fals
         </label>
         <label className="text-xs text-gray-500">
           시작
-          <input type="time" value={form.startTime} onChange={set('startTime')} className={`${FIELD} w-full mt-1`} />
+          <TimeField value={form.startTime} onChange={setTime('startTime')} className={`${FIELD} w-full mt-1`} />
         </label>
         <label className="text-xs text-gray-500">
           종료
-          <input type="time" value={form.endTime} onChange={set('endTime')} className={`${FIELD} w-full mt-1`} />
+          <TimeField value={form.endTime} onChange={setTime('endTime')} className={`${FIELD} w-full mt-1`} />
         </label>
         <label className="text-xs text-gray-500">
           정원

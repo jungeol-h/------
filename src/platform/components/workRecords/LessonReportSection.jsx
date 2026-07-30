@@ -6,6 +6,7 @@ import { LESSON_MAX_STUDENTS } from '../../data/workRecordTypes.js'
 import { educatorDisplayName } from '../../utils/educatorName.js'
 import StudentCombobox from '../counseling/StudentCombobox.jsx'
 import ModalShell from '../common/ModalShell.jsx'
+import TimeField from '../common/TimeField.jsx'
 import { todayStr as today } from '../../utils/dateUtils.js'
 
 
@@ -28,6 +29,7 @@ const fieldClass =
 // 참여학생은 WorkPlanFormModal의 콤보박스+칩 패턴, 최대 10명.
 function LessonFields({ value, onChange, students }) {
   const set = (key) => (e) => onChange({ ...value, [key]: e.target.value })
+  const setTime = (key) => (v) => onChange({ ...value, [key]: v })
 
   const addStudent = (id) => {
     if (!id || value.studentIds.includes(id)) return
@@ -72,11 +74,11 @@ function LessonFields({ value, onChange, students }) {
         </div>
         <div>
           <label className="text-xs text-gray-500 mb-1 block">시작시간</label>
-          <input type="time" value={value.startTime} onChange={set('startTime')} className={`${fieldClass} w-full`} />
+          <TimeField value={value.startTime} onChange={setTime('startTime')} className={`${fieldClass} w-full`} />
         </div>
         <div>
           <label className="text-xs text-gray-500 mb-1 block">종료시간</label>
-          <input type="time" value={value.endTime} onChange={set('endTime')} className={`${fieldClass} w-full`} />
+          <TimeField value={value.endTime} onChange={setTime('endTime')} className={`${fieldClass} w-full`} />
         </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

@@ -3,6 +3,7 @@ import { X, CheckCheck } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
 import MultiStudentSelect from '../common/MultiStudentSelect.jsx'
+import TimeField from '../common/TimeField.jsx'
 import { AttachmentField } from '../counseling/AttachmentField.jsx'
 import {
   uploadTaskFiles, removeTaskFiles, validateTaskFile,
@@ -163,10 +164,9 @@ export default function TaskFormModal({ students = [], fixedStudent, task, onClo
           </div>
           <div>
             <label className="text-xs text-gray-500 mb-1 block">마감시간 (선택)</label>
-            <input
-              type="time"
+            <TimeField
               value={dueTime}
-              onChange={(e) => setDueTime(e.target.value)}
+              onChange={setDueTime}
               className={fieldClass}
             />
           </div>

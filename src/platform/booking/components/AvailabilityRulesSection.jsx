@@ -8,6 +8,7 @@
 import { useMemo, useState } from 'react'
 import { CalendarClock, CalendarPlus, Pencil, Repeat, Trash2 } from 'lucide-react'
 import ModalShell from '../../components/common/ModalShell.jsx'
+import TimeField from '../../components/common/TimeField.jsx'
 import { useBooking } from '../BookingContext.jsx'
 import { bookingMessage } from '../bookingMessages.js'
 import { generateSlots } from '../slotGeneration.js'
@@ -66,6 +67,7 @@ function RuleModal({ rule, educatorId, onClose }) {
   const educatorOptions = config.educators.filter((e) => e.programId === form.programId && e.active)
   const subjectOptions = config.subjects.filter((s) => s.programId === form.programId && s.active)
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
+  const setTime = (key) => (v) => setForm((f) => ({ ...f, [key]: v }))
   const toggleDay = (d) => setForm((f) => ({
     ...f,
     weekdays: f.weekdays.includes(d) ? f.weekdays.filter((x) => x !== d) : [...f.weekdays, d],
@@ -182,19 +184,19 @@ function RuleModal({ rule, educatorId, onClose }) {
         )}
         <label className="text-xs text-gray-500">
           운영 시작
-          <input type="time" value={form.dayStart} onChange={set('dayStart')} className={`${FIELD} w-full mt-1`} />
+          <TimeField value={form.dayStart} onChange={setTime('dayStart')} className={`${FIELD} w-full mt-1`} />
         </label>
         <label className="text-xs text-gray-500">
           운영 종료
-          <input type="time" value={form.dayEnd} onChange={set('dayEnd')} className={`${FIELD} w-full mt-1`} />
+          <TimeField value={form.dayEnd} onChange={setTime('dayEnd')} className={`${FIELD} w-full mt-1`} />
         </label>
         <label className="text-xs text-gray-500">
           휴식 시작 (선택)
-          <input type="time" value={form.breakStart} onChange={set('breakStart')} className={`${FIELD} w-full mt-1`} />
+          <TimeField value={form.breakStart} onChange={setTime('breakStart')} className={`${FIELD} w-full mt-1`} />
         </label>
         <label className="text-xs text-gray-500">
           휴식 종료 (선택)
-          <input type="time" value={form.breakEnd} onChange={set('breakEnd')} className={`${FIELD} w-full mt-1`} />
+          <TimeField value={form.breakEnd} onChange={setTime('breakEnd')} className={`${FIELD} w-full mt-1`} />
         </label>
         <label className="text-xs text-gray-500">
           슬롯 정원 (기본 {program?.defaultCapacity ?? 1})
