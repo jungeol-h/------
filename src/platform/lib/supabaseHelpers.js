@@ -208,8 +208,10 @@ export const toWorkPlan = (row) => ({
   authorId: row.author_id,
   planDate: row.plan_date,
   planTime: row.plan_time ?? '',
+  planEndTime: row.plan_end_time ?? '',
   types: toArray(row.types),
-  studentIds: toArray(row.student_ids),
+  studentIds: toArray(row.student_ids), // 구 기록 호환 (2026-07-30 개편 후 신규는 빈 배열)
+  audiences: toArray(row.audiences), // 대상 복수선택 — WORK_PLAN_AUDIENCES 키
   memo: row.memo ?? '',
   status: row.status ?? 'planned',
   createdAt: row.created_at,

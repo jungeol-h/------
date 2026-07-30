@@ -17,6 +17,7 @@ import { getLearningCautionStudents } from '../../context/selectors/weeklyLearni
 import { getReconciliationIssues } from '../../context/selectors/reconciliation.js'
 import { getWorkPlansForDate } from '../../context/selectors/workPlans.js'
 import { COUNSELING_TYPE_LABELS } from '../../data/counselingTypes.js'
+import { WORK_PLAN_TYPE_LABELS, WORK_PLAN_AUDIENCE_LABELS } from '../../data/workRecordTypes.js'
 import StatisticsSection from '../../components/admin/StatisticsSection.jsx'
 import UrgentReportListModal from '../../components/admin/UrgentReportListModal.jsx'
 import CautionStudentsModal from '../../components/admin/CautionStudentsModal.jsx'
@@ -373,14 +374,15 @@ export default function AdminHomeTab({ basePath = '/admin', readOnly = false }) 
                   <span className="flex gap-1 flex-shrink-0">
                     {plan.types.map((t) => (
                       <span key={t} className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700">
-                        {COUNSELING_TYPE_LABELS[t] ?? t}
+                        {WORK_PLAN_TYPE_LABELS[t] ?? COUNSELING_TYPE_LABELS[t] ?? t}
                       </span>
                     ))}
                   </span>
                   <span className="text-xs text-gray-600 truncate flex-1">
-                    {plan.studentIds
-                      .map((sid) => data.students.find((s) => s.id === sid)?.name ?? '?')
-                      .join(', ')}
+                    {(plan.audiences?.length > 0
+                      ? plan.audiences.map((a) => WORK_PLAN_AUDIENCE_LABELS[a] ?? a)
+                      : plan.studentIds.map((sid) => data.students.find((s) => s.id === sid)?.name ?? '?')
+                    ).join(', ')}
                     {plan.memo && <span className="text-gray-400"> · {plan.memo}</span>}
                   </span>
                 </button>

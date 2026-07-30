@@ -32,7 +32,9 @@ export async function fetchForStudent(userId) {
     supabase.from('daily_self_scores').select('*').eq('student_id', userId).order('date', { ascending: false }).limit(60),
     // 홈 말풍선용 — 상담 본문(content 등)은 학생에게 노출하지 않도록 제한 컬럼만
     supabase.from('counseling_records').select('id,student_id,date,type,follow_up,next_appointment').eq('student_id', userId).order('date', { ascending: false }).limit(10),
-    // 본인이 태그된 예정 업무계획 (일정 리마인더용)
+    // 본인이 태그된 예정 업무계획 (일정 리마인더용).
+    // 2026-07-30 개편 후 신규 계획은 student_ids가 비어 학생에게 안 잡힌다 — 의도된 동작
+    // (센터장 업무 기록으로 전환, 구체적 대상은 메모). 구 기록 태그만 여기 걸린다.
     supabase.from('work_plans').select('*').contains('student_ids', JSON.stringify([userId])).gte('plan_date', todayStr),
   ])
 

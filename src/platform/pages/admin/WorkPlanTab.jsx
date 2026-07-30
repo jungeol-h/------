@@ -5,6 +5,7 @@ import { toDateStr } from '../../utils/dateUtils.js'
 import { COUNSELING_TYPE_LABELS } from '../../data/counselingTypes.js'
 import {
   WORK_PLAN_STATUSES, WORK_PLAN_STATUS_LABELS, WORK_PLAN_STATUS_BADGE,
+  WORK_PLAN_TYPE_LABELS, WORK_PLAN_AUDIENCE_LABELS,
 } from '../../data/workRecordTypes.js'
 import WorkPlanFormModal from '../../components/admin/WorkPlanFormModal.jsx'
 
@@ -31,11 +32,6 @@ export default function WorkPlanTab({ readOnly = false }) {
   const { data, deleteWorkPlan, updateWorkPlan } = useData()
   const [showForm, setShowForm] = useState(false)
   const [editingPlan, setEditingPlan] = useState(null)
-
-  const activeStudents = useMemo(
-    () => data.students.filter((s) => (s.status ?? 'active') === 'active'),
-    [data.students]
-  )
 
   const groups = useMemo(() => {
     const todayStr = toDateStr(new Date())
@@ -103,15 +99,21 @@ export default function WorkPlanTab({ readOnly = false }) {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-bold text-gray-800">
-              {formatDate(plan.planDate)}{plan.planTime && ` ${plan.planTime}`}
+              {formatDate(plan.planDate)}
+              {plan.planTime && ` ${plan.planTime}${plan.planEndTime ? `~${plan.planEndTime}` : ''}`}
             </span>
             {renderStatusBadge(plan)}
             {plan.types.map((t) => (
               <span key={t} className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700">
-                {COUNSELING_TYPE_LABELS[t] ?? t}
+                {WORK_PLAN_TYPE_LABELS[t] ?? COUNSELING_TYPE_LABELS[t] ?? t}
               </span>
             ))}
           </div>
+          {plan.audiences?.length > 0 && (
+            <p className="text-xs text-gray-600 mt-1 truncate">
+              대상: {plan.audiences.map((a) => WORK_PLAN_AUDIENCE_LABELS[a] ?? a).join(', ')}
+            </p>
+          )}
           {plan.studentIds.length > 0 && (
             <p className="text-xs text-gray-600 mt-1 truncate">
               {plan.studentIds.map(studentName).join(', ')}
@@ -162,7 +164,7 @@ export default function WorkPlanTab({ readOnly = false }) {
             <CalendarDays size={18} className="text-blue-600" />
             <h2 className="text-lg font-bold text-gray-900">업무계획</h2>
           </div>
-          <p className="text-xs text-gray-500 mt-0.5">상담·코칭·과제 등 예약 일정을 관리합니다.</p>
+          <p className="text-xs text-gray-500 mt-0.5">센터장의 업무 일정을 기록·관리합니다.</p>
         </div>
         {!readOnly && (
           <button
@@ -182,7 +184,6 @@ export default function WorkPlanTab({ readOnly = false }) {
 
       {showForm && (
         <WorkPlanFormModal
-          students={activeStudents}
           plan={editingPlan}
           onClose={() => { setShowForm(false); setEditingPlan(null) }}
         />

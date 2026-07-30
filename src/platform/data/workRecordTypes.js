@@ -28,6 +28,43 @@ export const WORK_PLAN_STATUS_BADGE = {
   done: 'bg-emerald-50 text-emerald-600',
 }
 
+// ── 업무계획 업무내용 9종 (2026-07-30 개편 — 이전 값은 COUNSELING_TYPES 재사용이었다.
+// 구 기록 표시는 WorkPlanTab에서 COUNSELING_TYPE_LABELS 폴백으로 처리) ──
+export const WORK_PLAN_TYPES = [
+  'career_consulting',
+  'assessment_consulting',
+  'subject_consulting',
+  'self_directed_coaching',
+  'event_mgmt',
+  'meeting',
+  'inquiry',
+  'program_mgmt',
+  'etc',
+]
+
+export const WORK_PLAN_TYPE_LABELS = {
+  career_consulting: '진로진학 컨설팅',
+  assessment_consulting: '검사컨설팅',
+  subject_consulting: '교과 컨설팅',
+  self_directed_coaching: '자기주도학습 코칭',
+  event_mgmt: '행사관리',
+  meeting: '회의',
+  inquiry: '문의 처리',
+  program_mgmt: '프로그램관리',
+  etc: '기타',
+}
+
+// ── 업무계획 대상 5종 (복수선택) ─────────────────────────────
+export const WORK_PLAN_AUDIENCES = ['student', 'parent', 'instructor', 'city_officer', 'admin']
+
+export const WORK_PLAN_AUDIENCE_LABELS = {
+  student: '학생',
+  parent: '학부모',
+  instructor: '강사',
+  city_officer: '시청담당자',
+  admin: '관리자',
+}
+
 // ── 관리보고 업무유형 6종 ────────────────────────────────────
 export const MANAGEMENT_WORK_TYPES = [
   'instructor_mgmt',    // 강사관리
