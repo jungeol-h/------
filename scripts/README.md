@@ -56,7 +56,8 @@ DB 스키마 변경은 **Supabase Studio SQL Editor에서 수동 실행**한다 
 | `add-password-security.sql` | 비밀번호 보안 1단계: users.phone/parent_phone(연락처 분리) + password_changed_at(강제 재설정 플래그) + 겸용 전화번호 복사 + 중복 방지 인덱스를 (name, phone)으로 교체. 해시화는 클라이언트가 수행(로그인 시 투명 업그레이드 + 강제 재설정 모달). 전환 완료 후 parent_password drop·평문 fallback 제거 예정 | 적용됨 (2026-07-29, Studio) |
 | `fix-kiosk-phone-lookup.sql` | **긴급 핫픽스**: kiosk_find_students 매칭을 right(password,4) → right(phone,4)로 교체. 해시 전환 후 키오스크가 학생을 못 찾던 라이브 장애 해소 (add-password-security 후속 누락분) | 적용됨 (2026-07-29, Studio) |
 | `add-2607-work-plan-range-audience.sql` | 업무계획 개편(2026-07-30 클라이언트): work_plans.plan_end_time(종료 시간 'HH:MM') + audiences(대상 복수선택 jsonb — 학생/학부모/강사/시청담당자/관리자). student_ids는 구 기록 호환용으로 유지 | 적용됨 (2026-07-31, Studio) |
-| `add-notices.sql` | 공지·알림(2026-07-31 클라이언트): notices 테이블 — kind(announcement=로그인 팝업 공지 / notification=홈 알림 칸 누적), audience(전체/학생/학부모), active 내리기 토글. 노출 1회 기록은 클라 localStorage | 적용됨 (2026-07-31, Studio) |
+| `add-notices.sql` | 공지·알림(2026-07-31 클라이언트): notices 테이블 — kind(announcement=로그인 팝업 공지 / notification=홈 알림 칸 누적), audience(전체/학생/학부모), active 내리기 토글 | 적용됨 (2026-07-31, Studio) |
+| `add-notice-reads.sql` | 공지 읽음 기록(add-notices 후속): notice_reads(notice_id×user_id, FK CASCADE) — 다기기 사용자가 기기마다 팝업을 다시 보던 localStorage 판정을 서버 기록으로 전환 (클라는 미적용 시 localStorage로 자연 강등) | 미적용 |
 
 ## 시드·일회성 유틸 (재실행 금지 또는 불필요)
 
