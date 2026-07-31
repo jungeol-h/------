@@ -35,6 +35,13 @@ export function dayLabel(dayOfWeek) {
   return DAY_LABELS[dayOfWeek] ?? ''
 }
 
+// 하루 2회 이상 등원(재등원) 여부 — events 로그에 'in' 이벤트가 2개 이상이면 true.
+// events가 없는(구 기록·마이그레이션 미적용) 레코드는 false.
+export function isReentry(record) {
+  if (!record?.events || !Array.isArray(record.events)) return false
+  return record.events.filter((e) => e?.type === 'in').length >= 2
+}
+
 // 학생 1명의 날짜별 출결 상태 분류. record/schedule은 해당 날짜 것만 넘긴다.
 //  - checked_out   하원 완료 (정상)
 //  - early_leave   조퇴 (하원했으나 예정보다 이름)

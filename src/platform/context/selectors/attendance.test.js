@@ -7,6 +7,7 @@ import {
   getTodayAttendanceBoard,
   getDailyAttendanceBoard,
   getUnresolvedAttendanceNotifications,
+  isReentry,
 } from './attendance.js'
 
 // 2026-07-06 은 월요일 (dow=1)
@@ -62,6 +63,14 @@ describe('classifyToday — 오늘 상태 분류', () => {
       record: { checkInAt: 'x', checkOutAt: null, status: 'late' },
       schedule, now: MONDAY_15H,
     })).toBe('late')
+  })
+  it('재등원(하원 후 다시 등원) — check_out_at이 리셋되어 등원 중으로 분류된다', () => {
+    // kiosk_check_in의 재등원 처리는 check_out_at을 NULL로 리셋하므로
+    // 분류 결과는 최초 등원과 동일하게 present/late로 나와야 한다.
+    expect(classifyToday({
+      record: { checkInAt: 'x', checkOutAt: null, status: 'present', events: [{ type: 'in' }, { type: 'out' }, { type: 'in' }] },
+      schedule, now: MONDAY_15H,
+    })).toBe('present')
   })
   it('cron 자동 결석(check_in 없이 absent)은 absent', () => {
     const record = { checkInAt: null, checkOutAt: null, status: 'absent' }
@@ -209,6 +218,21 @@ describe('getDailyAttendanceBoard — 날짜별 현황판 (등록명단 기준)'
     })
     expect(board.not_arrived.map((e) => e.student.id)).toEqual(['s3'])
     expect(board.no_schedule.map((e) => e.student.id)).toEqual(['s2'])
+  })
+})
+
+describe('isReentry — events 로그 기반 재등원 판정', () => {
+  it('in 이벤트가 2개 이상이면 재등원', () => {
+    expect(isReentry({ events: [{ type: 'in', at: 't1' }, { type: 'out', at: 't2' }, { type: 'in', at: 't3' }] }))
+      .toBe(true)
+  })
+  it('in 이벤트가 1개면 재등원 아님', () => {
+    expect(isReentry({ events: [{ type: 'in', at: 't1' }] })).toBe(false)
+  })
+  it('events 없음(구 기록·미적용)은 false', () => {
+    expect(isReentry({})).toBe(false)
+    expect(isReentry(null)).toBe(false)
+    expect(isReentry({ events: [] })).toBe(false)
   })
 })
 

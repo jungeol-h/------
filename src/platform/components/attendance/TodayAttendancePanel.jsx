@@ -6,6 +6,7 @@
 import { useMemo, useState } from 'react'
 import { Pencil, Search } from 'lucide-react'
 import { ATTENDANCE_STATUS_META, ATTENDANCE_STATUS_ORDER } from './attendanceStatusMeta.js'
+import { isReentry } from '../../context/selectors/attendance.js'
 
 const hhmm = (iso) => (iso ? new Date(iso).toTimeString().slice(0, 5) : '')
 
@@ -127,7 +128,16 @@ export default function TodayAttendancePanel({ board, onEditRecord, isToday = tr
                     {[student.school, student.grade].filter(Boolean).join(' ')}
                   </p>
                 </td>
-                <td className="px-3 py-2.5"><StatusChip status={status} /></td>
+                <td className="px-3 py-2.5">
+                  <div className="flex items-center gap-1.5">
+                    <StatusChip status={status} />
+                    {isReentry(record) && (
+                      <span className="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded-full">
+                        재등원
+                      </span>
+                    )}
+                  </div>
+                </td>
                 <td className="px-3 py-2.5 text-xs text-gray-500">
                   {schedule ? `${schedule.arrivalTime}~${schedule.departureTime}` : '—'}
                 </td>

@@ -10,8 +10,9 @@ import { useData } from '../../context/DataContext.jsx'
 const RESET_DELAY_MS = 3000
 
 // RPC 결과 → 결과 화면 문구
-function checkInMessage(student, { result, corrected, noSchedule }) {
+function checkInMessage(student, { result, corrected, noSchedule, reentry }) {
   if (result === 'already_in') return { tone: 'info', text: `${student.name}님은 이미 등원 처리되어 있어요` }
+  if (reentry) return { tone: 'ok', text: `${student.name}님 재등원 완료` }
   if (corrected) return { tone: 'warn', text: `${student.name}님 등원 완료 · 지각 (자동결석 정정)` }
   if (result === 'late') return { tone: 'warn', text: `${student.name}님 등원 완료 · 지각` }
   if (noSchedule) return { tone: 'ok', text: `${student.name}님 등원 완료 (오늘 등원 예정 없음)` }
@@ -207,7 +208,7 @@ export default function KioskPage() {
                     disabled={busy || s.checkedIn}
                     className="flex-1 h-16 rounded-xl bg-indigo-500 text-white text-lg font-bold flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                   >
-                    <LogIn size={22} /> 등원
+                    <LogIn size={22} /> {s.checkedOut ? '재등원' : '등원'}
                   </button>
                   <button
                     onClick={() => handleCheckOut(s)}
@@ -221,7 +222,9 @@ export default function KioskPage() {
                   <p className="text-center text-[11px] text-gray-400">등원 완료 상태예요</p>
                 )}
                 {s.checkedOut && (
-                  <p className="text-center text-[11px] text-gray-400">하원 완료 상태예요 (재입력 시 갱신)</p>
+                  <p className="text-center text-[11px] text-gray-400">
+                    하원 완료 상태예요 · 다시 등원하려면 재등원을 눌러 주세요
+                  </p>
                 )}
               </div>
             ))}

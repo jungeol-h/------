@@ -75,6 +75,7 @@ export const toAttendanceRecord = (row) => ({
   checkoutStatus: row.checkout_status ?? null,
   source: row.source ?? 'kiosk',
   note: row.note ?? '',
+  events: row.events ?? [],
 })
 
 export const toAttendanceSchedule = (row) => ({

@@ -17,6 +17,7 @@ import { withWriteRetry } from '../../lib/supabaseRetry.js'
 
 export function useAttendanceDomain(setData) {
   // 키오스크 번호(전화번호 뒷 4자리) 매칭 — 로컬 상태를 건드리지 않는 조회
+  // checkedIn: 현재 등원 중(하원 안 함). checkedOut: 오늘 하원 이력 있음(재등원 가능 상태).
   const kioskFindStudents = useCallback(async (digits) => {
     const { data, error } = await supabase.rpc('kiosk_find_students', { p_digits: digits })
     if (error) throw error
@@ -46,7 +47,8 @@ export function useAttendanceDomain(setData) {
     [setData]
   )
 
-  // 등원 — DB가 지각 판정. { result: 'present'|'late'|'already_in', corrected, noSchedule }
+  // 등원 — DB가 지각 판정. { result: 'present'|'late'|'already_in', corrected, noSchedule, reentry }
+  // reentry: 하원 완료 후 재등원(하루 2회 이상 등원)인 경우 true
   const kioskCheckIn = useCallback(
     async (studentId) => {
       const { data, error } = await withWriteRetry(
@@ -59,6 +61,7 @@ export function useAttendanceDomain(setData) {
         result: data?.result,
         corrected: data?.corrected ?? false,
         noSchedule: data?.no_schedule ?? false,
+        reentry: data?.reentry ?? false,
       }
     },
     [applyRecord]
