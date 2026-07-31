@@ -15,7 +15,9 @@ function safeSheetName(name) {
 
 // reservations: slot 조인 포함(booking) — slot 없는 건 제외(호출부 필터와 동일 기준)
 // 반환: [{ name, rows: [[...COLUMNS 순서 값]] }] — 전체 시트 + 상담사별 시트
-export function buildReservationSheets({ reservations = [], students = [], userNames = {}, config }) {
+// splitByEducator=false면 '전체' 시트 1장만 반환 (강사 본인 슬롯처럼 이미 단일 강사로
+// 좁혀진 경우 상담사별 분할이 불필요 — 2026-07-31 강사 '내 슬롯' 엑셀 다운로드)
+export function buildReservationSheets({ reservations = [], students = [], userNames = {}, config, splitByEducator = true }) {
   const studentById = new Map(students.map((s) => [s.id, s]))
   const programName = (id) => config?.programs?.find((p) => p.id === id)?.name ?? ''
   const subjectName = (id) => config?.subjects?.find((s) => s.id === id)?.name ?? ''
@@ -42,6 +44,8 @@ export function buildReservationSheets({ reservations = [], students = [], userN
     .sort((a, b) => (a.slot.date === b.slot.date
       ? (a.slot.startTime < b.slot.startTime ? -1 : 1)
       : a.slot.date < b.slot.date ? -1 : 1))
+
+  if (!splitByEducator) return [{ name: '전체', rows: valid.map(toRow) }]
 
   // 상담사별 그룹 (시트 순서: 이름 가나다순, 미지정은 마지막)
   const byEducator = new Map()

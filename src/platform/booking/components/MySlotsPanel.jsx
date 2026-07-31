@@ -4,11 +4,13 @@
 // 관리자 스코프 fetch는 전 강사 슬롯이므로 여기서 educatorId로 본인분만 거른다).
 
 import { useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, FileSpreadsheet } from 'lucide-react'
 import { useBooking } from '../BookingContext.jsx'
+import { useData } from '../../context/DataContext.jsx'
 import { addDaysStr } from '../bookingRules.js'
 import { todayStr } from '../../utils/dateUtils.js'
-import { SLOT_STATUS } from '../bookingStatus.js'
+import { SLOT_STATUS, reservationDisplayStatus } from '../bookingStatus.js'
+import { buildReservationSheets, downloadReservationWorkbook } from '../reservationExcel.js'
 import AvailabilityRulesSection from './AvailabilityRulesSection.jsx'
 import SlotEditorModal from './SlotEditorModal.jsx'
 import DesignatedReserveModal from './DesignatedReserveModal.jsx'
@@ -22,6 +24,7 @@ function dowOf(dateStr) {
 
 export default function MySlotsPanel({ educatorId, programs, isAdmin = false }) {
   const { config, slots, reservations, userNames } = useBooking()
+  const { data } = useData()
 
   const [weekStart, setWeekStart] = useState(() => {
     // 이번 주 월요일
@@ -31,6 +34,9 @@ export default function MySlotsPanel({ educatorId, programs, isAdmin = false }) 
   })
   const [editSlot, setEditSlot] = useState(null)
   const [designatedOpen, setDesignatedOpen] = useState(false)
+  const [view, setView] = useState('slots') // 'slots' | 'reservations'
+  const [exportRange, setExportRange] = useState(null) // null이면 표시 주 사용, 열면 { from, to }
+  const [exporting, setExporting] = useState(false)
 
   const programOf = (id) => config.programs.find((p) => p.id === id)
   const subjectName = (id) => config.subjects.find((s) => s.id === id)?.name ?? ''
@@ -47,6 +53,44 @@ export default function MySlotsPanel({ educatorId, programs, isAdmin = false }) 
       .sort((a, b) => (a.date === b.date ? (a.startTime < b.startTime ? -1 : 1) : a.date < b.date ? -1 : 1)),
     [slots, weekDates, educatorId],
   )
+
+  // 본인 예약만 — 관리자 스코프는 전 강사 예약이 들어오므로 반드시 educatorId로 거른다
+  const myReservations = useMemo(
+    () => reservations.filter((r) => r.slot && r.slot.educatorId === educatorId),
+    [reservations, educatorId],
+  )
+  const weekReservations = useMemo(
+    () => myReservations
+      .filter((r) => r.slot.date >= weekDates[0] && r.slot.date <= weekDates[6])
+      .sort((a, b) => (a.slot.date === b.slot.date
+        ? (a.slot.startTime < b.slot.startTime ? -1 : 1)
+        : a.slot.date < b.slot.date ? -1 : 1)),
+    [myReservations, weekDates],
+  )
+
+  const exportFrom = exportRange?.from ?? weekDates[0]
+  const exportTo = exportRange?.to ?? weekDates[6]
+  const exportReservations = useMemo(
+    () => myReservations.filter((r) => r.slot.date >= exportFrom && r.slot.date <= exportTo),
+    [myReservations, exportFrom, exportTo],
+  )
+
+  const exportExcel = async () => {
+    if (exporting || exportReservations.length === 0) return
+    setExporting(true)
+    try {
+      const sheets = buildReservationSheets({
+        reservations: exportReservations,
+        students: data.students ?? [],
+        userNames,
+        config,
+        splitByEducator: false,
+      })
+      await downloadReservationWorkbook(sheets, `${exportFrom}_${exportTo}`)
+    } finally {
+      setExporting(false)
+    }
+  }
 
   return (
     <div className="space-y-3">
@@ -71,46 +115,131 @@ export default function MySlotsPanel({ educatorId, programs, isAdmin = false }) 
         <p className="text-sm font-bold text-gray-700">{weekDates[0]} ~ {weekDates[6]}</p>
         <button type="button" onClick={() => setWeekStart(addDaysStr(weekStart, 7))} className="p-2 rounded-lg bg-gray-100"><ChevronRight size={16} /></button>
       </div>
-      {weekDates.map((d) => {
-        const daySlots = weekSlots.filter((s) => s.date === d)
-        if (daySlots.length === 0) return null
-        return (
-          <div key={d} className="space-y-1.5">
-            <h4 className="text-xs font-bold text-gray-400">{d} ({dowOf(d)})</h4>
-            {daySlots.map((s) => {
-              const booked = confirmedOf(s.id)
-              const status = SLOT_STATUS[s.status]
-              return (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => setEditSlot(s)}
-                  className="w-full bg-white rounded-xl shadow-sm p-3 text-left flex items-center justify-between gap-2"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-gray-900">
-                      {s.startTime}~{s.endTime}
-                      <span className="ml-1.5 text-xs font-semibold text-gray-500">{programOf(s.programId)?.name}</span>
-                      {s.subjectId && <span className="ml-1 text-xs text-emerald-600">{subjectName(s.subjectId)}</span>}
-                      {s.ruleId && <span className="ml-1 text-[10px] font-bold text-indigo-400">자동</span>}
-                      {!s.isPublic && <span className="ml-1 text-[10px] text-gray-400">비공개</span>}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-0.5 truncate">
-                      {booked.length}/{s.capacity}명
-                      {booked.length > 0 && ` · ${booked.map((r) => studentName(r.studentId)).join(', ')}`}
-                    </p>
-                  </div>
-                  <span className={`text-[10px] font-bold px-2 py-1 rounded-full flex-shrink-0 ${status?.color}`}>
-                    {status?.label}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-        )
-      })}
-      {weekSlots.length === 0 && (
-        <p className="py-10 text-center text-sm text-gray-400 bg-white rounded-2xl shadow-sm">이번 주 슬롯이 없습니다.</p>
+
+      <div className="flex items-center gap-2">
+        <div className="flex bg-gray-100 rounded-lg p-0.5 text-xs font-bold">
+          <button
+            type="button"
+            onClick={() => setView('slots')}
+            className={`px-3 py-1.5 rounded-md ${view === 'slots' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}
+          >
+            슬롯
+          </button>
+          <button
+            type="button"
+            onClick={() => setView('reservations')}
+            className={`px-3 py-1.5 rounded-md ${view === 'reservations' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}
+          >
+            예약 목록
+          </button>
+        </div>
+        <button
+          type="button"
+          onClick={() => setExportRange((r) => (r ? null : { from: weekDates[0], to: weekDates[6] }))}
+          className="ml-auto text-[11px] text-gray-400 underline"
+        >
+          {exportRange ? '기간 초기화' : '기간 조정'}
+        </button>
+      </div>
+
+      {exportRange && (
+        <div className="grid grid-cols-2 gap-2">
+          <input
+            type="date"
+            value={exportRange.from}
+            onChange={(e) => setExportRange((r) => ({ ...r, from: e.target.value }))}
+            className="h-9 px-2 rounded-lg border border-gray-200 text-xs"
+          />
+          <input
+            type="date"
+            value={exportRange.to}
+            onChange={(e) => setExportRange((r) => ({ ...r, to: e.target.value }))}
+            className="h-9 px-2 rounded-lg border border-gray-200 text-xs"
+          />
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={exportExcel}
+        disabled={exporting || exportReservations.length === 0}
+        className="w-full h-10 rounded-xl border border-dashed border-emerald-300 text-emerald-600 text-xs font-bold flex items-center justify-center gap-1 disabled:opacity-40"
+      >
+        <FileSpreadsheet size={14} />
+        {exporting ? '생성 중...' : `엑셀 다운로드 (${exportFrom} ~ ${exportTo}, ${exportReservations.length}건)`}
+      </button>
+
+      {view === 'slots' && (
+        <>
+          {weekDates.map((d) => {
+            const daySlots = weekSlots.filter((s) => s.date === d)
+            if (daySlots.length === 0) return null
+            return (
+              <div key={d} className="space-y-1.5">
+                <h4 className="text-xs font-bold text-gray-400">{d} ({dowOf(d)})</h4>
+                {daySlots.map((s) => {
+                  const booked = confirmedOf(s.id)
+                  const status = SLOT_STATUS[s.status]
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => setEditSlot(s)}
+                      className="w-full bg-white rounded-xl shadow-sm p-3 text-left flex items-center justify-between gap-2"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-gray-900">
+                          {s.startTime}~{s.endTime}
+                          <span className="ml-1.5 text-xs font-semibold text-gray-500">{programOf(s.programId)?.name}</span>
+                          {s.subjectId && <span className="ml-1 text-xs text-emerald-600">{subjectName(s.subjectId)}</span>}
+                          {s.ruleId && <span className="ml-1 text-[10px] font-bold text-indigo-400">자동</span>}
+                          {!s.isPublic && <span className="ml-1 text-[10px] text-gray-400">비공개</span>}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-0.5 truncate">
+                          {booked.length}/{s.capacity}명
+                          {booked.length > 0 && ` · ${booked.map((r) => studentName(r.studentId)).join(', ')}`}
+                        </p>
+                      </div>
+                      <span className={`text-[10px] font-bold px-2 py-1 rounded-full flex-shrink-0 ${status?.color}`}>
+                        {status?.label}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            )
+          })}
+          {weekSlots.length === 0 && (
+            <p className="py-10 text-center text-sm text-gray-400 bg-white rounded-2xl shadow-sm">이번 주 슬롯이 없습니다.</p>
+          )}
+        </>
+      )}
+
+      {view === 'reservations' && (
+        <div className="space-y-1.5">
+          {weekReservations.map((r) => {
+            const display = reservationDisplayStatus(r, r.slot)
+            return (
+              <div key={r.id} className="bg-white rounded-xl shadow-sm p-3 flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-gray-900">
+                    {r.slot.date} ({dowOf(r.slot.date)}) {r.slot.startTime}~{r.slot.endTime}
+                    <span className="ml-1.5 text-xs font-semibold text-gray-500">{programOf(r.programId)?.name}</span>
+                    {r.slot.subjectId && <span className="ml-1 text-xs text-emerald-600">{subjectName(r.slot.subjectId)}</span>}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5 truncate">{studentName(r.studentId)}</p>
+                  {r.cancelReason && <p className="text-[11px] text-gray-400 mt-0.5">취소사유: {r.cancelReason}</p>}
+                </div>
+                <span className="text-[10px] font-bold px-2 py-1 rounded-full flex-shrink-0 bg-gray-100 text-gray-600">
+                  {display.label}
+                </span>
+              </div>
+            )
+          })}
+          {weekReservations.length === 0 && (
+            <p className="py-10 text-center text-sm text-gray-400 bg-white rounded-2xl shadow-sm">이번 주 예약이 없습니다.</p>
+          )}
+        </div>
       )}
 
       {editSlot && (
