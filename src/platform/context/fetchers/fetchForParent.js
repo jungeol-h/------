@@ -10,7 +10,7 @@ import { daysAgoStr } from '../../utils/dateUtils.js'
 import {
   toUser, toMindRecord, toDiaryRecord, toLearningRecord, toTask,
   toTodoItem, toCounselingRecord, toAttendanceRecord, toAttendanceSchedule,
-  toParentChild, collectRows,
+  toParentChild, toNotice, collectRows,
 } from '../../lib/supabaseHelpers.js'
 import { EMPTY } from '../dataModel.js'
 
@@ -26,9 +26,19 @@ export async function fetchForParent(userId) {
   const parentChildren = linkRows.map(toParentChild)
   const studentIds = parentChildren.map((l) => l.studentId)
 
+  // 알림 칸은 자녀 연결과 무관한 계정 단위 데이터라 항상 조회한다.
+  const noticesRes = await supabase
+    .from('notices')
+    .select('*')
+    .eq('active', true)
+    .in('audience', ['all', 'parent'])
+    .order('created_at', { ascending: false })
+    .limit(100)
+  const notices = collectRows(noticesRes, 'notices', errors).map(toNotice)
+
   if (studentIds.length === 0) {
     // 연결된 자녀가 없거나 테이블 미존재 — 빈 데이터(에러 아님).
-    return { ...EMPTY, parentChildren, _fetchErrors: errors, _fetchMeta: meta }
+    return { ...EMPTY, parentChildren, notices, _fetchErrors: errors, _fetchMeta: meta }
   }
 
   // 상담 코멘트 작성자 표기용 교육자 목록
@@ -65,6 +75,7 @@ export async function fetchForParent(userId) {
     attendanceSchedules: collectRows(schedulesRes, 'attendance_schedules', errors).map(toAttendanceSchedule),
     counselingRecords: collectRows(counselingRes, 'counseling_records', errors).map(toCounselingRecord),
     parentChildren,
+    notices,
     _fetchErrors: errors,
     _fetchMeta: meta,
   }

@@ -8,6 +8,7 @@ import CounselingTabContent from '../../components/counseling/CounselingTabConte
 import ManagementReportSection from '../../components/workRecords/ManagementReportSection.jsx'
 import FinanceSection from '../../components/workRecords/FinanceSection.jsx'
 import LessonReportSection from '../../components/workRecords/LessonReportSection.jsx'
+import NoticeSection from '../../components/workRecords/NoticeSection.jsx'
 import WorkPlanTab from '../admin/WorkPlanTab.jsx'
 import { isActiveStudent } from '../../data/studentStatus.js'
 
@@ -82,6 +83,8 @@ export default function WorkRecordsTab() {
         return <div className="py-6"><FinanceSection readOnly={readOnly} /></div>
       case 'lesson':
         return <div className="py-6"><LessonReportSection students={lessonStudents} readOnly={readOnly} /></div>
+      case 'notices':
+        return <div className="py-6"><NoticeSection readOnly={readOnly} /></div>
       case 'counseling':
       default:
         return (
@@ -98,7 +101,7 @@ export default function WorkRecordsTab() {
 
   return (
     <div className="pt-6">
-      <div className="grid grid-cols-5 gap-1 rounded-xl bg-gray-100 p-1">
+      <div className="grid grid-cols-6 gap-1 rounded-xl bg-gray-100 p-1">
         {WORK_RECORD_MENUS.map((m) => (
           <button
             key={m.key}

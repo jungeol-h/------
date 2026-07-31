@@ -315,6 +315,18 @@ export const toQuizAttempt = (row) => ({
   submittedAt: row.submitted_at,
 })
 
+export const toNotice = (row) => ({
+  id: row.id,
+  kind: row.kind ?? 'notification',
+  audience: row.audience ?? 'all',
+  title: row.title ?? '',
+  content: row.content ?? '',
+  createdBy: row.created_by ?? null,
+  createdByName: row.created_by_name ?? '',
+  active: row.active ?? true,
+  createdAt: row.created_at,
+})
+
 // ── 침묵 실패 방지: fetch 결과 검사 ──────────────────────────────
 // Supabase 쿼리 결과에서 에러를 errors 배열에 수집하고 data 행을 꺼낸다.
 // 에러가 나도 throw하지 않고 [] 를 돌려줘 부분 렌더는 유지하되,

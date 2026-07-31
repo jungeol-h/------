@@ -8,7 +8,7 @@ import {
   toCounselingRecord, toAlert, toCareerDesignResult,
   toLearningDiagnosisResult, toAssignment, toQuizSet, toQuizQuestion,
   toQuizAttempt, toAttendanceRecord, toAttendanceSchedule,
-  toAttendanceNotification, toUrgentReport, toLessonReport, collectRows,
+  toAttendanceNotification, toUrgentReport, toLessonReport, toNotice, collectRows,
 } from '../../lib/supabaseHelpers.js'
 import { EMPTY } from '../dataModel.js'
 import { canViewByGroups } from '../../utils/groupScope.js'
@@ -25,8 +25,15 @@ export async function fetchForManager(userId) {
 
   const allStudentIds = assnRows.map((a) => a.student_id)
 
+  // 공지·알림 작성 관리 목록 — 담당 학생 유무와 무관하게 항상 조회
+  const fetchNotices = async () => {
+    const res = await supabase.from('notices').select('*').order('created_at', { ascending: false }).limit(200)
+    return collectRows(res, 'notices', errors).map(toNotice)
+  }
+
   if (allStudentIds.length === 0) {
-    return { ...EMPTY, assignments: [], _fetchErrors: errors, _fetchMeta: meta }
+    const notices = await fetchNotices()
+    return { ...EMPTY, assignments: [], notices, _fetchErrors: errors, _fetchMeta: meta }
   }
 
   const studentsRes = await supabase
@@ -43,7 +50,8 @@ export async function fetchForManager(userId) {
     .map(toAssignment)
 
   if (studentIds.length === 0) {
-    return { ...EMPTY, assignments, _fetchErrors: errors, _fetchMeta: meta }
+    const notices = await fetchNotices()
+    return { ...EMPTY, assignments, notices, _fetchErrors: errors, _fetchMeta: meta }
   }
 
   // 출결: 기록은 최근 60일, 알림은 미해결 전체 + 최근 7일
@@ -74,6 +82,7 @@ export async function fetchForManager(userId) {
     // 수업보고 그룹 필터용 — 전체 학생의 소속만 가볍게 조회
     supabase.from('users').select('id, group_names').eq('role', 'student'),
   ])
+  const notices = await fetchNotices()
 
   const recordMeta = (res, table) => {
     if (res?.error || res?.count == null) return
@@ -122,6 +131,7 @@ export async function fetchForManager(userId) {
     attendanceRecords: collectRows(attendanceRes, 'attendance_records', errors).map(toAttendanceRecord),
     attendanceSchedules: collectRows(schedulesRes, 'attendance_schedules', errors).map(toAttendanceSchedule),
     attendanceNotifications: collectRows(attNotiRes, 'attendance_notifications', errors).map(toAttendanceNotification),
+    notices,
     _fetchErrors: errors,
     _fetchMeta: meta,
   }

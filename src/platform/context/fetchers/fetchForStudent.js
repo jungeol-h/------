@@ -6,7 +6,7 @@ import {
   toTodoItem, toCareerDesignResult, toLearningDiagnosisResult,
   toAssignment, toQuizSet, toQuizQuestion, toQuizAttempt,
   toAttendanceRecord, toAttendanceSchedule,
-  toDailySelfScore, toCounselingRecord, toWorkPlan,
+  toDailySelfScore, toCounselingRecord, toWorkPlan, toNotice,
   collectRows,
 } from '../../lib/supabaseHelpers.js'
 import { EMPTY } from '../dataModel.js'
@@ -14,7 +14,7 @@ import { toDateStr } from '../../utils/dateUtils.js'
 
 export async function fetchForStudent(userId) {
   const todayStr = toDateStr(new Date())
-  const [userRes, assnRes, mindRes, learningRes, tasksRes, todoRes, diaryRes, careerRes, diagRes, attemptsRes, attendanceRes, schedulesRes, loginCountRes, selfScoresRes, counselingRes, workPlansRes] = await Promise.all([
+  const [userRes, assnRes, mindRes, learningRes, tasksRes, todoRes, diaryRes, careerRes, diagRes, attemptsRes, attendanceRes, schedulesRes, loginCountRes, selfScoresRes, counselingRes, workPlansRes, noticesRes] = await Promise.all([
     supabase.from('users').select('*').eq('id', userId).limit(1),
     supabase.from('assignments').select('*').eq('student_id', userId),
     supabase.from('mind_records').select('*', { count: 'exact' }).eq('student_id', userId).order('date', { ascending: false }).limit(2000),
@@ -36,6 +36,8 @@ export async function fetchForStudent(userId) {
     // 2026-07-30 개편 후 신규 계획은 student_ids가 비어 학생에게 안 잡힌다 — 의도된 동작
     // (센터장 업무 기록으로 전환, 구체적 대상은 메모). 구 기록 태그만 여기 걸린다.
     supabase.from('work_plans').select('*').contains('student_ids', JSON.stringify([userId])).gte('plan_date', todayStr),
+    // 공지 팝업 + 알림 칸 — 전체 대상 또는 학생 대상, 활성만
+    supabase.from('notices').select('*').eq('active', true).in('audience', ['all', 'student']).order('created_at', { ascending: false }).limit(100),
   ])
 
   const errors = []
@@ -82,6 +84,7 @@ export async function fetchForStudent(userId) {
     dailySelfScores: collectRows(selfScoresRes, 'daily_self_scores', errors).map(toDailySelfScore),
     counselingRecords: collectRows(counselingRes, 'counseling_records', errors).map(toCounselingRecord),
     workPlans: collectRows(workPlansRes, 'work_plans', errors).map(toWorkPlan),
+    notices: collectRows(noticesRes, 'notices', errors).map(toNotice),
     _fetchErrors: errors,
     _fetchMeta: meta,
   }

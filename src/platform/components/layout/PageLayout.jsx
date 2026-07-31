@@ -1,10 +1,13 @@
 import { AlertTriangle } from 'lucide-react'
 import Header from './Header.jsx'
 import TabBar from './TabBar.jsx'
+import NoticePopup from '../common/NoticePopup.jsx'
 import { useData } from '../../context/DataContext.jsx'
+import { useAuth } from '../../context/AuthContext.jsx'
 
 export default function PageLayout({ title, badge, tabs, children, wide = false }) {
   const { data } = useData()
+  const { currentUser } = useAuth()
   const fetchErrors = data._fetchErrors ?? []
 
   // wide=true: 관리자/매니저 운영 화면용 노션 스타일 풀폭. 기본은 학생 모바일 퍼스트(max-w-lg).
@@ -12,6 +15,7 @@ export default function PageLayout({ title, badge, tabs, children, wide = false 
 
   return (
     <div className="min-h-screen bg-gray-50 print:min-h-0 print:bg-white">
+      {currentUser && <NoticePopup />}
       <Header title={title} badge={badge} />
       <main className={`${mainWidth} mx-auto pt-14 pb-20 min-h-screen print:max-w-none print:mx-0 print:pt-0 print:pb-0 print:px-0 print:min-h-0`}>
         {fetchErrors.length > 0 && (

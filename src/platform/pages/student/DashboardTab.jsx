@@ -15,6 +15,7 @@ import { todayPlansFor } from './learningTabLogic.js'
 import { todayStr } from '../../utils/dateUtils.js'
 import ClockTimetable from '../../components/student/ClockTimetable.jsx'
 import TodayCenterScheduleCard from './TodayCenterScheduleCard.jsx'
+import NoticeFeedCard from '../../components/common/NoticeFeedCard.jsx'
 
 function getMoodWeather(mindRecord) {
   if (!mindRecord) return { Icon: Cloud, color: 'text-gray-300', label: '미입력' }
@@ -159,6 +160,9 @@ export default function DashboardTab() {
           </div>
         ))}
       </div>
+
+      {/* 알림 칸 — 관리자·강사가 등록한 알림 누적 리스트 */}
+      <NoticeFeedCard audience="student" />
 
       {/* 선생님 코멘트·리마인더 말풍선 */}
       {homeMessages.length > 0 && (

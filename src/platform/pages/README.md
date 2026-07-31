@@ -13,8 +13,11 @@
 | `/parent/*` | parent | `parent/ParentDashboard` | 홈·학습·예약·코멘트 (예약만 쓰기 가능, 나머지 자녀 읽기 전용) |
 
 `shared/`는 여러 역할이 같이 쓰는 화면: `StudentDetailPage`(학생 상세 — 역할별 진입),
-`WorkRecordsTab`(업무기록 통합 탭 5메뉴: 업무계획·관리보고·재정·상담보고·수업보고,
-`?menu=` 딥링크, 역할별 편집/잠금/열람 분기).
+`WorkRecordsTab`(업무기록 통합 탭 6메뉴: 업무계획·관리보고·재정·상담보고·수업보고·공지알림,
+`?menu=` 딥링크, 역할별 편집/잠금/열람 분기). 공지·알림(2026-07-31 클라이언트 요청)은
+`notices` 테이블 — 공지(announcement)는 전 역할 홈 로그인 팝업(`NoticePopup`, PageLayout
+마운트, localStorage 1회 노출), 알림(notification)은 학생·학부모 홈 알림 칸
+(`NoticeFeedCard`, 대상 전체/학생/학부모) 누적 표시.
 
 ## 새 역할 추가 체크리스트 (과거 실수 기반 — 하나라도 빼먹으면 로그인 후 무한 튕김)
 

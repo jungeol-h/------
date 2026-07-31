@@ -17,7 +17,7 @@ import {
   toLearningDiagnosisResult, toAssignment, toQuizSet, toQuizQuestion,
   toQuizAttempt, toParentChild, toAttendanceRecord, toAttendanceSchedule,
   toAttendanceNotification, toWorkPlan,
-  toUrgentReport, toManagementReport, toFinanceRecord, toLessonReport,
+  toUrgentReport, toManagementReport, toFinanceRecord, toLessonReport, toNotice,
   collectRows,
 } from '../../lib/supabaseHelpers.js'
 import { EMPTY } from '../dataModel.js'
@@ -26,7 +26,7 @@ export async function fetchForAdmin(scope = null) {
   const errors = []
   const meta = {}
 
-  const [usersRes, assnRes, alertsRes, counselingRes, statsRes, setsRes, parentChildrenRes, workPlansRes, urgentReportsRes, managementReportsRes, financeRecordsRes, lessonReportsRes] = await Promise.all([
+  const [usersRes, assnRes, alertsRes, counselingRes, statsRes, setsRes, parentChildrenRes, workPlansRes, urgentReportsRes, managementReportsRes, financeRecordsRes, lessonReportsRes, noticesRes] = await Promise.all([
     supabase.from('users').select('*').order('grade').order('login_id'),
     supabase.from('assignments').select('*'),
     supabase.from('alerts').select('*').order('created_at', { ascending: false }),
@@ -39,6 +39,8 @@ export async function fetchForAdmin(scope = null) {
     supabase.from('management_reports').select('*').order('date', { ascending: false }).limit(1000),
     supabase.from('finance_records').select('*').order('date', { ascending: false }).limit(2000),
     supabase.from('lesson_reports').select('*').order('date', { ascending: false }).limit(1000),
+    // 공지·알림 작성 관리 목록용 — active 무관 전체
+    supabase.from('notices').select('*').order('created_at', { ascending: false }).limit(200),
   ])
 
   const allUsers = collectRows(usersRes, 'users', errors)
@@ -137,6 +139,7 @@ export async function fetchForAdmin(scope = null) {
     managementReports: collectRows(managementReportsRes, 'management_reports', errors).filter(byRecordGroup).map(toManagementReport),
     financeRecords: collectRows(financeRecordsRes, 'finance_records', errors).filter(byRecordGroup).map(toFinanceRecord),
     lessonReports: collectRows(lessonReportsRes, 'lesson_reports', errors).filter(byStudentIdList).map(toLessonReport),
+    notices: collectRows(noticesRes, 'notices', errors).map(toNotice),
     _fetchErrors: errors,
     _fetchMeta: meta,
   }
