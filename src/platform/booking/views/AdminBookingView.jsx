@@ -1,10 +1,13 @@
-// 관리자 예약 탭 — 내부 5메뉴(?menu= 딥링크, WorkRecordsTab 선례):
-// 운영현황 · 예약현황 · 타임테이블 · 프로그램 · 이력.
+// 관리자 예약 탭 — 내부 6메뉴(?menu= 딥링크, WorkRecordsTab 선례):
+// 운영현황 · 내 슬롯 · 예약현황 · 타임테이블 · 프로그램 · 이력.
 // 기존 admin 6탭은 건드리지 않고 7번째 탭으로 격리 (회귀 0 원칙).
+// '내 슬롯'은 관리자가 직접 상담을 진행하는 경우(예: 황광희 원장)를 위한
+// 본인 슬롯 뷰 + 강사지정예약 (2026-07-31 클라이언트 요청) — MySlotsPanel 공용.
 
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { ChevronDown, ChevronRight, Plus, Pencil, Trash2 } from 'lucide-react'
+import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
 import { useBooking } from '../BookingContext.jsx'
 import { todayStr } from '../../utils/dateUtils.js'
@@ -19,9 +22,11 @@ import TimetableWizard from '../components/TimetableWizard.jsx'
 import AvailabilityRulesSection from '../components/AvailabilityRulesSection.jsx'
 import OpenPeriodEditor from '../components/OpenPeriodEditor.jsx'
 import SlotEditorModal from '../components/SlotEditorModal.jsx'
+import MySlotsPanel from '../components/MySlotsPanel.jsx'
 
 const MENUS = [
   { key: 'ops', label: '운영현황' },
+  { key: 'myslots', label: '내 슬롯' },
   { key: 'reservations', label: '예약현황' },
   { key: 'timetable', label: '타임테이블' },
   { key: 'programs', label: '프로그램' },
@@ -516,6 +521,15 @@ function ProgramsMenu() {
   )
 }
 
+// 관리자 본인 슬롯 — 관리자 스코프 fetch(전 강사)를 본인 id로 걸러 강사와 같은 화면
+function MySlotsMenu() {
+  const { currentUser } = useAuth()
+  const { config } = useBooking()
+  // 관리자는 프로그램 배정과 무관하게 전체 활성 프로그램으로 지정 예약 가능
+  const programs = useMemo(() => config.programs.filter((p) => p.active), [config.programs])
+  return <MySlotsPanel educatorId={currentUser?.id} programs={programs} isAdmin />
+}
+
 export default function AdminBookingView() {
   const [searchParams, setSearchParams] = useSearchParams()
   const rawMenu = searchParams.get('menu')
@@ -525,13 +539,13 @@ export default function AdminBookingView() {
   return (
     <div className="pt-6 space-y-4">
       <div className="flex items-center gap-2">
-        <div className="grid grid-cols-5 gap-1 rounded-xl bg-gray-100 p-1 flex-1">
+        <div className="grid grid-cols-6 gap-1 rounded-xl bg-gray-100 p-1 flex-1">
           {MENUS.map((m) => (
             <button
               key={m.key}
               type="button"
               onClick={() => selectMenu(m.key)}
-              className={`h-10 rounded-lg text-[11px] sm:text-xs font-bold flex items-center justify-center ${
+              className={`h-10 rounded-lg text-[10px] sm:text-xs font-bold flex items-center justify-center whitespace-nowrap ${
                 menu === m.key ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500'
               }`}
             >
@@ -543,6 +557,7 @@ export default function AdminBookingView() {
       </div>
 
       {menu === 'ops' && <BookingOpsDashboard />}
+      {menu === 'myslots' && <MySlotsMenu />}
       {menu === 'reservations' && <ReservationSearch />}
       {menu === 'timetable' && <TimetableMenu />}
       {menu === 'programs' && <ProgramsMenu />}

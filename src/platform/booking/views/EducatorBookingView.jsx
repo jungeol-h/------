@@ -4,22 +4,21 @@
 
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useBooking } from '../BookingContext.jsx'
-import { addDaysStr, todayStrKst } from '../bookingRules.js'
+import { todayStrKst } from '../bookingRules.js'
 import { todayStr } from '../../utils/dateUtils.js'
 import {
-  SLOT_STATUS, ATTENDANCE_STATUS, ATTENDANCE_CHOICES,
+  ATTENDANCE_STATUS, ATTENDANCE_CHOICES,
   reservationDisplayStatus, recordState, RECORD_STATE, attendanceDeadlinePassed,
 } from '../bookingStatus.js'
 import { bookingMessage } from '../bookingMessages.js'
 import BookingNotificationsBell from '../components/BookingNotificationsBell.jsx'
 import SlotEditorModal from '../components/SlotEditorModal.jsx'
-import AvailabilityRulesSection from '../components/AvailabilityRulesSection.jsx'
+import MySlotsPanel from '../components/MySlotsPanel.jsx'
 import RecordFormModal from '../components/RecordFormModal.jsx'
 import GroupAssignModal from '../components/GroupAssignModal.jsx'
-import DesignatedReserveModal from '../components/DesignatedReserveModal.jsx'
 
 const MENUS = [
   { key: 'slots', label: '내 슬롯' },
@@ -29,12 +28,6 @@ const MENUS = [
 ]
 
 const FIELD = 'h-10 px-3 rounded-lg border border-gray-200 text-sm'
-const WEEKDAY = ['일', '월', '화', '수', '목', '금', '토']
-
-function dowOf(dateStr) {
-  const [y, m, d] = dateStr.split('-').map(Number)
-  return WEEKDAY[new Date(y, m - 1, d).getDay()]
-}
 
 export default function EducatorBookingView({ isAdmin = false }) {
   const { currentUser } = useAuth()
@@ -46,17 +39,10 @@ export default function EducatorBookingView({ isAdmin = false }) {
   const menu = MENUS.some((m) => m.key === rawMenu) ? rawMenu : 'slots'
   const selectMenu = (key) => setSearchParams({ menu: key }, { replace: true })
 
-  const [weekStart, setWeekStart] = useState(() => {
-    // 이번 주 월요일
-    const now = new Date()
-    const day = now.getDay()
-    return addDaysStr(todayStr(), day === 0 ? -6 : 1 - day)
-  })
   const [attDate, setAttDate] = useState(todayStr())
   const [editSlot, setEditSlot] = useState(null)
   const [recordTarget, setRecordTarget] = useState(null)
   const [groupModal, setGroupModal] = useState(null) // { program, existingSlot? }
-  const [designatedOpen, setDesignatedOpen] = useState(false)
   const [attFail, setAttFail] = useState(null)
 
   const myId = currentUser?.id
@@ -98,85 +84,6 @@ export default function EducatorBookingView({ isAdmin = false }) {
     <span className={`ml-1 min-w-[16px] h-4 px-1 rounded-full text-[10px] text-white inline-flex items-center justify-center ${danger ? 'bg-red-500' : 'bg-orange-400'}`}>
       {n}
     </span>
-  )
-
-  // ─── 내 슬롯 (주간) ─────────────────────────────────────────
-  const weekDates = useMemo(
-    () => Array.from({ length: 7 }, (_, i) => addDaysStr(weekStart, i)),
-    [weekStart],
-  )
-  const weekSlots = useMemo(
-    () => slots
-      .filter((s) => s.date >= weekDates[0] && s.date <= weekDates[6])
-      .sort((a, b) => (a.date === b.date ? (a.startTime < b.startTime ? -1 : 1) : a.date < b.date ? -1 : 1)),
-    [slots, weekDates],
-  )
-
-  const renderSlots = () => (
-    <div className="space-y-3">
-      {/* 예약 가능 시간의 단일 홈 — 매주 반복(규칙) + 특정 날짜 추가.
-          아래 주간 목록은 그 결과를 확인·수정하는 달력 뷰다 */}
-      <AvailabilityRulesSection educatorId={isAdmin ? null : myId} />
-
-      {/* 강사지정예약 — 학생·시간 지정 고정 예약 (반복 가능). 지정된 시간대에는
-          타임테이블이 예약 가능 시간을 만들지 않는다 (2026-07-30 클라이언트 요청) */}
-      {myPrograms.length > 0 && (
-        <button
-          type="button"
-          onClick={() => setDesignatedOpen(true)}
-          className="w-full h-10 rounded-xl border border-dashed border-indigo-300 text-indigo-600 text-xs font-bold flex items-center justify-center gap-1"
-        >
-          <Plus size={14} /> 강사지정예약 — 학생·시간을 지정해 고정
-        </button>
-      )}
-
-      <div className="flex items-center justify-between pt-2">
-        <button type="button" onClick={() => setWeekStart(addDaysStr(weekStart, -7))} className="p-2 rounded-lg bg-gray-100"><ChevronLeft size={16} /></button>
-        <p className="text-sm font-bold text-gray-700">{weekDates[0]} ~ {weekDates[6]}</p>
-        <button type="button" onClick={() => setWeekStart(addDaysStr(weekStart, 7))} className="p-2 rounded-lg bg-gray-100"><ChevronRight size={16} /></button>
-      </div>
-      {weekDates.map((d) => {
-        const daySlots = weekSlots.filter((s) => s.date === d)
-        if (daySlots.length === 0) return null
-        return (
-          <div key={d} className="space-y-1.5">
-            <h4 className="text-xs font-bold text-gray-400">{d} ({dowOf(d)})</h4>
-            {daySlots.map((s) => {
-              const booked = confirmedOf(s.id)
-              const status = SLOT_STATUS[s.status]
-              return (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => setEditSlot(s)}
-                  className="w-full bg-white rounded-xl shadow-sm p-3 text-left flex items-center justify-between gap-2"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-gray-900">
-                      {s.startTime}~{s.endTime}
-                      <span className="ml-1.5 text-xs font-semibold text-gray-500">{programOf(s.programId)?.name}</span>
-                      {s.subjectId && <span className="ml-1 text-xs text-emerald-600">{subjectName(s.subjectId)}</span>}
-                      {s.ruleId && <span className="ml-1 text-[10px] font-bold text-indigo-400">자동</span>}
-                      {!s.isPublic && <span className="ml-1 text-[10px] text-gray-400">비공개</span>}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-0.5 truncate">
-                      {booked.length}/{s.capacity}명
-                      {booked.length > 0 && ` · ${booked.map((r) => studentName(r.studentId)).join(', ')}`}
-                    </p>
-                  </div>
-                  <span className={`text-[10px] font-bold px-2 py-1 rounded-full flex-shrink-0 ${status?.color}`}>
-                    {status?.label}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-        )
-      })}
-      {weekSlots.length === 0 && (
-        <p className="py-10 text-center text-sm text-gray-400 bg-white rounded-2xl shadow-sm">이번 주 슬롯이 없습니다.</p>
-      )}
-    </div>
   )
 
   // ─── 출결 ───────────────────────────────────────────────────
@@ -411,7 +318,7 @@ export default function EducatorBookingView({ isAdmin = false }) {
         <BookingNotificationsBell />
       </div>
 
-      {menu === 'slots' && renderSlots()}
+      {menu === 'slots' && <MySlotsPanel educatorId={myId} programs={myPrograms} isAdmin={isAdmin} />}
       {menu === 'attendance' && renderAttendance()}
       {menu === 'records' && renderRecords()}
       {menu === 'group' && renderGroup()}
@@ -447,13 +354,6 @@ export default function EducatorBookingView({ isAdmin = false }) {
           subjectOptions={config.subjects.filter((s) => s.programId === groupModal.program.id && s.active)}
           existingSlot={groupModal.existingSlot}
           onClose={() => setGroupModal(null)}
-        />
-      )}
-      {designatedOpen && (
-        <DesignatedReserveModal
-          educatorId={myId}
-          programs={myPrograms}
-          onClose={() => setDesignatedOpen(false)}
         />
       )}
     </div>

@@ -36,11 +36,12 @@ function RuleModal({ rule, educatorId, onClose }) {
   const isAdmin = actor.role === 'admin'
   const templates = config.templates ?? []
 
-  // 강사 모드: 그 강사에게 배정된 프로그램만 / 관리자 모드: 전체 활성
+  // 강사 모드: 그 강사에게 배정된 프로그램만 / 관리자: 항상 전체 활성
+  // (관리자 '내 슬롯'은 educatorId가 본인으로 고정되지만 배정 여부와 무관해야 한다)
   const programOptions = useMemo(() => {
     const active = config.programs.filter((p) => p.active)
     const owner = educatorId ?? rule?.educatorId
-    if (isAdmin && !educatorId) return active
+    if (isAdmin) return active
     const mine = new Set(
       config.educators.filter((e) => e.educatorId === owner && e.active).map((e) => e.programId),
     )
