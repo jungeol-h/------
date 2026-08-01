@@ -59,8 +59,8 @@ describe('buildMonthlyLessonEntries', () => {
       },
     ]
     const { entries } = buildMonthlyLessonEntries(reports, getStudent, opts)
-    expect(entries[0].dateTimeText).toBe('2026. 7. 4.(토)')
-    expect(entries[1].dateTimeText).toBe('2026. 7. 11.(토) pm 2:00 ~ pm 2:50 (50분)')
+    expect(entries[0].dateTimeText).toBe('7. 4.(토)')
+    expect(entries[1].dateTimeText).toBe('7. 11.(토) 14:00~14:50 (50분)')
   })
 
   it('빈 reports 방어', () => {

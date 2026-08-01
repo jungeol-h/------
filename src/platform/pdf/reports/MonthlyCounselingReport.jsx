@@ -43,7 +43,7 @@ export default function MonthlyCounselingReport({ header = {}, entries = [], log
         <FormTitle text="컨설팅 보고서" {...(logoSrc !== undefined && { logoSrc })} />
         <FormHeaderTable rows={headerRows} />
         <View>
-          <DetailHead leftTopLabel="학생이름" leftBottomLabel="학교학년" />
+          <DetailHead />
           {entries.length === 0 ? (
             <EmptyDetailBox text="해당 기간 상담 기록이 없습니다." />
           ) : (

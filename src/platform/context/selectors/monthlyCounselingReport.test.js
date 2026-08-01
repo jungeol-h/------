@@ -4,6 +4,7 @@ import {
   formatAmPm,
   durationMinutes,
   formatCounselingDateTime,
+  formatCompactDateTime,
   currentMonthRange,
   buildMonthlyCounselingEntries,
 } from './monthlyCounselingReport.js'
@@ -72,6 +73,14 @@ describe('formatCounselingDateTime', () => {
   })
 })
 
+describe('formatCompactDateTime', () => {
+  it('연도 생략 + 24h 표기 (보고서 메타줄용)', () => {
+    expect(formatCompactDateTime('2026-07-04', '14:00', '14:20')).toBe('7. 4.(토) 14:00~14:20 (20분)')
+    expect(formatCompactDateTime('2026-07-04', '', '')).toBe('7. 4.(토)')
+    expect(formatCompactDateTime('2026-07-04', '14:00', '')).toBe('7. 4.(토) 14:00')
+  })
+})
+
 describe('currentMonthRange', () => {
   it('이번 달 1일~말일', () => {
     expect(currentMonthRange(new Date('2026-07-17T12:00:00'))).toEqual(['2026-07-01', '2026-07-31'])
@@ -126,7 +135,7 @@ describe('buildMonthlyCounselingEntries', () => {
       { id: 'r1', studentId: 's1', educatorId: 'e1', date: '2026-07-04', startTime: '14:00', endTime: '14:20', ...base },
     ]
     const { entries } = buildMonthlyCounselingEntries(records, getStudent, opts)
-    expect(entries[0].dateTimeText).toBe('2026. 7. 4.(토) pm 2:00 ~ pm 2:20 (20분)')
+    expect(entries[0].dateTimeText).toBe('7. 4.(토) 14:00~14:20 (20분)')
     expect(entries[0].cumulativeText).toBe('1회차')
     expect(entries[1].cumulativeText).toBe('2회차')
   })
@@ -157,6 +166,16 @@ describe('buildMonthlyCounselingEntries', () => {
     expect(entries[0].studentName).toBe('김학생, 이학생')
     expect(entries[0].schoolGrade).toBe('2명')
     expect(entries[0].cumulativeText).toBe('김학생 2회차 · 이학생 1회차')
+  })
+
+  it('그룹 상담 회차가 전원 동일하면 "각 N회차"로 압축', () => {
+    const session = { date: '2026-07-04', startTime: '14:00', endTime: '14:40', ...base }
+    const records = [
+      { id: 'r1', studentId: 's1', educatorId: 'e1', ...session },
+      { id: 'r2', studentId: 's2', educatorId: 'e1', ...session },
+    ]
+    const { entries } = buildMonthlyCounselingEntries(records, getStudent, opts)
+    expect(entries[0].cumulativeText).toBe('각 1회차')
   })
 
   it('같은 날 시간 없이 따로 쓴 개별 상담(주제 상이)은 병합하지 않는다', () => {

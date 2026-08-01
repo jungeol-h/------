@@ -63,8 +63,8 @@ describe('buildStudentCounselingEntries', () => {
     const { entries, totalCount, periodText } = buildStudentCounselingEntries(records)
     expect(totalCount).toBe(2)
     expect(entries.map((e) => e.cumulativeText)).toEqual(['1회차', '2회차'])
-    expect(entries[0].dateTimeText).toBe('2026. 5. 10.(일)')
-    expect(entries[1].dateTimeText).toBe('2026. 7. 4.(토) pm 2:00 ~ pm 2:20 (20분)')
+    expect(entries[0].dateTimeText).toBe('5. 10.(일)')
+    expect(entries[1].dateTimeText).toBe('7. 4.(토) 14:00~14:20 (20분)')
     expect(periodText).toBe('2026. 5. 10.(일) ~ 2026. 7. 4.(토)')
   })
 

@@ -1,7 +1,7 @@
 import { Document, Page, View, Text } from '@react-pdf/renderer'
 import { formStyles } from '../components/counselingFormStyles.js'
 import {
-  FormTitle, FormHeaderTable, DetailHead, EmptyDetailBox,
+  FormTitle, FormHeaderTable, DetailHead, EmptyDetailBox, InlineSections,
 } from '../components/CounselingFormLayout.jsx'
 
 // 강사별 월간 수업보고서 — MonthlyCounselingReport와 같은 관공서 서식 골격에
@@ -14,43 +14,32 @@ import {
 //             — selectors/monthlyLessonReport.js buildMonthlyLessonEntries 산출물.
 
 // 수업 건 1개 블록 — EntryBlock의 수업보고 변형 (교재·수업내용·과제 구성).
+// 메타줄: '참여학생들 (N명) · 수업일시 · N회차'
 function LessonEntryBlock({ entry }) {
+  const meta = [
+    `${entry.studentNames || '-'} (${entry.studentCountText})`,
+    entry.dateTimeText,
+    entry.cumulativeText,
+  ].filter(Boolean).join('  ·  ')
   return (
     <View style={formStyles.block} wrap={false}>
       <View style={formStyles.colNo}>
         <Text style={formStyles.centerText}>{entry.no}</Text>
       </View>
       <View style={formStyles.colBody}>
-        <View style={formStyles.rowTop}>
-          <View style={formStyles.leftTopCell}>
-            <Text style={formStyles.centerText}>{entry.studentNames || ' '}</Text>
-          </View>
-          <View style={formStyles.dateTimeCell}>
-            <Text style={formStyles.centerText}>{entry.dateTimeText}</Text>
-          </View>
-          <View style={formStyles.roundCell}>
-            <Text style={formStyles.centerText}>{entry.cumulativeText}</Text>
-          </View>
+        <View style={formStyles.metaRow}>
+          <Text style={formStyles.metaText}>{meta}</Text>
         </View>
-        <View style={formStyles.rowBody}>
-          <View style={formStyles.leftBottomCell}>
-            <Text style={formStyles.centerText}>{entry.studentCountText || ' '}</Text>
-          </View>
-          <View style={formStyles.contentCell}>
-            <Text style={formStyles.subSection}>주제 : {entry.topic}</Text>
-            <View style={formStyles.dashedDivider} />
-            <Text style={formStyles.subLabel}>수업 교재</Text>
-            <Text style={formStyles.subSection}>{entry.textbook || ' '}</Text>
-            <View style={formStyles.dashedDivider} />
-            <Text style={formStyles.subLabel}>수업 내용</Text>
-            <Text style={formStyles.subSection}>{entry.content || ' '}</Text>
-            <View style={formStyles.dashedDivider} />
-            <Text style={formStyles.subLabel}>과제</Text>
-            <Text style={formStyles.subSection}>{entry.homework || ' '}</Text>
-          </View>
-          <View style={formStyles.noteCell}>
-            <Text>{entry.note || ' '}</Text>
-          </View>
+        <View style={formStyles.contentCell}>
+          <InlineSections
+            sections={[
+              ['주제', entry.topic],
+              ['교재', entry.textbook],
+              ['수업 내용', entry.content],
+              ['과제', entry.homework],
+              ['특이사항', entry.note],
+            ]}
+          />
         </View>
       </View>
     </View>
@@ -86,12 +75,7 @@ export default function MonthlyLessonReport({ header = {}, entries = [], logoSrc
         <FormTitle text="수업 보고서" {...(logoSrc !== undefined && { logoSrc })} />
         <FormHeaderTable rows={headerRows} />
         <View>
-          <DetailHead
-            leftTopLabel="참여학생"
-            leftBottomLabel="인원"
-            dateTimeLabel="수업일시(수업시간)"
-            contentLabel="수업내용"
-          />
+          <DetailHead />
           {entries.length === 0 ? (
             <EmptyDetailBox text="해당 기간 수업보고 기록이 없습니다." />
           ) : (

@@ -5,7 +5,7 @@
 import { hasStructuredContent } from '../../data/counselingTypes.js'
 import { ATTENDANCE_BLOCKS } from '../../data/attendanceBlocks.js'
 import { timeToMinutes, dayLabel } from './attendance.js'
-import { formatKoreanDate, formatCounselingDateTime } from './monthlyCounselingReport.js'
+import { formatKoreanDate, formatCompactDateTime } from './monthlyCounselingReport.js'
 
 // 하루의 등원~하원 구간을 블록으로 그리디 타일링 — 겹침(staggered) 블록 중
 // 시작시각이 진행 지점과 맞는 것만 차례로 채운다. 예: 월 16:00~20:50 → [M1, M3].
@@ -67,7 +67,7 @@ export function buildStudentCounselingEntries(records) {
         no: i + 1,
         educatorName: r.educatorName || '-',
         typeLabel: r.typeLabel || '-',
-        dateTimeText: formatCounselingDateTime(r.date, r.startTime, r.endTime),
+        dateTimeText: formatCompactDateTime(r.date, r.startTime, r.endTime),
         cumulativeText: `${i + 1}회차`,
         topic: structured ? r.topic : '',
         diagnosis: structured ? r.diagnosis : '',

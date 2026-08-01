@@ -44,7 +44,7 @@ export default function StudentCounselingReport({ header = {}, entries = [], log
         <FormTitle text="학생별 컨설팅 리포트" {...(logoSrc !== undefined && { logoSrc })} />
         <FormHeaderTable rows={headerRows} />
         <View>
-          <DetailHead leftTopLabel="상담강사" leftBottomLabel="상담유형" />
+          <DetailHead />
           {entries.length === 0 ? (
             <EmptyDetailBox />
           ) : (

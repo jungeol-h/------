@@ -1,19 +1,19 @@
 import { View, Text, Image } from '@react-pdf/renderer'
 import { formStyles } from './counselingFormStyles.js'
 
-// 관공서 서식 상담 리포트 공용 골격 — docs/보고서 양식.pdf 계열.
-// MonthlyCounselingReport(강사별 월간)·StudentCounselingReport(학생별)가 공유한다.
+// 서식 상담 리포트 공용 골격 — MonthlyCounselingReport(강사별)·StudentCounselingReport
+// (학생별)·MonthlyLessonReport(수업)가 공유한다.
 //
-// 페이지 분할: DetailHead(View fixed)가 모든 페이지 상단에 반복되고, 각 상담 건
-// 블록은 wrap={false}로 건 경계에서만 나뉜다 (components/Table.jsx의 검증된 패턴).
-// 테두리는 머리가 4변, 블록이 좌/우/하 3변만 가져 페이지 경계에서도 이중선이 없다.
+// 2026-08 압축 개편(클라 확정 "페이지 수 최소화"): 칼럼 헤더 없이 각 건이
+// [번호][메타 한 줄(음영: 대상 · 일시 · 회차) / 본문 전체 폭] 블록. 내용 라벨은
+// 본문과 한 줄 병기(InlineSections), 빈 필드는 생략, 특이사항도 인라인.
 //
-// 블록 내부는 [번호][본문(상단행/하단행)] 구조 — 상단행(이름·상담일시·누적횟수)의
-// borderBottom 하나가 가로 구분선 전체를 그어, 열별로 따로 그을 때 생기던
-// 미세한 어긋남이 없다.
+// 페이지 분할: DetailHead(View fixed, 제목 띠)가 모든 페이지 상단에 반복되고, 각 건
+// 블록은 wrap={false}로 건 경계에서만 나뉜다. 테두리는 제목 띠가 4변, 블록이
+// 좌/우/하 3변만 가져 페이지 경계에서도 이중선이 없다.
 //
 // ⚠️ 세로 방향 flex:1 금지 — 높이 auto인 컨테이너에서 높이 0으로 붕괴해 내용이
-// 겹쳐 찍힌다(Yoga). 셀 높이는 전부 내용 기반, 열은 row stretch로 맞춘다.
+// 겹쳐 찍힌다(Yoga). 셀 높이는 전부 내용 기반.
 // 한계: 상담 1건이 A4 한 장을 넘으면 wrap={false}가 깨져 넘칠 수 있다(실사용상 비발생 전제).
 
 
@@ -56,56 +56,44 @@ export function FormHeaderTable({ rows }) {
   )
 }
 
-// 세부내용 표 머리 — fixed로 모든 페이지 상단에 반복.
-// leftTopLabel/leftBottomLabel: 좌측 열 라벨 (학생이름/학교학년 또는 상담강사/상담유형)
-// dateTimeLabel/contentLabel: 수업보고서(MonthlyLessonReport)가 라벨만 바꿔 재사용한다.
-export function DetailHead({
-  leftTopLabel,
-  leftBottomLabel,
-  dateTimeLabel = '상담일시(상담시간)',
-  contentLabel = '상담내용',
-}) {
+// 세부내용 표 머리 — fixed로 모든 페이지 상단에 반복. 2026-08 개편으로 칼럼 헤더
+// 없이 제목 띠만 남았다(각 건의 메타줄이 스스로를 설명하므로 칼럼명이 불필요).
+export function DetailHead() {
   return (
     <View fixed>
       <View style={formStyles.detailTitleBar}>
         <Text style={formStyles.detailTitleText}>세부 내용</Text>
       </View>
-      <View style={[formStyles.block, formStyles.blockHead]}>
-        <View style={formStyles.colNo}>
-          <Text style={formStyles.centerText}>번호</Text>
-        </View>
-        <View style={formStyles.colBody}>
-          <View style={formStyles.rowTop}>
-            <View style={formStyles.leftTopCell}>
-              <Text style={formStyles.centerText}>{leftTopLabel}</Text>
-            </View>
-            <View style={formStyles.dateTimeCell}>
-              <Text style={formStyles.centerText}>{dateTimeLabel}</Text>
-            </View>
-            <View style={formStyles.roundCell}>
-              <Text style={formStyles.centerText}>누적횟수</Text>
-            </View>
-          </View>
-          <View style={formStyles.rowBody}>
-            <View style={formStyles.leftBottomCell}>
-              <Text style={formStyles.centerText}>{leftBottomLabel}</Text>
-            </View>
-            <View style={[formStyles.contentCell, { justifyContent: 'center' }]}>
-              <Text style={formStyles.centerText}>{contentLabel}</Text>
-            </View>
-            <View style={[formStyles.noteCell, { justifyContent: 'center' }]}>
-              <Text style={formStyles.centerText}>특이사항</Text>
-            </View>
-          </View>
-        </View>
-      </View>
     </View>
   )
 }
 
+// 내용 섹션 목록 — 빈 필드는 아예 생략하고, 라벨은 본문과 한 줄에 병기(중첩 Text).
+// 페이지 수 최소화 개편(2026-08): 라벨 별도 줄·빈 섹션 자리 차지가 페이지를 불리던 주범.
+export function InlineSections({ sections }) {
+  const filled = sections.filter(([, value]) => value)
+  if (filled.length === 0) return <Text> </Text>
+  return filled.map(([label, value], i) => (
+    <View key={label}>
+      {i > 0 && <View style={formStyles.dashedDivider} />}
+      <Text style={formStyles.subSection}>
+        <Text style={formStyles.subLabel}>{label} : </Text>
+        {value}
+      </Text>
+    </View>
+  ))
+}
+
+// 메타줄 텍스트 조립 — '김승범 (산청중 2학년) · 7. 5.(토) 14:00~14:20 (20분) · 3회차'
+function metaTextOf(leftTop, leftBottom, entry) {
+  const subject = leftBottom ? `${leftTop || '-'} (${leftBottom})` : leftTop || '-'
+  return [subject, entry.dateTimeText, entry.cumulativeText].filter(Boolean).join('  ·  ')
+}
+
 // 상담 건 1개 블록 — wrap={false}로 건 경계 페이지 분할.
+// [번호][메타 한 줄(음영) / 본문 전체 폭] 구조. 특이사항도 인라인 섹션(있을 때만).
 // entry: { no, dateTimeText, cumulativeText, topic, diagnosis, advice, followUp, fallbackContent, note }
-// leftTop/leftBottom: 좌측 열 값 (학생이름/학교학년 또는 상담강사/상담유형)
+// leftTop/leftBottom: 메타줄 대상 표기 (학생이름·학교학년 또는 상담강사·상담유형)
 export function EntryBlock({ entry, leftTop, leftBottom }) {
   return (
     <View style={formStyles.block} wrap={false}>
@@ -113,42 +101,23 @@ export function EntryBlock({ entry, leftTop, leftBottom }) {
         <Text style={formStyles.centerText}>{entry.no}</Text>
       </View>
       <View style={formStyles.colBody}>
-        <View style={formStyles.rowTop}>
-          <View style={formStyles.leftTopCell}>
-            <Text style={formStyles.centerText}>{leftTop || ' '}</Text>
-          </View>
-          <View style={formStyles.dateTimeCell}>
-            <Text style={formStyles.centerText}>{entry.dateTimeText}</Text>
-          </View>
-          <View style={formStyles.roundCell}>
-            <Text style={formStyles.centerText}>{entry.cumulativeText}</Text>
-          </View>
+        <View style={formStyles.metaRow}>
+          <Text style={formStyles.metaText}>{metaTextOf(leftTop, leftBottom, entry)}</Text>
         </View>
-        <View style={formStyles.rowBody}>
-          <View style={formStyles.leftBottomCell}>
-            <Text style={formStyles.centerText}>{leftBottom || ' '}</Text>
-          </View>
-          <View style={formStyles.contentCell}>
-            {entry.fallbackContent ? (
-              <Text>{entry.fallbackContent}</Text>
-            ) : (
-              <>
-                <Text style={formStyles.subSection}>주제 : {entry.topic}</Text>
-                <View style={formStyles.dashedDivider} />
-                <Text style={formStyles.subLabel}>문제 확인</Text>
-                <Text style={formStyles.subSection}>{entry.diagnosis || ' '}</Text>
-                <View style={formStyles.dashedDivider} />
-                <Text style={formStyles.subLabel}>제안 조언</Text>
-                <Text style={formStyles.subSection}>{entry.advice || ' '}</Text>
-                <View style={formStyles.dashedDivider} />
-                <Text style={formStyles.subLabel}>후속 조치</Text>
-                <Text style={formStyles.subSection}>{entry.followUp || ' '}</Text>
-              </>
-            )}
-          </View>
-          <View style={formStyles.noteCell}>
-            <Text>{entry.note || ' '}</Text>
-          </View>
+        <View style={formStyles.contentCell}>
+          {entry.fallbackContent ? (
+            <InlineSections sections={[['내용', entry.fallbackContent], ['특이사항', entry.note]]} />
+          ) : (
+            <InlineSections
+              sections={[
+                ['주제', entry.topic],
+                ['문제 확인', entry.diagnosis],
+                ['제안 조언', entry.advice],
+                ['후속 조치', entry.followUp],
+                ['특이사항', entry.note],
+              ]}
+            />
+          )}
         </View>
       </View>
     </View>

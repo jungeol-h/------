@@ -10,38 +10,40 @@ import { colors, fontSize } from '../config/styles'
 
 const BORDER = 0.8
 const line = { borderColor: colors.text, borderStyle: 'solid' }
-const LEFT_COL = '16%' // 학생이름/학교학년 열 (colBody 기준)
-const RIGHT_COL = '17%' // 누적횟수/특이사항 열 (colBody 기준)
+// 2026-08 개편(페이지 수 최소화, 클라 확정): 칼럼 헤더 없이 건마다
+// [번호][메타 한 줄(음영: 대상 · 일시 · 회차) / 본문 전체 폭] 블록 구조.
 
+// 2026-08 압축 개편: 클라이언트 요청 "페이지 수 최소화" — 여백·최소높이·폰트를
+// 줄이고 내용 라벨은 본문과 한 줄로 병기(EntryBlock). 서식 골격은 유지.
 export const formStyles = StyleSheet.create({
   page: {
     fontFamily: 'Pretendard',
-    fontSize: fontSize.sm,
+    fontSize: fontSize.xs,
     color: colors.text,
-    padding: 36,
-    lineHeight: 1.35,
+    padding: 26,
+    lineHeight: 1.25,
   },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 14,
+    marginBottom: 8,
   },
-  titleLogo: { width: 70, height: 22, marginRight: 10 },
+  titleLogo: { width: 56, height: 18, marginRight: 8 },
   titleText: {
-    fontSize: fontSize.title,
+    fontSize: fontSize.xl,
     fontWeight: 700,
     textAlign: 'center',
   },
 
   // ── 상단 헤더 표 ──
-  headerTable: { ...line, borderWidth: BORDER, marginBottom: 12 },
+  headerTable: { ...line, borderWidth: BORDER, marginBottom: 8 },
   headerRow: { flexDirection: 'row', ...line, borderBottomWidth: BORDER },
   headerRowLast: { borderBottomWidth: 0 },
   headerCell: {
     ...line,
     borderRightWidth: BORDER,
-    paddingVertical: 6,
+    paddingVertical: 4,
     paddingHorizontal: 4,
     justifyContent: 'center',
   },
@@ -53,73 +55,46 @@ export const formStyles = StyleSheet.create({
   detailTitleBar: {
     ...line,
     borderWidth: BORDER,
-    borderBottomWidth: 0,
     backgroundColor: colors.bgMuted,
-    paddingVertical: 4,
+    paddingVertical: 3,
   },
   detailTitleText: { textAlign: 'center', fontWeight: 700 },
-  // 머리·블록 공통 골격: [번호 7%][본문 93% = 상단행/하단행]
+  // 블록 골격: [번호 5%][본문 95% = 메타줄/내용]
   block: {
     ...line,
     borderLeftWidth: BORDER,
     borderRightWidth: BORDER,
     borderBottomWidth: BORDER,
     flexDirection: 'row',
-    minHeight: 72,
+    minHeight: 24,
   },
-  blockHead: { ...line, borderTopWidth: BORDER, backgroundColor: colors.bgLight, minHeight: 0 },
   colNo: {
-    width: '7%',
+    width: '5%',
     ...line,
     borderRightWidth: BORDER,
     justifyContent: 'center',
   },
-  colBody: { width: '93%' },
+  colBody: { width: '95%' },
   centerText: { textAlign: 'center' },
-  // 본문 상단 행: 이름 + 상담일시 + 누적횟수 — 구분선은 이 행의 borderBottom 하나뿐
-  rowTop: { flexDirection: 'row', ...line, borderBottomWidth: BORDER },
-  leftTopCell: {
-    width: LEFT_COL,
+  // 메타줄: 대상(학교·인원) · 일시 · 회차 — 음영 한 줄
+  metaRow: {
     ...line,
-    borderRightWidth: BORDER,
-    paddingVertical: 3,
-    paddingHorizontal: 2,
-    justifyContent: 'center',
-  },
-  dateTimeCell: { flex: 1, paddingVertical: 3, paddingHorizontal: 4, justifyContent: 'center' },
-  roundCell: {
-    width: RIGHT_COL,
-    ...line,
-    borderLeftWidth: BORDER,
-    paddingVertical: 3,
-    paddingHorizontal: 4,
-    justifyContent: 'center',
-  },
-  // 본문 하단 행: 학교학년 + 상담내용 + 특이사항
-  rowBody: { flexDirection: 'row', flexGrow: 1 },
-  leftBottomCell: {
-    width: LEFT_COL,
-    ...line,
-    borderRightWidth: BORDER,
-    paddingVertical: 4,
-    paddingHorizontal: 2,
-    justifyContent: 'center',
-  },
-  contentCell: { flex: 1, paddingVertical: 4, paddingHorizontal: 6 },
-  noteCell: {
-    width: RIGHT_COL,
-    ...line,
-    borderLeftWidth: BORDER,
-    paddingVertical: 4,
+    borderBottomWidth: BORDER,
+    backgroundColor: colors.bgLight,
+    paddingVertical: 2,
     paddingHorizontal: 5,
   },
-  subLabel: { fontWeight: 600, fontSize: fontSize.xs, color: colors.muted, marginBottom: 1 },
-  subSection: { minHeight: 16 },
+  metaText: { fontWeight: 600 },
+  // 본문: 전체 폭 (특이사항도 인라인 섹션으로). ⚠️ 세로 컨테이너라 flex:1 금지 — 내용 기반 높이.
+  contentCell: { paddingVertical: 3, paddingHorizontal: 5 },
+  // 본문과 한 줄 병기하는 인라인 라벨 (중첩 Text)
+  subLabel: { fontWeight: 700, fontSize: 8, color: colors.muted },
+  subSection: {},
   dashedDivider: {
     borderBottomWidth: 0.5,
     borderBottomColor: colors.border,
     borderBottomStyle: 'dashed',
-    marginVertical: 3,
+    marginVertical: 2,
   },
   emptyBox: {
     ...line,

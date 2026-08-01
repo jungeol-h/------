@@ -49,6 +49,18 @@ export function formatCounselingDateTime(date, startTime, endTime) {
   return `${dateText} ${start} ~ ${end}${mins ? ` (${mins}분)` : ''}`
 }
 
+// 보고서 메타줄용 압축 표기 — '7. 5.(토) 14:00~14:20 (20분)'. 연도는 보고서
+// 헤더의 작성기간에 있으므로 생략, 시간은 24h 그대로 (페이지 수 최소화 개편).
+export function formatCompactDateTime(date, startTime, endTime) {
+  const [, m, d] = String(date ?? '').split('-').map(Number)
+  if (!m || !d) return date ?? ''
+  const dateText = `${m}. ${d}.(${DOW_KR[new Date(Number(date.slice(0, 4)), m - 1, d).getDay()]})`
+  if (!startTime) return dateText
+  if (!endTime) return `${dateText} ${startTime}`
+  const mins = durationMinutes(startTime, endTime)
+  return `${dateText} ${startTime}~${endTime}${mins ? ` (${mins}분)` : ''}`
+}
+
 // 이번 달 1일~말일 ['YYYY-MM-01', 'YYYY-MM-말일'] — 출력 모달 기본 기간.
 export function currentMonthRange(today = new Date()) {
   const first = new Date(today.getFullYear(), today.getMonth(), 1)
@@ -136,17 +148,20 @@ export function buildMonthlyCounselingEntries(records, getStudent, { educatorId,
     }))
     const single = members.length === 1
     const structured = hasStructuredContent(r)
+    const uniformRound = members.every((m) => m.round === members[0].round)
     return {
       no: i + 1,
       studentName: members.map((m) => m.student.name || '-').join(', '),
-      // 그룹 세션은 학교학년 대신 인원수 — 좌측 셀이 좁아 학생별 병기는 누적횟수에서만
+      // 그룹 세션은 학교학년 대신 인원수
       schoolGrade: single
         ? [members[0].student.school, members[0].student.grade].filter(Boolean).join(' ')
         : `${members.length}명`,
-      dateTimeText: formatCounselingDateTime(r.date, r.startTime, r.endTime),
+      dateTimeText: formatCompactDateTime(r.date, r.startTime, r.endTime),
       cumulativeText: single
         ? `${members[0].round}회차`
-        : members.map((m) => `${m.student.name || '-'} ${m.round}회차`).join(' · '),
+        : uniformRound
+          ? `각 ${members[0].round}회차`
+          : members.map((m) => `${m.student.name || '-'} ${m.round}회차`).join(' · '),
       topic: structured ? r.topic : '',
       diagnosis: structured ? r.diagnosis : '',
       advice: structured ? r.advice : '',
