@@ -32,7 +32,7 @@ export default function LessonReportModal({
   const [endDate, setEndDate] = useState(defaultEnd)
   const [datesTouched, setDatesTouched] = useState(false) // 사용자가 기간을 직접 수정했는가
   const [duty, setDuty] = useState(fixedEducator?.subject ?? '')
-  const [schedule, setSchedule] = useState(DEFAULT_SCHEDULE)
+  const [schedule, setSchedule] = useState(fixedEducator?.workSchedule || DEFAULT_SCHEDULE)
 
   const selectedEducator =
     fixedEducator ?? educators?.find((e) => e.id === educatorId) ?? null
@@ -63,8 +63,10 @@ export default function LessonReportModal({
 
   const handleSelectEducator = (id) => {
     setEducatorId(id)
-    // 담당업무 기본값은 선택 강사의 담당 분야 — 이후 자유 수정
-    setDuty(educators?.find((e) => e.id === id)?.subject ?? '')
+    const educator = educators?.find((e) => e.id === id)
+    // 담당업무·업무일정 기본값은 선택 강사의 담당 분야·등록된 일정 — 이후 자유 수정
+    setDuty(educator?.subject ?? '')
+    setSchedule(educator?.workSchedule || DEFAULT_SCHEDULE)
   }
 
   const fieldClass =

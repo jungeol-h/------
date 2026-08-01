@@ -59,6 +59,7 @@ DB 스키마 변경은 **Supabase Studio SQL Editor에서 수동 실행**한다 
 | `add-notices.sql` | 공지·알림(2026-07-31 클라이언트): notices 테이블 — kind(announcement=로그인 팝업 공지 / notification=홈 알림 칸 누적), audience(전체/학생/학부모), active 내리기 토글 | 적용됨 (2026-07-31, Studio) |
 | `add-notice-reads.sql` | 공지 읽음 기록(add-notices 후속): notice_reads(notice_id×user_id, FK CASCADE) — 다기기 사용자가 기기마다 팝업을 다시 보던 localStorage 판정을 서버 기록으로 전환 (클라는 미적용 시 localStorage로 자연 강등) | 적용됨 (2026-07-31, Studio — 실DB 테이블 확인) |
 | `add-attendance-reentry.sql` | 하루 2회 등원(재등원) 지원: attendance_records.events(jsonb, 등·하원 이벤트 로그) + kiosk_check_in/kiosk_check_out/kiosk_find_students 교체 — 하원 완료 후 재등원 시 하루 1행 유지하며 check_out_at을 NULL로 리셋(UNIQUE student_id,date 인덱스는 무변경). judge_attendance는 check_in_at만 참조해 영향 없음 확인 | 적용됨 (2026-07-31, Studio) |
+| `add-educator-work-schedule.sql` | 교직원 업무일정: users.work_schedule(TEXT) + 6명(김승범·최돈권·박영균·황광희·김재형·이승구) 담당·일정 시드(2026-08-01 클라이언트 확정) — 월간 컨설팅/수업 보고서 헤더 기본값. 수정 UI: 관리자 EducatorFormModal·본인 Header 내 정보 | 적용됨 (2026-08-01, MCP apply_migration — 실DB 검증) |
 
 ## 시드·일회성 유틸 (재실행 금지 또는 불필요)
 

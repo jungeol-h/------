@@ -27,6 +27,7 @@ export default function EducatorFormModal({ mode = 'create', initial, onSubmit, 
   const [phone, setPhone] = useState(initial?.phone ?? '')
   const [resetPassword, setResetPassword] = useState(false) // edit 모드: 저장 시 비밀번호를 연락처로 초기화
   const [subject, setSubject] = useState(initial?.subject ?? '')
+  const [workSchedule, setWorkSchedule] = useState(initial?.workSchedule ?? '')
   const [groups, setGroups] = useState(() => new Set(initial?.groups ?? []))
   const [saving, setSaving] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
@@ -89,7 +90,8 @@ export default function EducatorFormModal({ mode = 'create', initial, onSubmit, 
         loginId: loginIdClean,
         phone: phoneClean,
         resetPassword: isEdit ? resetPassword : undefined,
-        subject: role === 'instructor' ? subject : '',
+        subject: cleanText(subject),
+        workSchedule: cleanText(workSchedule),
         groups: [...groups],
       })
       onClose()
@@ -137,7 +139,7 @@ export default function EducatorFormModal({ mode = 'create', initial, onSubmit, 
             </select>
           </div>
 
-          {role === 'instructor' && (
+          {role === 'instructor' ? (
             <div>
               <label className="block text-[11px] font-bold text-gray-500 mb-1">담당 과목</label>
               <select
@@ -152,7 +154,30 @@ export default function EducatorFormModal({ mode = 'create', initial, onSubmit, 
               </select>
               <p className="mt-1 text-[10px] text-gray-400">확인평가 출제·모니터링이 이 과목으로 스코프됩니다</p>
             </div>
+          ) : (
+            <div>
+              <label className="block text-[11px] font-bold text-gray-500 mb-1">담당 업무</label>
+              <input
+                type="text"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
+                placeholder="예: 비교과 계열심화 자연"
+              />
+            </div>
           )}
+
+          <div>
+            <label className="block text-[11px] font-bold text-gray-500 mb-1">업무일정</label>
+            <input
+              type="text"
+              value={workSchedule}
+              onChange={(e) => setWorkSchedule(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
+              placeholder="예: 금 16:00~21:00 · 일 13:30~18:00"
+            />
+            <p className="mt-1 text-[10px] text-gray-400">월간 컨설팅·수업 보고서 헤더의 업무일정 기본값으로 쓰입니다</p>
+          </div>
 
           <div>
             <label className="block text-[11px] font-bold text-gray-500 mb-1">소속 그룹</label>

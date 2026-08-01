@@ -403,7 +403,10 @@ export default function LessonReportSection({ students, readOnly = false }) {
                 )
               : null
           }
-          fixedEducator={isReportPicker ? null : currentUser}
+          fixedEducator={
+            // 스테일 localStorage 세션에는 subject/workSchedule이 없을 수 있어 fetch본 우선
+            isReportPicker ? null : data.educators.find((e) => e.id === currentUser?.id) ?? currentUser
+          }
           reports={data.lessonReports}
           getStudent={getStudent}
           onClose={() => setShowMonthlyReport(false)}

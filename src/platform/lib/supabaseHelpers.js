@@ -20,6 +20,7 @@ export const toUser = (row) => ({
   status: row.status ?? 'active',
   enrolledAt: row.enrolled_at ?? null,
   subject: row.subject ?? '',
+  workSchedule: row.work_schedule ?? '', // 교직원 업무일정 — 보고서 헤더 기본값
   groups: row.group_names ?? [], // 소속 그룹 (빈 배열 = 무소속: 직원이면 전체 열람, 학생이면 공용)
 })
 

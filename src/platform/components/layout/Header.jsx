@@ -1,10 +1,14 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bell, LogOut, ChevronLeft, KeyRound } from 'lucide-react'
+import { Bell, LogOut, ChevronLeft, KeyRound, UserCog } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import FeedbackButton from '../FeedbackButton.jsx'
 import InstallButton from '../InstallButton.jsx'
 import ChangePasswordModal from '../auth/ChangePasswordModal.jsx'
+import MyProfileModal from '../auth/MyProfileModal.jsx'
+
+// 내 정보(담당 업무·업무일정) 버튼 노출 대상 — 교직원 역할만
+const EDUCATOR_ROLES = new Set(['admin', 'manager', 'instructor', 'consultant'])
 
 const ROLE_LABELS = {
   student: '학생',
@@ -30,6 +34,8 @@ export default function Header({ title, badge, back }) {
   const { currentUser, logout } = useAuth()
   const navigate = useNavigate()
   const [showPwModal, setShowPwModal] = useState(false)
+  const [showProfileModal, setShowProfileModal] = useState(false)
+  const isEducator = EDUCATOR_ROLES.has(currentUser?.role)
 
   const handleLogout = () => {
     logout()
@@ -61,6 +67,16 @@ export default function Header({ title, badge, back }) {
         )}
         <InstallButton />
         <FeedbackButton />
+        {isEducator && (
+          <button
+            onClick={() => setShowProfileModal(true)}
+            className="text-gray-400 hover:text-gray-600 border border-gray-200 rounded-lg p-1.5 flex-shrink-0"
+            aria-label="내 정보"
+            title="내 정보"
+          >
+            <UserCog size={13} />
+          </button>
+        )}
         <button
           onClick={() => setShowPwModal(true)}
           className="text-gray-400 hover:text-gray-600 border border-gray-200 rounded-lg p-1.5 flex-shrink-0"
@@ -78,6 +94,7 @@ export default function Header({ title, badge, back }) {
         </button>
       </div>
       {showPwModal && <ChangePasswordModal onClose={() => setShowPwModal(false)} />}
+      {showProfileModal && <MyProfileModal onClose={() => setShowProfileModal(false)} />}
     </header>
   )
 }

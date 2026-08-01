@@ -17,7 +17,7 @@ export const EDUCATOR_MANAGED_ROLES = ['manager', 'instructor', 'consultant', 'v
 export function useEducatorDomain(setData) {
   // 교직원 신규 추가 — 초기 비밀번호 = 본인 연락처(해시), 첫 로그인 시 강제 재설정
   const createEducator = useCallback(
-    async ({ name, role, loginId, phone, subject, groups }) => {
+    async ({ name, role, loginId, phone, subject, workSchedule, groups }) => {
       if (!EDUCATOR_MANAGED_ROLES.includes(role)) {
         throw new Error('허용되지 않은 역할입니다.')
       }
@@ -31,6 +31,7 @@ export function useEducatorDomain(setData) {
         name,
         role,
         subject: subject ?? '',
+        work_schedule: workSchedule || null,
         group_names: groups ?? [],
         status: 'active',
       }
@@ -65,6 +66,7 @@ export function useEducatorDomain(setData) {
       if (patch.phone !== undefined) snake.phone = patch.phone || null
       if (patch.role !== undefined) snake.role = patch.role
       if (patch.subject !== undefined) snake.subject = patch.subject
+      if (patch.workSchedule !== undefined) snake.work_schedule = patch.workSchedule || null
       if (patch.groups !== undefined) snake.group_names = patch.groups
       if (patch.resetPassword) {
         snake.password = await hashPassword(patch.phone, INITIAL_COST)

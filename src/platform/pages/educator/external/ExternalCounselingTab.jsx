@@ -179,7 +179,12 @@ export default function ExternalCounselingTab() {
                   )
                 : null
             }
-            fixedEducator={isAdmin || isViewer ? null : currentUser}
+            fixedEducator={
+              // 스테일 localStorage 세션에는 subject/workSchedule이 없을 수 있어 fetch본 우선
+              isAdmin || isViewer
+                ? null
+                : data.educators.find((e) => e.id === currentUser?.id) ?? currentUser
+            }
             loadRecords={loadMonthlyRecords}
             reportLabel="외부컨설팅보고서"
             onClose={() => setShowMonthlyReport(false)}

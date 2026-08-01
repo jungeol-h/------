@@ -44,7 +44,7 @@ export default function MonthlyReportModal({
   const [datesTouched, setDatesTouched] = useState(false) // 사용자가 기간을 직접 수정했는가
   const [filterType, setFilterType] = useState('') // '' = 전체 — 담당업무별 보고서 분리용
   const [duty, setDuty] = useState(fixedEducator?.subject ?? '')
-  const [schedule, setSchedule] = useState(DEFAULT_SCHEDULE)
+  const [schedule, setSchedule] = useState(fixedEducator?.workSchedule || DEFAULT_SCHEDULE)
 
   // 유형 필터 확장(구 체계 별칭 포함). null이면 전체.
   const selectedTypes = useMemo(
@@ -111,12 +111,14 @@ export default function MonthlyReportModal({
 
   const handleSelectEducator = (id) => {
     setEducatorId(id)
+    const educator = educators?.find((e) => e.id === id)
     // 담당업무 기본값: 유형 선택 시 유형 라벨, 아니면 선택 강사의 담당 분야 — 이후 자유 수정
     setDuty(
       filterType
         ? `${COUNSELING_TYPE_LABELS[filterType]} 컨설팅`
-        : educators?.find((e) => e.id === id)?.subject ?? '',
+        : educator?.subject ?? '',
     )
+    setSchedule(educator?.workSchedule || DEFAULT_SCHEDULE)
   }
 
   const handleSelectType = (value) => {

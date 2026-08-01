@@ -170,6 +170,20 @@ export function AuthProvider({ children }) {
     await savePassword(currentUser.id, newPassword)
   }
 
+  // 내 정보(담당 업무·업무일정) 수정 — 교직원 본인이 Header '내 정보' 모달에서 사용.
+  // 보고서(월간 컨설팅/수업) 헤더의 담당업무·업무일정 기본값이 이 값에서 나온다.
+  const updateMyProfile = async ({ subject, workSchedule }) => {
+    if (!currentUser) throw new Error('로그인이 필요합니다.')
+    const { error: upErr } = await supabase
+      .from('users')
+      .update({ subject: subject ?? '', work_schedule: workSchedule || null })
+      .eq('id', currentUser.id)
+    if (upErr) throw upErr
+    setCurrentUser((prev) =>
+      prev ? { ...prev, subject: subject ?? '', workSchedule: workSchedule ?? '' } : prev,
+    )
+  }
+
   // 강제 재설정 대상: 본인이 비밀번호를 정한 적이 없는 계정.
   // 단, localStorage 세션의 판정은 위 useEffect가 DB로 재확인한 뒤에만 유효
   // (resetFlagVerified) — 다른 기기에서 이미 재설정한 옛 세션에 또 띄우지 않는다.
@@ -181,6 +195,7 @@ export function AuthProvider({ children }) {
       value={{
         currentUser, login, logout, loading, error,
         changePassword, completeForcedReset, mustChangePassword, syncPasswordChangedAt,
+        updateMyProfile,
       }}
     >
       {children}
