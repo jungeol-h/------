@@ -78,7 +78,7 @@ export function byDateTime(a, b) {
 // (CounselingTabContent fan-out), 보고서에는 한 세션 = 한 칸이어야 한다(2026-08 클라 확정).
 // fan-out 행은 학생 외 모든 내용이 동일하므로 그 서명으로 묶는다. 같은 날 시간 없이
 // 따로 작성한 개별 상담은 주제·내용이 달라 병합되지 않는다(실DB 검증).
-function sessionKey(r) {
+export function sessionKey(r) {
   return JSON.stringify([
     r.date, r.startTime ?? '', r.endTime ?? '', r.type ?? '',
     r.topic ?? '', r.diagnosis ?? '', r.advice ?? '', r.followUp ?? '',

@@ -2,24 +2,21 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import { FileSpreadsheet, BarChart2, Printer } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid, Cell } from 'recharts'
 import { useData } from '../../context/DataContext.jsx'
-import { useAuth } from '../../context/AuthContext.jsx'
-import DownloadPdfButton from '../../pdf/components/DownloadPdfButton.jsx'
 import AttendanceExcelModal from '../attendance/AttendanceExcelModal.jsx'
 import MonthlyReportModal from '../counseling/MonthlyReportModal.jsx'
-import { buildFilename, nowDateTime } from '../../pdf/utils/formatters.js'
-import { authorOf } from '../../pdf/config/meta.js'
+import MonthlyOperationsReportModal from './MonthlyOperationsReportModal.jsx'
 import { getAttendanceTotals, getAvgLearningMinutes, getCounselingTypeCounts } from '../../context/selectors/adminStats.js'
 import { formatMinutes } from '../../pages/student/learningTabLogic.js'
 
 // 통계 섹션 — 구 '통계' 탭 콘텐츠를 관리자 홈 하단에 임베드 (요청: 통계를 홈 맨 아래로).
 export default function StatisticsSection() {
   const { data } = useData()
-  const { currentUser } = useAuth()
   const hasStats = data.monthlyStats.length > 0
   const barRef = useRef(null)
   const lineRef = useRef(null)
   const [excelOpen, setExcelOpen] = useState(false)
   const [counselingReportOpen, setCounselingReportOpen] = useState(false)
+  const [operationsReportOpen, setOperationsReportOpen] = useState(false)
 
   // 강사별 월간 컨설팅 보고서 — 업무기록>상담보고의 출력과 동일 (강사 선택형).
   // 누적횟수(N회차)가 전체 이력 기준이어야 하므로 counselingRecords 전량을 넘긴다.
@@ -36,42 +33,6 @@ export default function StatisticsSection() {
   const avgLearningMin = useMemo(() => getAvgLearningMinutes(data), [data])
   const typeCounts = useMemo(() => getCounselingTypeCounts(data), [data])
   const hasAttendance = attendanceTotals.present + attendanceTotals.late + attendanceTotals.absent > 0
-
-  const buildPdf = useCallback(async () => {
-    const periodLabel = hasStats
-      ? `${data.monthlyStats[0].month} ~ ${data.monthlyStats[data.monthlyStats.length - 1].month}`
-      : '-'
-    const identifier = hasStats
-      ? `${data.monthlyStats[0].month}-${data.monthlyStats[data.monthlyStats.length - 1].month}`.replace(/월/g, '')
-      : ''
-    const filename = buildFilename('월간보고서', identifier)
-
-    const [
-      { default: StatisticsReport },
-      { captureChart },
-    ] = await Promise.all([
-      import('../../pdf/reports/StatisticsReport.jsx'),
-      import('../../pdf/utils/captureChart.js'),
-    ])
-
-    const [centerHoursImg, selfIndexImg] = await Promise.all([
-      captureChart(barRef.current),
-      captureChart(lineRef.current),
-    ])
-
-    return {
-      element: (
-        <StatisticsReport
-          monthlyStats={data.monthlyStats}
-          chartImages={{ centerHours: centerHoursImg, selfIndex: selfIndexImg }}
-          period={periodLabel}
-          generatedAt={nowDateTime()}
-          author={authorOf(currentUser)}
-        />
-      ),
-      filename,
-    }
-  }, [hasStats, data.monthlyStats, currentUser])
 
   return (
     <section className="space-y-3">
@@ -95,15 +56,21 @@ export default function StatisticsSection() {
             <Printer size={14} />
             컨설팅 보고서
           </button>
-          <DownloadPdfButton
-            buildDocument={buildPdf}
-            label="월간 보고서"
-            disabled={!hasStats}
-          />
+          <button
+            onClick={() => setOperationsReportOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 active:scale-95 transition-all"
+          >
+            <Printer size={14} />
+            월간 보고서
+          </button>
         </div>
       </div>
 
       <AttendanceExcelModal open={excelOpen} onClose={() => setExcelOpen(false)} />
+
+      {operationsReportOpen && (
+        <MonthlyOperationsReportModal onClose={() => setOperationsReportOpen(false)} />
+      )}
 
       {counselingReportOpen && (
         <MonthlyReportModal

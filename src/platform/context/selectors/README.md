@@ -46,6 +46,7 @@
 | `reflectionReport.js` | 종합 성장 리포트 데이터 조립 (getTaskSummary/getQuizSummary 포함) |
 | `monthlyCounselingReport.js` | 강사별 월간 컨설팅 보고서 조립 + 날짜·기간 서식 유틸 (monthRangeOf 등) |
 | `monthlyLessonReport.js` | 강사별 월간 수업보고서 조립 (수업보고 — 학생 복수·교재·과제) |
+| `monthlyOperationsReport.js` | 월간 종합 보고서 집계 — 시수 규칙(교과60·진로40·수업60분=1시수, 50~70분→60 스냅)·출석 연인원·이용시간(events 쌍) |
 | `report.js` / `studentView.js` / `learningRecords.js` | 일일 리포트·학생 화면 파생값 |
 | `reconciliation.js` | 출결-학습 대사(reconcile) |
 | `workPlans.js` | 업무계획 파생값 |
