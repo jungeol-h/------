@@ -7,7 +7,9 @@ import {
   COUNSELING_TARGET_TYPES, COUNSELING_TARGET_LABELS,
   composeCounselingContent, hasStructuredContent,
 } from '../../data/counselingTypes.js'
+import { hasMultipleDuties } from '../../data/educatorDuties.js'
 import CounselingContentFields from './CounselingContentFields.jsx'
+import DutyTypeBadge from './DutyTypeBadge.jsx'
 import { AttachmentField } from './AttachmentField.jsx'
 import { uploadCounselingPdfs, removeCounselingFiles, filterUnreferencedPaths } from '../../lib/counselingFiles.js'
 import MultiStudentSelect from '../common/MultiStudentSelect.jsx'
@@ -28,7 +30,9 @@ export default function CounselingFormModal({ students = [], fixedStudent, recor
   const [studentIds, setStudentIds] = useState(() =>
     record?.studentId ? [record.studentId] : fixedStudent?.id ? [fixedStudent.id] : []
   )
-  const [type, setType] = useState(record?.type ?? COUNSELING_TYPES[0])
+  // 복수 담당업무 작성자는 신규 작성 시 유형 기본값 없이 명시적 선택을 강제한다 (보고서 오분류 방지)
+  const multiDuty = hasMultipleDuties(authorId)
+  const [type, setType] = useState(record?.type ?? (multiDuty ? '' : COUNSELING_TYPES[0]))
   const [targetType, setTargetType] = useState(record?.targetType ?? 'student')
   const [date, setDate] = useState(record?.date ?? todayStr())
   const [startTime, setStartTime] = useState(record?.startTime ?? '')
@@ -121,6 +125,7 @@ export default function CounselingFormModal({ students = [], fixedStudent, recor
               onChange={e => setType(e.target.value)}
               className={fieldClass}
             >
+              {multiDuty && <option value="" disabled>유형을 선택하세요</option>}
               {COUNSELING_TYPES.map(t => (
                 <option key={t} value={t}>{COUNSELING_TYPE_LABELS[t]}</option>
               ))}
@@ -129,6 +134,7 @@ export default function CounselingFormModal({ students = [], fixedStudent, recor
                 <option value={type}>{COUNSELING_TYPE_LABELS[type] ?? type}</option>
               )}
             </select>
+            <DutyTypeBadge educatorId={authorId} type={type} />
           </div>
         </div>
 
@@ -178,7 +184,7 @@ export default function CounselingFormModal({ students = [], fixedStudent, recor
           </button>
           <button
             onClick={handleSave}
-            disabled={saving || !fields.topic.trim() || studentIds.length === 0}
+            disabled={saving || !fields.topic.trim() || studentIds.length === 0 || !type}
             className="flex-1 py-3 bg-emerald-500 text-white rounded-xl font-bold hover:bg-emerald-600 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <CheckCheck size={16} />

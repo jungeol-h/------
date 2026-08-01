@@ -7,6 +7,7 @@ import {
   COUNSELING_TARGET_TYPES, COUNSELING_TARGET_LABELS,
   composeCounselingContent,
 } from '../../data/counselingTypes.js'
+import { hasMultipleDuties } from '../../data/educatorDuties.js'
 import { educatorDisplayName } from '../../utils/educatorName.js'
 import StudentCombobox from './StudentCombobox.jsx'
 import MultiStudentSelect from '../common/MultiStudentSelect.jsx'
@@ -14,6 +15,7 @@ import TimeField from '../common/TimeField.jsx'
 import CounselingFormModal, { COUNSELING_MAX_STUDENTS } from './CounselingFormModal.jsx'
 import CounselingContentFields from './CounselingContentFields.jsx'
 import CounselingRecordBody from './CounselingRecordBody.jsx'
+import DutyTypeBadge from './DutyTypeBadge.jsx'
 import UrgentReportModal from './UrgentReportModal.jsx'
 import MonthlyReportModal from './MonthlyReportModal.jsx'
 import { AttachmentField, AttachmentChips } from './AttachmentField.jsx'
@@ -31,7 +33,9 @@ export default function CounselingTabContent({ students, records, showAuthor = f
   const { addCounselingRecord, deleteCounselingRecord, data } = useData()
   const { currentUser } = useAuth()
   const [studentIds, setStudentIds] = useState([]) // 다중 선택 — 학생별 기록 fan-out
-  const [type, setType] = useState(COUNSELING_TYPES[0])
+  // 복수 담당업무 작성자는 유형 기본값 없이 명시적 선택을 강제한다 (보고서 오분류 방지)
+  const multiDuty = hasMultipleDuties(authorId)
+  const [type, setType] = useState(multiDuty ? '' : COUNSELING_TYPES[0])
   const [targetType, setTargetType] = useState('student')
   const [date, setDate] = useState(todayStr())
   const [startTime, setStartTime] = useState('')
@@ -118,7 +122,7 @@ export default function CounselingTabContent({ students, records, showAuthor = f
   const fieldClass =
     'border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300'
 
-  const canSave = !saving && fields.topic.trim() && studentIds.length > 0
+  const canSave = !saving && fields.topic.trim() && studentIds.length > 0 && type
 
   const handleSave = async () => {
     if (!canSave) return
@@ -141,7 +145,7 @@ export default function CounselingTabContent({ students, records, showAuthor = f
       }
       // 성공 시 폼 초기화(학생/유형은 연속 작성 편의를 위해 유지하지 않고 비움).
       setStudentIds([])
-      setType(COUNSELING_TYPES[0])
+      setType(multiDuty ? '' : COUNSELING_TYPES[0])
       setTargetType('student')
       setDate(todayStr())
       setStartTime('')
@@ -205,12 +209,14 @@ export default function CounselingTabContent({ students, records, showAuthor = f
                 onChange={(e) => setType(e.target.value)}
                 className={`${fieldClass} w-full`}
               >
+                {multiDuty && <option value="" disabled>유형을 선택하세요</option>}
                 {COUNSELING_TYPES.map((t) => (
                   <option key={t} value={t}>
                     {COUNSELING_TYPE_LABELS[t]}
                   </option>
                 ))}
               </select>
+              <DutyTypeBadge educatorId={authorId} type={type} />
             </div>
           </div>
         </div>

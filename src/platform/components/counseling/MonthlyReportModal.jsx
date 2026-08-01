@@ -4,6 +4,7 @@ import ModalShell from '../common/ModalShell.jsx'
 import DownloadPdfButton from '../../pdf/components/DownloadPdfButton.jsx'
 import { educatorDisplayName } from '../../utils/educatorName.js'
 import { COUNSELING_TYPES, COUNSELING_TYPE_LABELS } from '../../data/counselingTypes.js'
+import { EDUCATOR_DUTIES } from '../../data/educatorDuties.js'
 import {
   currentMonthRange,
   monthRangeOf,
@@ -38,7 +39,10 @@ export default function MonthlyReportModal({
   onClose,
 }) {
   const [defaultStart, defaultEnd] = useMemo(() => currentMonthRange(), [])
-  const [educatorId, setEducatorId] = useState(fixedEducator?.id ?? '')
+  // 강사 셀렉트 값 — 복수 담당업무 강사(educatorDuties)는 업무별 항목으로 나뉘어
+  // 'id::dutyKey' 형태가 된다 (예: 황광희(국어) / 황광희(진로진학컨설팅)).
+  const [educatorPick, setEducatorPick] = useState(fixedEducator?.id ?? '')
+  const [educatorId, dutyKey] = educatorPick.split('::')
   const [startDate, setStartDate] = useState(defaultStart)
   const [endDate, setEndDate] = useState(defaultEnd)
   const [datesTouched, setDatesTouched] = useState(false) // 사용자가 기간을 직접 수정했는가
@@ -59,6 +63,8 @@ export default function MonthlyReportModal({
 
   const selectedEducator =
     fixedEducator ?? educators?.find((e) => e.id === educatorId) ?? null
+  const selectedDuty =
+    EDUCATOR_DUTIES[educatorId]?.find((d) => d.key === dutyKey) ?? null
 
   useEffect(() => {
     if (!educatorId) return
@@ -109,24 +115,35 @@ export default function MonthlyReportModal({
     })
   }, [loaded, educatorId, startDate, endDate, selectedTypes])
 
-  const handleSelectEducator = (id) => {
-    setEducatorId(id)
+  const handleSelectEducator = (value) => {
+    setEducatorPick(value)
+    const [id, pickedKey] = value.split('::')
     const educator = educators?.find((e) => e.id === id)
-    // 담당업무 기본값: 유형 선택 시 유형 라벨, 아니면 선택 강사의 담당 분야 — 이후 자유 수정
-    setDuty(
-      filterType
-        ? `${COUNSELING_TYPE_LABELS[filterType]} 컨설팅`
-        : educator?.subject ?? '',
-    )
+    const pickedDuty = EDUCATOR_DUTIES[id]?.find((d) => d.key === pickedKey)
+    if (pickedDuty) {
+      // 업무별 항목 선택 → 유형 필터·담당업무 헤더 자동 적용
+      setFilterType(pickedDuty.type)
+      setDuty(pickedDuty.reportDuty)
+    } else {
+      // 담당업무 기본값: 유형 선택 시 유형 라벨, 아니면 선택 강사의 담당 분야 — 이후 자유 수정
+      setDuty(
+        filterType
+          ? `${COUNSELING_TYPE_LABELS[filterType]} 컨설팅`
+          : educator?.subject ?? '',
+      )
+    }
     setSchedule(educator?.workSchedule || DEFAULT_SCHEDULE)
   }
 
   const handleSelectType = (value) => {
     setFilterType(value)
+    const matchedDuty = EDUCATOR_DUTIES[educatorId]?.find((d) => d.type === value)
     setDuty(
-      value
-        ? `${COUNSELING_TYPE_LABELS[value]} 컨설팅`
-        : selectedEducator?.subject ?? '',
+      matchedDuty
+        ? matchedDuty.reportDuty
+        : value
+          ? `${COUNSELING_TYPE_LABELS[value]} 컨설팅`
+          : selectedEducator?.subject ?? '',
     )
   }
 
@@ -143,16 +160,27 @@ export default function MonthlyReportModal({
         <div>
           <label className="text-xs text-gray-500 mb-1 block">담당자(강사)</label>
           <select
-            value={educatorId}
+            value={educatorPick}
             onChange={(e) => handleSelectEducator(e.target.value)}
             className={fieldClass}
           >
             <option value="">강사를 선택하세요</option>
-            {educators.map((e) => (
-              <option key={e.id} value={e.id}>
-                {educatorDisplayName(e)}
-              </option>
-            ))}
+            {educators.flatMap((e) => {
+              const duties = EDUCATOR_DUTIES[e.id]
+              if (!duties?.length) {
+                return (
+                  <option key={e.id} value={e.id}>
+                    {educatorDisplayName(e)}
+                  </option>
+                )
+              }
+              // 복수 담당업무 강사는 업무별 항목으로 분리 노출 (계정은 하나)
+              return duties.map((d) => (
+                <option key={`${e.id}::${d.key}`} value={`${e.id}::${d.key}`}>
+                  {`${e.name}(${d.label})`}
+                </option>
+              ))
+            })}
           </select>
         </div>
       )}
@@ -263,7 +291,13 @@ export default function MonthlyReportModal({
               ),
               filename: buildFilename(
                 reportLabel,
-                [managerName, filterType && COUNSELING_TYPE_LABELS[filterType], startDate.slice(0, 7)]
+                [
+                  managerName,
+                  selectedDuty && filterType === selectedDuty.type
+                    ? selectedDuty.label
+                    : filterType && COUNSELING_TYPE_LABELS[filterType],
+                  startDate.slice(0, 7),
+                ]
                   .filter(Boolean)
                   .join('_'),
               ),
