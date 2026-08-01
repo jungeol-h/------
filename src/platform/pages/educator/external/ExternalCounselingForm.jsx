@@ -5,7 +5,9 @@ import {
   COUNSELING_TARGET_TYPES, COUNSELING_TARGET_LABELS,
   composeCounselingContent, hasStructuredContent,
 } from '../../../data/counselingTypes.js'
+import { hasMultipleDuties } from '../../../data/educatorDuties.js'
 import CounselingContentFields from '../../../components/counseling/CounselingContentFields.jsx'
+import DutyTypeBadge from '../../../components/counseling/DutyTypeBadge.jsx'
 import { createRecord, updateRecord } from './externalData.js'
 import { todayStr } from '../../../utils/dateUtils.js'
 
@@ -14,7 +16,9 @@ import { todayStr } from '../../../utils/dateUtils.js'
 // 구 기록(단일 content) 수정 시엔 content를 진단 칸에 프리필한다.
 export default function ExternalCounselingForm({ student, record, counselorId, onClose, onSaved }) {
   const isEdit = !!record
-  const [type, setType] = useState(record?.type ?? COUNSELING_TYPES[0])
+  // 복수 담당업무 작성자는 신규 작성 시 유형 기본값 없이 명시적 선택을 강제한다 (보고서 오분류 방지)
+  const multiDuty = hasMultipleDuties(counselorId)
+  const [type, setType] = useState(record?.type ?? (multiDuty ? '' : COUNSELING_TYPES[0]))
   const [targetType, setTargetType] = useState(record?.targetType ?? 'student')
   const [date, setDate] = useState(record?.date ?? todayStr())
   const [fields, setFields] = useState({
@@ -97,6 +101,7 @@ export default function ExternalCounselingForm({ student, record, counselorId, o
           <div>
             <label className="text-xs text-gray-500 mb-1 block">상담 유형</label>
             <select value={type} onChange={(e) => setType(e.target.value)} className={fieldClass}>
+              {multiDuty && <option value="" disabled>유형을 선택하세요</option>}
               {COUNSELING_TYPES.map((t) => (
                 <option key={t} value={t}>
                   {COUNSELING_TYPE_LABELS[t]}
@@ -107,6 +112,7 @@ export default function ExternalCounselingForm({ student, record, counselorId, o
                 <option value={type}>{COUNSELING_TYPE_LABELS[type] ?? type}</option>
               )}
             </select>
+            <DutyTypeBadge educatorId={counselorId} type={type} />
           </div>
         </div>
 
@@ -121,7 +127,7 @@ export default function ExternalCounselingForm({ student, record, counselorId, o
           </button>
           <button
             onClick={handleSave}
-            disabled={saving || !fields.topic.trim()}
+            disabled={saving || !fields.topic.trim() || !type}
             className="flex-1 py-3 bg-emerald-500 text-white rounded-xl font-bold hover:bg-emerald-600 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <CheckCheck size={16} />
