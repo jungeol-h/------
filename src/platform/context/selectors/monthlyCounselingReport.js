@@ -74,13 +74,30 @@ export function byDateTime(a, b) {
   return String(a.id) < String(b.id) ? -1 : 1
 }
 
+// 그룹 상담 fan-out 병합 키 — 다중 학생 상담은 학생별 개별 행으로 저장되지만
+// (CounselingTabContent fan-out), 보고서에는 한 세션 = 한 칸이어야 한다(2026-08 클라 확정).
+// fan-out 행은 학생 외 모든 내용이 동일하므로 그 서명으로 묶는다. 같은 날 시간 없이
+// 따로 작성한 개별 상담은 주제·내용이 달라 병합되지 않는다(실DB 검증).
+function sessionKey(r) {
+  return JSON.stringify([
+    r.date, r.startTime ?? '', r.endTime ?? '', r.type ?? '',
+    r.topic ?? '', r.diagnosis ?? '', r.advice ?? '', r.followUp ?? '',
+    r.note ?? '', r.fallbackContent ?? '',
+  ])
+}
+
 // 강사 1명의 기간 내 보고서 항목 조립.
 // records: 강사 무관 **전체 이력** — 누적횟수(N회차)가 조회기간 이전을 포함해
 //          학생×강사 기준으로 세어지므로 기간으로 미리 자르면 안 된다.
 // getStudent: (studentId) => { name, school, grade } | undefined
+// types: 상담유형 키 배열(담당업무별 보고서 분리 — 예: ['career_path','career']).
+//        null/빈 배열이면 전체. 누적 회차도 필터된 유형 안에서만 센다(업무별 회차).
 // 반환: { entries, totalCount } — entries는 MonthlyCounselingReport props 형태.
-export function buildMonthlyCounselingEntries(records, getStudent, { educatorId, startDate, endDate }) {
-  const mine = (records ?? []).filter((r) => r.educatorId === educatorId)
+export function buildMonthlyCounselingEntries(records, getStudent, { educatorId, startDate, endDate, types = null }) {
+  const typeSet = types?.length ? new Set(types) : null
+  const mine = (records ?? []).filter(
+    (r) => r.educatorId === educatorId && (!typeSet || typeSet.has(r.type))
+  )
 
   // 학생별 전체 이력 오름차순 → recordId → 누적 회차
   const roundOf = new Map()
@@ -94,26 +111,50 @@ export function buildMonthlyCounselingEntries(records, getStudent, { educatorId,
     list.forEach((r, i) => roundOf.set(r.id, i + 1))
   }
 
-  const entries = mine
+  // 기간 내 기록을 세션 단위로 병합 (정렬 유지 — 그룹의 대표는 첫 행)
+  const inRange = mine
     .filter((r) => r.date && r.date >= startDate && r.date <= endDate)
     .sort(byDateTime)
-    .map((r, i) => {
-      const student = getStudent(r.studentId) ?? {}
-      const structured = hasStructuredContent(r)
-      return {
-        no: i + 1,
-        studentName: student.name || '-',
-        schoolGrade: [student.school, student.grade].filter(Boolean).join(' '),
-        dateTimeText: formatCounselingDateTime(r.date, r.startTime, r.endTime),
-        cumulativeText: `${roundOf.get(r.id)}회차`,
-        topic: structured ? r.topic : '',
-        diagnosis: structured ? r.diagnosis : '',
-        advice: structured ? r.advice : '',
-        followUp: structured ? r.followUp : '',
-        fallbackContent: structured ? '' : (r.fallbackContent ?? ''),
-        note: r.note ?? '',
-      }
-    })
+  const sessions = []
+  const byKey = new Map()
+  for (const r of inRange) {
+    const key = sessionKey(r)
+    const group = byKey.get(key)
+    if (group) group.push(r)
+    else {
+      const created = [r]
+      byKey.set(key, created)
+      sessions.push(created)
+    }
+  }
+
+  const entries = sessions.map((group, i) => {
+    const r = group[0]
+    const members = group.map((g) => ({
+      round: roundOf.get(g.id),
+      student: getStudent(g.studentId) ?? {},
+    }))
+    const single = members.length === 1
+    const structured = hasStructuredContent(r)
+    return {
+      no: i + 1,
+      studentName: members.map((m) => m.student.name || '-').join(', '),
+      // 그룹 세션은 학교학년 대신 인원수 — 좌측 셀이 좁아 학생별 병기는 누적횟수에서만
+      schoolGrade: single
+        ? [members[0].student.school, members[0].student.grade].filter(Boolean).join(' ')
+        : `${members.length}명`,
+      dateTimeText: formatCounselingDateTime(r.date, r.startTime, r.endTime),
+      cumulativeText: single
+        ? `${members[0].round}회차`
+        : members.map((m) => `${m.student.name || '-'} ${m.round}회차`).join(' · '),
+      topic: structured ? r.topic : '',
+      diagnosis: structured ? r.diagnosis : '',
+      advice: structured ? r.advice : '',
+      followUp: structured ? r.followUp : '',
+      fallbackContent: structured ? '' : (r.fallbackContent ?? ''),
+      note: r.note ?? '',
+    }
+  })
 
   return { entries, totalCount: entries.length }
 }
