@@ -56,8 +56,17 @@ export function currentMonthRange(today = new Date()) {
   return [toDateStr(first), toDateStr(last)]
 }
 
+// 'YYYY-MM-DD'가 속한 달의 1일~말일. 파싱 실패 시 null.
+// 월초에 출력 모달을 열면 기본 기간(이번 달)이 0건이라 — 최근 기록이 있는
+// 달로 기간을 자동 이동할 때 쓴다 (2026-08-01 "출력할 기록이 없습니다" 사고).
+export function monthRangeOf(dateStr) {
+  const [y, m] = String(dateStr ?? '').split('-').map(Number)
+  if (!y || !m) return null
+  return [toDateStr(new Date(y, m - 1, 1)), toDateStr(new Date(y, m, 0))]
+}
+
 // (date, startTime, id) 오름차순 — 회차 부여와 출력 순서에 공통 사용.
-function byDateTime(a, b) {
+export function byDateTime(a, b) {
   if (a.date !== b.date) return a.date < b.date ? -1 : 1
   const at = a.startTime || ''
   const bt = b.startTime || ''

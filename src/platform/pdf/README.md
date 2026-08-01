@@ -9,8 +9,9 @@ components/ PageWrapper · Section · Table · KpiGrid · InfoGrid(라벨-값 2�
             CounselingFormLayout(관공서 서식 상담 리포트 공용 골격 — 세로 flex:1 금지 주석 필독)
 utils/      downloadPdf.js(renderPdfBlob/saveBlob) · captureChart.js(Recharts→PNG) · formatters.js
 reports/    UserListReport · StatisticsReport · QuizReport · ReflectionReport
-            MonthlyCounselingReport(강사별 월간) · StudentCounselingReport(학생별 —
-            등록일정은 data/attendanceBlocks.js 시간블록 기호) — 둘 다 관공서 서식이라
+            MonthlyCounselingReport(강사별 월간) · MonthlyLessonReport(강사별 월간 수업보고 —
+            교재·과제) · StudentCounselingReport(학생별 — 등록일정은
+            data/attendanceBlocks.js 시간블록 기호) — 셋 다 관공서 서식이라
             PageWrapper 대신 자체 Document/Page + CounselingFormLayout 골격
 ```
 

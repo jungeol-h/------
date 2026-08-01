@@ -58,7 +58,13 @@ export function FormHeaderTable({ rows }) {
 
 // 세부내용 표 머리 — fixed로 모든 페이지 상단에 반복.
 // leftTopLabel/leftBottomLabel: 좌측 열 라벨 (학생이름/학교학년 또는 상담강사/상담유형)
-export function DetailHead({ leftTopLabel, leftBottomLabel }) {
+// dateTimeLabel/contentLabel: 수업보고서(MonthlyLessonReport)가 라벨만 바꿔 재사용한다.
+export function DetailHead({
+  leftTopLabel,
+  leftBottomLabel,
+  dateTimeLabel = '상담일시(상담시간)',
+  contentLabel = '상담내용',
+}) {
   return (
     <View fixed>
       <View style={formStyles.detailTitleBar}>
@@ -74,7 +80,7 @@ export function DetailHead({ leftTopLabel, leftBottomLabel }) {
               <Text style={formStyles.centerText}>{leftTopLabel}</Text>
             </View>
             <View style={formStyles.dateTimeCell}>
-              <Text style={formStyles.centerText}>상담일시(상담시간)</Text>
+              <Text style={formStyles.centerText}>{dateTimeLabel}</Text>
             </View>
             <View style={formStyles.roundCell}>
               <Text style={formStyles.centerText}>누적횟수</Text>
@@ -85,7 +91,7 @@ export function DetailHead({ leftTopLabel, leftBottomLabel }) {
               <Text style={formStyles.centerText}>{leftBottomLabel}</Text>
             </View>
             <View style={[formStyles.contentCell, { justifyContent: 'center' }]}>
-              <Text style={formStyles.centerText}>상담내용</Text>
+              <Text style={formStyles.centerText}>{contentLabel}</Text>
             </View>
             <View style={[formStyles.noteCell, { justifyContent: 'center' }]}>
               <Text style={formStyles.centerText}>특이사항</Text>

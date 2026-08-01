@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Loader, AlertCircle } from 'lucide-react'
 import ModalShell from '../common/ModalShell.jsx'
 import DownloadPdfButton from '../../pdf/components/DownloadPdfButton.jsx'
 import { educatorDisplayName } from '../../utils/educatorName.js'
@@ -7,25 +6,24 @@ import {
   currentMonthRange,
   monthRangeOf,
   formatKoreanDate,
-  buildMonthlyCounselingEntries,
 } from '../../context/selectors/monthlyCounselingReport.js'
+import { buildMonthlyLessonEntries } from '../../context/selectors/monthlyLessonReport.js'
 
 const DEFAULT_SCHEDULE = '매주 토요일 12:00~19:00'
 
-// 강사별 월간 컨설팅 보고서 출력 옵션 모달 — 재원생/외부 상담 공용.
-// 기간·담당업무·업무일정을 입력받아 MonthlyCounselingReport PDF를 생성한다.
+// 강사별 월간 수업 보고서 출력 옵션 모달 — counseling/MonthlyReportModal의 수업보고 변형.
+// 데이터가 동기(data.lessonReports)라 async loadRecords 없이 단순하다.
 // props:
 //   educators: [{id, name, subject}] — 강사 선택 셀렉트(admin/viewer용). fixedEducator와 택일
-//   fixedEducator: {id, name, subject} — 본인 고정(강사/컨설턴트/매니저)
-//   loadRecords: async (educatorId) => ({ records, getStudent })
-//     records는 강사 무관 전체 이력 정규화본({educatorId, date, startTime?, …, fallbackContent})
-//   reportLabel: 파일명용 리포트 이름 (예: '컨설팅보고서', '외부컨설팅보고서')
+//   fixedEducator: {id, name, subject} — 본인 고정(매니저/강사/컨설턴트)
+//   reports: data.lessonReports **전량** — 누적회차가 기간 이전 이력 기준이라 미리 자르면 안 된다
+//   getStudent: (studentId) => student | undefined
 //   onClose
-export default function MonthlyReportModal({
+export default function LessonReportModal({
   educators = null,
   fixedEducator = null,
-  loadRecords,
-  reportLabel = '컨설팅보고서',
+  reports,
+  getStudent,
   onClose,
 }) {
   const [defaultStart, defaultEnd] = useMemo(() => currentMonthRange(), [])
@@ -36,41 +34,15 @@ export default function MonthlyReportModal({
   const [duty, setDuty] = useState(fixedEducator?.subject ?? '')
   const [schedule, setSchedule] = useState(DEFAULT_SCHEDULE)
 
-  const [loaded, setLoaded] = useState(null) // { records, getStudent }
-  const [loading, setLoading] = useState(false)
-  const [loadError, setLoadError] = useState(false)
-  const [retryKey, setRetryKey] = useState(0)
-
   const selectedEducator =
     fixedEducator ?? educators?.find((e) => e.id === educatorId) ?? null
-
-  useEffect(() => {
-    if (!educatorId) return
-    let cancelled = false
-    setLoading(true)
-    setLoadError(false)
-    setLoaded(null)
-    loadRecords(educatorId)
-      .then((result) => {
-        if (!cancelled) setLoaded(result)
-      })
-      .catch(() => {
-        if (!cancelled) setLoadError(true)
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [educatorId, loadRecords, retryKey])
 
   // 월초에 열면 기본 기간(이번 달)이 0건인 사고 방지 — 사용자가 기간을 손대기 전이고
   // 현재 기간에 기록이 없으면, 선택 강사의 최근 기록이 있는 달로 기간을 자동 이동한다.
   // 이동 후에는 기간 내 기록이 생겨 조건이 거짓이 되므로 재실행돼도 무한 루프가 없다.
   useEffect(() => {
-    if (datesTouched || !loaded || !educatorId) return
-    const mine = loaded.records.filter((r) => r.educatorId === educatorId && r.date)
+    if (datesTouched || !educatorId) return
+    const mine = (reports ?? []).filter((r) => r.authorId === educatorId && r.date)
     if (mine.length === 0) return
     if (mine.some((r) => r.date >= startDate && r.date <= endDate)) return
     const latest = mine.reduce((acc, r) => (r.date > acc ? r.date : acc), mine[0].date)
@@ -78,16 +50,16 @@ export default function MonthlyReportModal({
     if (!range) return
     setStartDate(range[0])
     setEndDate(range[1])
-  }, [datesTouched, loaded, educatorId, startDate, endDate])
+  }, [datesTouched, reports, educatorId, startDate, endDate])
 
   const { entries, totalCount } = useMemo(() => {
-    if (!loaded || !educatorId || !startDate || !endDate) return { entries: [], totalCount: 0 }
-    return buildMonthlyCounselingEntries(loaded.records, loaded.getStudent, {
+    if (!educatorId || !startDate || !endDate) return { entries: [], totalCount: 0 }
+    return buildMonthlyLessonEntries(reports, getStudent, {
       educatorId,
       startDate,
       endDate,
     })
-  }, [loaded, educatorId, startDate, endDate])
+  }, [reports, getStudent, educatorId, startDate, endDate])
 
   const handleSelectEducator = (id) => {
     setEducatorId(id)
@@ -100,10 +72,10 @@ export default function MonthlyReportModal({
 
   const managerName = selectedEducator?.name ?? ''
   const periodText = `${formatKoreanDate(startDate)} ~ ${formatKoreanDate(endDate)}`
-  const canBuild = !!educatorId && !loading && !loadError && entries.length > 0
+  const canBuild = !!educatorId && entries.length > 0
 
   return (
-    <ModalShell title="월간 컨설팅 보고서" onClose={onClose}>
+    <ModalShell title="월간 수업 보고서" onClose={onClose}>
       {educators && (
         <div>
           <label className="text-xs text-gray-500 mb-1 block">담당자(강사)</label>
@@ -154,7 +126,7 @@ export default function MonthlyReportModal({
           type="text"
           value={duty}
           onChange={(e) => setDuty(e.target.value)}
-          placeholder="예: 진로진학 컨설팅"
+          placeholder="예: 수학"
           className={fieldClass}
         />
       </div>
@@ -170,27 +142,10 @@ export default function MonthlyReportModal({
 
       {educatorId && (
         <div className="text-sm">
-          {loading ? (
-            <span className="inline-flex items-center gap-1.5 text-gray-400">
-              <Loader size={14} className="animate-spin" /> 상담 기록 불러오는 중...
-            </span>
-          ) : loadError ? (
-            <span className="inline-flex items-center gap-1.5 text-red-500">
-              <AlertCircle size={14} /> 불러오지 못했습니다.
-              <button
-                type="button"
-                onClick={() => setRetryKey((k) => k + 1)}
-                className="text-blue-600 font-semibold"
-              >
-                다시 시도
-              </button>
-            </span>
-          ) : (
-            <span className={entries.length === 0 ? 'text-gray-400' : 'text-gray-600'}>
-              해당 기간 상담 <span className="font-bold">{totalCount}</span>건
-              {entries.length === 0 && ' — 출력할 기록이 없습니다.'}
-            </span>
-          )}
+          <span className={entries.length === 0 ? 'text-gray-400' : 'text-gray-600'}>
+            해당 기간 수업보고 <span className="font-bold">{totalCount}</span>건
+            {entries.length === 0 && ' — 출력할 기록이 없습니다.'}
+          </span>
         </div>
       )}
 
@@ -199,18 +154,18 @@ export default function MonthlyReportModal({
           label="보고서 PDF"
           disabled={!canBuild}
           buildDocument={async () => {
-            const { default: MonthlyCounselingReport } = await import(
-              '../../pdf/reports/MonthlyCounselingReport.jsx'
+            const { default: MonthlyLessonReport } = await import(
+              '../../pdf/reports/MonthlyLessonReport.jsx'
             )
             const { buildFilename } = await import('../../pdf/utils/formatters.js')
             return {
               element: (
-                <MonthlyCounselingReport
+                <MonthlyLessonReport
                   header={{ managerName, periodText, duty, schedule, totalCount }}
                   entries={entries}
                 />
               ),
-              filename: buildFilename(reportLabel, `${managerName}_${startDate.slice(0, 7)}`),
+              filename: buildFilename('수업보고서', `${managerName}_${startDate.slice(0, 7)}`),
             }
           }}
         />

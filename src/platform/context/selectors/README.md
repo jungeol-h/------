@@ -44,6 +44,8 @@
 | `adminStats.js` | 관리자 통계 섹션 (누적 출결 60일·1인당 학습 30일·업무횟수) |
 | `homeMessages.js` | 학생 홈 코멘트 말풍선 (상담 followUp·과제 마감·업무계획 태그) |
 | `reflectionReport.js` | 종합 성장 리포트 데이터 조립 (getTaskSummary/getQuizSummary 포함) |
+| `monthlyCounselingReport.js` | 강사별 월간 컨설팅 보고서 조립 + 날짜·기간 서식 유틸 (monthRangeOf 등) |
+| `monthlyLessonReport.js` | 강사별 월간 수업보고서 조립 (수업보고 — 학생 복수·교재·과제) |
 | `report.js` / `studentView.js` / `learningRecords.js` | 일일 리포트·학생 화면 파생값 |
 | `reconciliation.js` | 출결-학습 대사(reconcile) |
 | `workPlans.js` | 업무계획 파생값 |

@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { CheckCheck, Pencil, Trash2, X } from 'lucide-react'
+import { useState, useMemo, useCallback } from 'react'
+import { CheckCheck, Pencil, Printer, Trash2, X } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { LESSON_MAX_STUDENTS } from '../../data/workRecordTypes.js'
@@ -7,6 +7,7 @@ import { educatorDisplayName } from '../../utils/educatorName.js'
 import StudentCombobox from '../counseling/StudentCombobox.jsx'
 import ModalShell from '../common/ModalShell.jsx'
 import TimeField from '../common/TimeField.jsx'
+import LessonReportModal from './LessonReportModal.jsx'
 import { todayStr as today } from '../../utils/dateUtils.js'
 
 
@@ -115,6 +116,55 @@ export default function LessonReportSection({ students, readOnly = false }) {
   const [saving, setSaving] = useState(false)
   const [editing, setEditing] = useState(null)
   const [editForm, setEditForm] = useState(null)
+  const [showMonthlyReport, setShowMonthlyReport] = useState(false)
+
+  // ── 수업보고 기록 검색 필터 (작성자·학생·기간) ──
+  const [filterEducatorId, setFilterEducatorId] = useState('')
+  const [filterStudentId, setFilterStudentId] = useState('')
+  const [filterFrom, setFilterFrom] = useState('')
+  const [filterTo, setFilterTo] = useState('')
+
+  // 필터 옵션은 실제 기록에 등장하는 작성자·학생에서만 파생 (빈 결과가 나올 옵션 배제)
+  const filterEducators = useMemo(() => {
+    const ids = new Set(data.lessonReports.map((r) => r.authorId))
+    return data.educators
+      .filter((e) => ids.has(e.id))
+      .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'))
+  }, [data.lessonReports, data.educators])
+
+  const filterStudents = useMemo(() => {
+    const ids = new Set(data.lessonReports.flatMap((r) => r.studentIds ?? []))
+    return data.students
+      .filter((s) => ids.has(s.id))
+      .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'))
+  }, [data.lessonReports, data.students])
+
+  const filteredReports = useMemo(
+    () => data.lessonReports.filter((r) =>
+      (!filterEducatorId || r.authorId === filterEducatorId) &&
+      (!filterStudentId || r.studentIds.includes(filterStudentId)) &&
+      (!filterFrom || r.date >= filterFrom) &&
+      (!filterTo || r.date <= filterTo)
+    ),
+    [data.lessonReports, filterEducatorId, filterStudentId, filterFrom, filterTo]
+  )
+
+  const hasFilter = Boolean(filterEducatorId || filterStudentId || filterFrom || filterTo)
+  const resetFilter = () => {
+    setFilterEducatorId('')
+    setFilterStudentId('')
+    setFilterFrom('')
+    setFilterTo('')
+  }
+
+  // 월간 보고서 — 누적회차가 화면 필터와 무관하게 전체 이력 기준이어야 하므로
+  // 모달에는 data.lessonReports 전량을 넘긴다.
+  const isReportPicker = currentUser?.role === 'admin' || currentUser?.role === 'viewer'
+  const studentById = useMemo(
+    () => new Map(data.students.map((s) => [s.id, s])),
+    [data.students]
+  )
+  const getStudent = useCallback((id) => studentById.get(id), [studentById])
 
   const canManage = (r) =>
     !readOnly && (r.authorId === currentUser?.id || currentUser?.role === 'admin')
@@ -193,12 +243,90 @@ export default function LessonReportSection({ students, readOnly = false }) {
       )}
 
       <section className="space-y-3">
-        <h2 className="text-base font-bold text-gray-900">수업보고 기록</h2>
-        {data.lessonReports.length === 0 ? (
-          <div className="text-center text-gray-400 py-12">수업보고 기록이 없어요 📚</div>
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-bold text-gray-900">
+            수업보고 기록
+            <span className="ml-1.5 text-sm font-semibold text-gray-400">
+              {hasFilter
+                ? `${filteredReports.length}건 / 전체 ${data.lessonReports.length}건`
+                : `${data.lessonReports.length}건`}
+            </span>
+          </h2>
+          <button
+            type="button"
+            onClick={() => setShowMonthlyReport(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-600 text-white text-xs font-semibold hover:bg-violet-700 active:scale-95 transition"
+          >
+            <Printer size={14} />
+            월간 보고서
+          </button>
+        </div>
+
+        {/* 검색 필터 — 작성자·학생·기간 */}
+        <div className="bg-white rounded-2xl shadow-sm p-4 space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">강사 (작성자)</label>
+              <select
+                value={filterEducatorId}
+                onChange={(e) => setFilterEducatorId(e.target.value)}
+                className={`${fieldClass} w-full`}
+              >
+                <option value="">전체 강사</option>
+                {filterEducators.map((e) => (
+                  <option key={e.id} value={e.id}>{educatorDisplayName(e)}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">학생</label>
+              <StudentCombobox
+                students={filterStudents}
+                value={filterStudentId}
+                onChange={setFilterStudentId}
+                placeholder="학생 검색..."
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-[1fr_1fr_auto] gap-3 items-end">
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">시작일</label>
+              <input
+                type="date"
+                value={filterFrom}
+                onChange={(e) => setFilterFrom(e.target.value)}
+                className={`${fieldClass} w-full`}
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">종료일</label>
+              <input
+                type="date"
+                value={filterTo}
+                onChange={(e) => setFilterTo(e.target.value)}
+                className={`${fieldClass} w-full`}
+              />
+            </div>
+            {hasFilter && (
+              <button
+                type="button"
+                onClick={resetFilter}
+                className="col-span-2 sm:col-span-1 h-[42px] px-4 rounded-xl bg-gray-100 text-gray-600 text-sm font-semibold flex items-center justify-center gap-1 hover:bg-gray-200"
+              >
+                <X size={14} />
+                초기화
+              </button>
+            )}
+          </div>
+        </div>
+
+        {filteredReports.length === 0 ? (
+          <div className="text-center text-gray-400 py-12">
+            {hasFilter ? '조건에 맞는 수업보고가 없어요 🔍' : '수업보고 기록이 없어요 📚'}
+          </div>
         ) : (
           <div className="space-y-3">
-            {data.lessonReports.map((r) => {
+            {filteredReports.map((r) => {
               const author = data.educators.find((e) => e.id === r.authorId)
               return (
                 <div key={r.id} className="bg-white rounded-2xl p-4 shadow-sm">
@@ -263,6 +391,23 @@ export default function LessonReportSection({ students, readOnly = false }) {
               </button>
             </div>
         </ModalShell>
+      )}
+
+      {showMonthlyReport && (
+        <LessonReportModal
+          educators={
+            isReportPicker
+              ? data.educators.filter((e) =>
+                  ['admin', 'manager', 'instructor', 'consultant'].includes(e.role) &&
+                  e.status !== 'inactive',
+                )
+              : null
+          }
+          fixedEducator={isReportPicker ? null : currentUser}
+          reports={data.lessonReports}
+          getStudent={getStudent}
+          onClose={() => setShowMonthlyReport(false)}
+        />
       )}
     </div>
   )
