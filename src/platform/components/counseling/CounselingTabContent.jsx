@@ -96,8 +96,11 @@ export default function CounselingTabContent({ students, records, showAuthor = f
   // 긴급 보고는 관리자에게 보내는 것 — 관리자 본인·열람 전용 역할에는 숨김
   const canUrgentReport = !readOnly && currentUser?.role !== 'admin'
 
+  // 예약(지정예약) 유래 기록은 여기서 수정·삭제 불가 — 원본이 booking_records라
+  // counseling CRUD로 건드리면 로컬만 바뀌고 DB에 남는 유령이 된다.
   const canManage = (r) =>
-    !readOnly && (r.educatorId === currentUser?.id || currentUser?.role === 'admin')
+    !readOnly && !r.source &&
+    (r.educatorId === currentUser?.id || currentUser?.role === 'admin')
 
   const handleDelete = async (record) => {
     if (!window.confirm('이 상담 기록을 삭제할까요?')) return
@@ -354,6 +357,11 @@ export default function CounselingTabContent({ students, records, showAuthor = f
                       <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
                         {COUNSELING_TARGET_LABELS[r.targetType] ?? '학생'}
                       </span>
+                      {r.source === 'booking' && (
+                        <span className="text-xs bg-violet-50 text-violet-600 px-2 py-0.5 rounded-full">
+                          예약 상담
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-gray-400">

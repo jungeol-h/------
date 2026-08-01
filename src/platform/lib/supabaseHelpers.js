@@ -134,6 +134,36 @@ export const toCounselingRecord = (row) => ({
   attachments: toArray(row.attachments), // [{ path, name, size }] — PDF 첨부 메타
 })
 
+// 지정예약 완료 상담(booking_records) → 상담보고 표시용 정규화.
+// 최인선 사례(2026-08-01): 예약 시스템으로만 컨설팅을 기록하는 강사가 있어
+// 상담보고 리스트·월간 보고서·통계가 counseling_records와 합쳐 소비한다.
+// source: 'booking' — 상담보고 화면에서 수정·삭제 금지(예약 화면이 원본).
+// 유형은 프로그램명으로 추정: '진로' 포함 → 진로진학, 그 외 → 교과학습.
+export const toBookingCounselingRecord = (row) => {
+  const slot = row.booking_reservations?.booking_slots ?? null
+  const hhmm = (v) => (v ? String(v).slice(0, 5) : '')
+  const programName = row.booking_programs?.name ?? ''
+  return {
+    id: row.id,
+    studentId: row.student_id,
+    educatorId: row.educator_id,
+    date: row.date,
+    comment: '',
+    type: programName.includes('진로') ? 'career_path' : 'subject_learning',
+    targetType: 'student',
+    topic: row.topic ?? '',
+    diagnosis: row.diagnosis ?? '',
+    advice: row.advice ?? '',
+    followUp: row.follow_up ?? '',
+    note: row.note ?? '',
+    nextAppointment: row.next_appointment ?? '',
+    startTime: hhmm(slot?.start_time),
+    endTime: hhmm(slot?.end_time),
+    attachments: [],
+    source: 'booking',
+  }
+}
+
 export const toAlert = (row) => ({
   id: row.id,
   studentId: row.student_id,

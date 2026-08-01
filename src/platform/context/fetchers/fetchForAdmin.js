@@ -13,7 +13,7 @@ import { daysAgoStr } from '../../utils/dateUtils.js'
 import { canViewByGroups, canViewRecordGroup } from '../../utils/groupScope.js'
 import {
   toUser, toMindRecord, toDiaryRecord, toLearningRecord, toTask,
-  toCounselingRecord, toAlert, toCareerDesignResult,
+  toCounselingRecord, toBookingCounselingRecord, toAlert, toCareerDesignResult,
   toLearningDiagnosisResult, toAssignment, toQuizSet, toQuizQuestion,
   toQuizAttempt, toParentChild, toAttendanceRecord, toAttendanceSchedule,
   toAttendanceNotification, toWorkPlan,
@@ -26,11 +26,14 @@ export async function fetchForAdmin(scope = null) {
   const errors = []
   const meta = {}
 
-  const [usersRes, assnRes, alertsRes, counselingRes, statsRes, setsRes, parentChildrenRes, workPlansRes, urgentReportsRes, managementReportsRes, financeRecordsRes, lessonReportsRes, noticesRes] = await Promise.all([
+  const [usersRes, assnRes, alertsRes, counselingRes, bookingCounselingRes, statsRes, setsRes, parentChildrenRes, workPlansRes, urgentReportsRes, managementReportsRes, financeRecordsRes, lessonReportsRes, noticesRes] = await Promise.all([
     supabase.from('users').select('*').order('grade').order('login_id'),
     supabase.from('assignments').select('*'),
     supabase.from('alerts').select('*').order('created_at', { ascending: false }),
     supabase.from('counseling_records').select('*').order('date', { ascending: false }),
+    // 지정예약 완료 상담 — 예약으로만 컨설팅을 기록하는 강사(최인선)의 기록을
+    // 상담보고·월간 보고서·통계에 합류시킨다 (읽기 전용, source: 'booking')
+    supabase.from('booking_records').select('*, booking_reservations(booking_slots(start_time, end_time)), booking_programs(name)').eq('status', 'done').order('date', { ascending: false }).limit(1000),
     supabase.from('monthly_stats').select('*').order('id'),
     supabase.from('quiz_sets').select('*').order('grade').order('round'),
     supabase.from('parent_children').select('*'),
@@ -114,7 +117,10 @@ export async function fetchForAdmin(scope = null) {
     parentChildren: parentChildRows.map(toParentChild),
     assignments: collectRows(assnRes, 'assignments', errors).filter(byStudentId).map(toAssignment),
     alerts: collectRows(alertsRes, 'alerts', errors).filter(byStudentId).map(toAlert),
-    counselingRecords: collectRows(counselingRes, 'counseling_records', errors).filter(byStudentId).map(toCounselingRecord),
+    counselingRecords: [
+      ...collectRows(counselingRes, 'counseling_records', errors).filter(byStudentId).map(toCounselingRecord),
+      ...collectRows(bookingCounselingRes, 'booking_records', errors).filter(byStudentId).map(toBookingCounselingRecord),
+    ],
     mindRecords: collectRows(mindRes, 'mind_records', errors).map(toMindRecord),
     learningRecords: collectRows(learningRes, 'learning_records', errors).map(toLearningRecord),
     tasks: collectRows(tasksRes, 'tasks', errors).map(toTask),
