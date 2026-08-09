@@ -106,6 +106,7 @@ export default function ReservationSearch({ readOnly = false }) {
     query: '',
     overrideOnly: false,
     overdueOnly: false,
+    includeInactive: false, // 퇴원·취소 학생 예약 포함 여부 (기본 숨김)
   })
   const [proxyOpen, setProxyOpen] = useState(false)
   const [cancelTarget, setCancelTarget] = useState(null)
@@ -121,6 +122,12 @@ export default function ReservationSearch({ readOnly = false }) {
     [config.educators],
   )
 
+  // 학생 상태 조회용 — data.students에 없는 학생은 판단 불가라 표시를 유지한다
+  const studentStatusById = useMemo(
+    () => new Map((data.students ?? []).map((s) => [s.id, s.status ?? 'active'])),
+    [data.students],
+  )
+
   const filtered = useMemo(
     () => reservations
       .filter((r) => {
@@ -134,13 +141,17 @@ export default function ReservationSearch({ readOnly = false }) {
         if (filters.attendance && r.attendanceStatus !== filters.attendance) return false
         if (filters.overrideOnly && !r.isOverride) return false
         if (filters.overdueOnly && !r.attendanceOverdue) return false
+        if (!filters.includeInactive) {
+          const st = studentStatusById.get(r.studentId)
+          if (st && st !== 'active') return false
+        }
         if (filters.query && !studentName(r.studentId).includes(filters.query)) return false
         return true
       })
       .sort((a, b) => (a.slot.date === b.slot.date
         ? (a.slot.startTime < b.slot.startTime ? -1 : 1)
         : a.slot.date < b.slot.date ? -1 : 1)),
-    [reservations, filters], // eslint-disable-line react-hooks/exhaustive-deps
+    [reservations, filters, studentStatusById], // eslint-disable-line react-hooks/exhaustive-deps
   )
 
   // 현재 필터 결과를 그대로 상담사별 시트로 내보낸다
@@ -231,6 +242,14 @@ export default function ReservationSearch({ readOnly = false }) {
             onChange={(e) => setFilters((f) => ({ ...f, overdueOnly: e.target.checked }))}
           />
           출결 기한초과 건만
+        </label>
+        <label className="flex items-center gap-2 text-xs text-gray-600">
+          <input
+            type="checkbox"
+            checked={filters.includeInactive}
+            onChange={(e) => setFilters((f) => ({ ...f, includeInactive: e.target.checked }))}
+          />
+          퇴원·취소 학생 포함
         </label>
       </div>
 

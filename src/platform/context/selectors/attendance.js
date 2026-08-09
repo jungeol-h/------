@@ -7,6 +7,8 @@
 // "예정" 기준은 센터 이용시간 등록명단(registrations)이 1순위다 — 클라이언트
 // 확정(2026-07-19): 출결은 학생이 등록한 센터 이용시간 기준. registrations가
 // 없을 때(로드 실패·마이그레이션 미적용)만 attendance_schedules로 대체한다.
+// 휴무기간(centerClosures)에 드는 날짜는 예정 자체를 만들지 않는다 —
+// 등록 학생도 no_schedule이 되고, 실등원 기록만 그대로 표시된다 (2026-08).
 
 import { toDateStr } from '../../utils/dateUtils.js'
 
@@ -74,13 +76,19 @@ export function classifyToday({ record, schedule, now }) {
   return classifyForDate({ record, schedule, dateStr: toDateStr(now), now })
 }
 
+// dateStr이 시작일~종료일(포함)에 드는 첫 휴무기간. 없으면 null.
+export function findClosureFor(closures, dateStr) {
+  if (!closures || closures.length === 0) return null
+  return closures.find((c) => c.startDate <= dateStr && dateStr <= c.endDate) ?? null
+}
+
 // 담당 학생들의 날짜별 현황판. 반환: { [상태]: [{ student, record, schedule }] }
 // all=true(관리자)면 배정과 무관하게 전체 active 학생을 대상으로 한다.
 // registrations(센터 이용시간 등록)가 있으면 그 요일 등록을 예정으로 삼는다 —
 // 한 학생의 여러 시간 블록은 첫 시작~마지막 종료로 합친 pseudo-schedule이 된다.
 // registrations가 null이면 attendance_schedules(등·하원 시간표)로 대체.
 export function getDailyAttendanceBoard(data, {
-  educatorId, all = false, dateStr, registrations = null, now = new Date(),
+  educatorId, all = false, dateStr, registrations = null, closures = null, now = new Date(),
 }) {
   const [y, m, d] = dateStr.split('-').map(Number)
   const dow = new Date(y, m - 1, d).getDay()
@@ -90,14 +98,16 @@ export function getDailyAttendanceBoard(data, {
   )
   const students = all
     ? data.students.filter((s) => (s.status ?? 'active') === 'active')
-    : data.students.filter((s) => myStudentIds.has(s.id))
+    : data.students.filter((s) => myStudentIds.has(s.id) && (s.status ?? 'active') === 'active')
 
   const recordByStudent = new Map(
     data.attendanceRecords.filter((r) => r.date === dateStr).map((r) => [r.studentId, r])
   )
 
+  // 휴무일은 예정을 만들지 않는다(빈 Map) — 기록 없는 학생은 no_schedule로 빠진다
   const scheduleByStudent = new Map()
-  if (registrations) {
+  const isClosed = findClosureFor(closures, dateStr) != null
+  if (!isClosed && registrations) {
     for (const r of registrations) {
       if (r.dayOfWeek !== dow) continue
       const cur = scheduleByStudent.get(r.studentId)
@@ -108,7 +118,7 @@ export function getDailyAttendanceBoard(data, {
         if (r.endTime > cur.departureTime) cur.departureTime = r.endTime
       }
     }
-  } else {
+  } else if (!isClosed) {
     data.attendanceSchedules
       .filter((s) => s.dayOfWeek === dow)
       .forEach((s) => scheduleByStudent.set(s.studentId, s))

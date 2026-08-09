@@ -3,7 +3,7 @@
 // 지표는 getStudentIndicatorMap으로 1-pass 계산. viewer의 /viewer/students에서 readOnly로 재사용.
 
 import { useState, useMemo, useCallback } from 'react'
-import { User, AlertCircle, Plus, Upload, MoreVertical, Pencil, UserX, UserCheck, Search, ArrowUp, ArrowDown, Trash2, ClipboardList } from 'lucide-react'
+import { User, AlertCircle, Plus, Upload, MoreVertical, Pencil, UserX, UserCheck, Search, ArrowUp, ArrowDown, Trash2, ClipboardList, Paperclip, MessageSquare } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
 import { getMindStatus } from '../../context/selectors/riskDetection.js'
 import { getStudentIndicatorMap } from '../../context/selectors/studentIndicators.js'
@@ -19,6 +19,8 @@ import EducatorFormModal from '../../components/admin/EducatorFormModal.jsx'
 import ModalShell from '../../components/common/ModalShell.jsx'
 import BulkStudentUploadModal from '../../components/admin/BulkStudentUploadModal.jsx'
 import TaskFormModal from '../../components/tasks/TaskFormModal.jsx'
+import StudyJournalModal from '../../components/admin/StudyJournalModal.jsx'
+import StudentFeedbackModal from '../../components/admin/StudentFeedbackModal.jsx'
 import { GROUP_OPTIONS } from '../../data/groups.js'
 import { STUDENT_STATUS_OPTIONS, STUDENT_STATUS_LABELS, isActiveStudent } from '../../data/studentStatus.js'
 import DownloadPdfButton from '../../pdf/components/DownloadPdfButton.jsx'
@@ -34,8 +36,8 @@ const MIND_BADGES = {
   caution: { label: '주의', color: 'text-yellow-600 bg-yellow-100' },
   risk:    { label: '위험', color: 'text-red-600 bg-red-100' },
 }
-// 학생 목록 그리드 컬럼 — 이름/담당/학생연락처/학부모연락처/출결/학습/마인드/과제/일정/지수/메뉴
-const LIST_GRID = 'grid-cols-[minmax(130px,1fr)_60px_100px_100px_48px_48px_52px_52px_44px_48px_32px]'
+// 학생 목록 그리드 컬럼 — 이름/담당/학생연락처/학부모연락처/출결/학습/마인드/과제/일정/일지/지수/메뉴
+const LIST_GRID = 'grid-cols-[minmax(130px,1fr)_60px_100px_100px_48px_48px_52px_52px_44px_44px_48px_32px]'
 
 export default function UserManagementTab({ readOnly = false }) {
   const {
@@ -51,6 +53,8 @@ export default function UserManagementTab({ readOnly = false }) {
   const [showParentModal, setShowParentModal] = useState(false)
   const [showBulkModal, setShowBulkModal] = useState(false)
   const [showTaskModal, setShowTaskModal] = useState(false) // 과제 내기 — 학생 다중 선택 일괄 부여
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false) // 학생 피드백 — 수시 코멘트
+  const [journalStudentId, setJournalStudentId] = useState(null) // 학습일지 첨부 모달 대상 학생 id
   const [query, setQuery] = useState('')
   const [filterGroup, setFilterGroup] = useState('all') // 'all' | GROUP_OPTIONS 값
   const [groupEditTarget, setGroupEditTarget] = useState(null) // 소속 편집 대상 교육자
@@ -197,11 +201,14 @@ export default function UserManagementTab({ readOnly = false }) {
     const label = STUDENT_STATUS_LABELS[next]
     const confirmMsg = next === 'active'
       ? `${student.name} 학생을 재원 상태로 되돌릴까요? 로그인과 다른 화면 표시가 다시 활성화됩니다.`
-      : `${student.name} 학생을 '${label}' 상태로 변경할까요? 로그인이 막히고 매니저/통계 화면에서 숨겨집니다.`
+      : `${student.name} 학생을 '${label}' 상태로 변경할까요? 로그인이 막히고 매니저/통계 화면에서 숨겨지며, 센터 이용시간·등하원 시간표가 정리되고 예정된 예약이 취소됩니다.`
     if (!window.confirm(confirmMsg)) return
     try {
-      await setStudentStatus(student.id, next)
+      const { cancelledBookings } = await setStudentStatus(student.id, next, { actorId: currentUser?.id })
       setMenuOpenId(null)
+      if (cancelledBookings > 0) {
+        alert(`예정된 예약 ${cancelledBookings}건을 취소했습니다.`)
+      }
     } catch {
       alert('상태 변경 중 오류가 발생했습니다.')
     }
@@ -254,6 +261,13 @@ export default function UserManagementTab({ readOnly = false }) {
                   과제 내기
                 </button>
                 <button
+                  onClick={() => setShowFeedbackModal(true)}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-violet-600 text-violet-700 text-xs font-semibold hover:bg-violet-50"
+                >
+                  <MessageSquare size={14} />
+                  피드백
+                </button>
+                <button
                   onClick={() => setShowBulkModal(true)}
                   className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-emerald-600 text-emerald-700 text-xs font-semibold hover:bg-emerald-50"
                 >
@@ -297,7 +311,7 @@ export default function UserManagementTab({ readOnly = false }) {
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm overflow-x-auto">
-          <div className="min-w-[760px]">
+          <div className="min-w-[810px]">
           <div className={`grid ${LIST_GRID} text-xs text-gray-400 font-semibold px-3 py-2 border-b border-gray-100 bg-gray-50`}>
             <button
               type="button"
@@ -320,6 +334,7 @@ export default function UserManagementTab({ readOnly = false }) {
             <span className="text-center" title="최근 마인드 기록 판정">마인드</span>
             <span className="text-center" title="과제 완료/전체">과제</span>
             <span className="text-center" title="업무계획에 태그된 횟수">일정</span>
+            <span className="text-center" title="학습일지 첨부">일지</span>
             <button
               type="button"
               onClick={() => toggleSort('selfIndex')}
@@ -407,6 +422,25 @@ export default function UserManagementTab({ readOnly = false }) {
                   <span className="text-center text-xs text-gray-600" title="업무계획 태그 횟수">
                     {ind?.planCount ? `${ind.planCount}회` : '-'}
                   </span>
+                  {/* 학습일지 첨부 — 행 클릭(상세 이동)과 겹치므로 stopPropagation 필수 */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setJournalStudentId(s.id)
+                    }}
+                    className="flex items-center justify-center gap-0.5 text-xs text-gray-600 hover:text-blue-600"
+                    title="학습일지 첨부"
+                  >
+                    {(s.studyJournals?.length ?? 0) > 0 ? (
+                      <>
+                        <Paperclip size={12} />
+                        {s.studyJournals.length}
+                      </>
+                    ) : (
+                      '-'
+                    )}
+                  </button>
                   <span className="text-right text-sm font-bold text-blue-600">{s.selfIndex}점</span>
                   {readOnly ? (
                     <span aria-hidden />
@@ -631,6 +665,23 @@ export default function UserManagementTab({ readOnly = false }) {
         <TaskFormModal
           students={activeStudents}
           onClose={() => setShowTaskModal(false)}
+        />
+      )}
+
+      {!readOnly && showFeedbackModal && (
+        <StudentFeedbackModal
+          students={activeStudents}
+          onClose={() => setShowFeedbackModal(false)}
+        />
+      )}
+
+      {/* 학습일지 첨부 — viewer도 열람 가능(readOnly). 대상은 id로 들고 있어
+          setStudentJournals 후에도 최신 studyJournals가 반영된 학생을 넘긴다. */}
+      {journalStudentId && (
+        <StudyJournalModal
+          student={data.students.find((st) => st.id === journalStudentId)}
+          readOnly={readOnly}
+          onClose={() => setJournalStudentId(null)}
         />
       )}
 

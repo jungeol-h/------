@@ -9,7 +9,9 @@ components/ PageWrapper · Section · Table · KpiGrid · InfoGrid(라벨-값 2�
             CounselingFormLayout(관공서 서식 상담 리포트 공용 골격 — 세로 flex:1 금지 주석 필독)
 utils/      downloadPdf.js(renderPdfBlob/saveBlob) · captureChart.js(Recharts→PNG) · formatters.js
 reports/    UserListReport · StatisticsReport(미사용 — 월간 종합으로 교체됨) · QuizReport ·
-            ReflectionReport · MonthlyOperationsReport(월간 종합 — 강사별 시수·이용 현황)
+            GrowthReport(학생별 월간 종합성장리포트 — 월 선택·차트 4종·코칭/피드백,
+            트리거는 components/reports/GrowthReportModal, 구 ReflectionReport 대체 2026-08) ·
+            MonthlyOperationsReport(월간 종합 — 강사별 시수·이용 현황)
             MonthlyCounselingReport(강사별 월간) · MonthlyLessonReport(강사별 월간 수업보고 —
             교재·과제) · StudentCounselingReport(학생별 — 등록일정은
             data/attendanceBlocks.js 시간블록 기호) — 셋 다 관공서 서식이라

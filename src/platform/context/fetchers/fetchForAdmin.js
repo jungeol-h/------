@@ -18,6 +18,7 @@ import {
   toQuizAttempt, toParentChild, toAttendanceRecord, toAttendanceSchedule,
   toAttendanceNotification, toWorkPlan,
   toUrgentReport, toManagementReport, toFinanceRecord, toLessonReport, toNotice,
+  toCenterClosure, toStudentFeedback,
   collectRows,
 } from '../../lib/supabaseHelpers.js'
 import { EMPTY } from '../dataModel.js'
@@ -26,7 +27,7 @@ export async function fetchForAdmin(scope = null) {
   const errors = []
   const meta = {}
 
-  const [usersRes, assnRes, alertsRes, counselingRes, bookingCounselingRes, statsRes, setsRes, parentChildrenRes, workPlansRes, urgentReportsRes, managementReportsRes, financeRecordsRes, lessonReportsRes, noticesRes] = await Promise.all([
+  const [usersRes, assnRes, alertsRes, counselingRes, bookingCounselingRes, statsRes, setsRes, parentChildrenRes, workPlansRes, urgentReportsRes, managementReportsRes, financeRecordsRes, lessonReportsRes, noticesRes, closuresRes, feedbacksRes] = await Promise.all([
     supabase.from('users').select('*').order('grade').order('login_id'),
     supabase.from('assignments').select('*'),
     supabase.from('alerts').select('*').order('created_at', { ascending: false }),
@@ -44,6 +45,10 @@ export async function fetchForAdmin(scope = null) {
     supabase.from('lesson_reports').select('*').order('date', { ascending: false }).limit(1000),
     // 공지·알림 작성 관리 목록용 — active 무관 전체
     supabase.from('notices').select('*').order('created_at', { ascending: false }).limit(200),
+    // 센터 휴무기간 — 출결판 휴무 표시·관리 (미적용 시 _fetchErrors로 강등)
+    supabase.from('center_closures').select('*').order('start_date', { ascending: false }),
+    // 학생 피드백(수시 코멘트) — 학생 명단·상세·종합성장리포트 소비
+    supabase.from('student_feedbacks').select('*').order('date', { ascending: false }).limit(2000),
   ])
 
   const allUsers = collectRows(usersRes, 'users', errors)
@@ -146,6 +151,8 @@ export async function fetchForAdmin(scope = null) {
     financeRecords: collectRows(financeRecordsRes, 'finance_records', errors).filter(byRecordGroup).map(toFinanceRecord),
     lessonReports: collectRows(lessonReportsRes, 'lesson_reports', errors).filter(byStudentIdList).map(toLessonReport),
     notices: collectRows(noticesRes, 'notices', errors).map(toNotice),
+    centerClosures: collectRows(closuresRes, 'center_closures', errors).map(toCenterClosure),
+    studentFeedbacks: collectRows(feedbacksRes, 'student_feedbacks', errors).filter(byStudentId).map(toStudentFeedback),
     _fetchErrors: errors,
     _fetchMeta: meta,
   }

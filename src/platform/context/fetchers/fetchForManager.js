@@ -8,7 +8,8 @@ import {
   toCounselingRecord, toAlert, toCareerDesignResult,
   toLearningDiagnosisResult, toAssignment, toQuizSet, toQuizQuestion,
   toQuizAttempt, toAttendanceRecord, toAttendanceSchedule,
-  toAttendanceNotification, toUrgentReport, toLessonReport, toNotice, collectRows,
+  toAttendanceNotification, toUrgentReport, toLessonReport, toNotice,
+  toCenterClosure, toStudentFeedback, collectRows,
 } from '../../lib/supabaseHelpers.js'
 import { EMPTY } from '../dataModel.js'
 import { canViewByGroups } from '../../utils/groupScope.js'
@@ -58,7 +59,7 @@ export async function fetchForManager(userId) {
   const attendanceSince = daysAgoStr(60)
   const notificationsSince = new Date(Date.now() - 7 * 86400000).toISOString()
 
-  const [mindRes, alertsRes, counselingRes, tasksRes, learningRes, diaryRes, careerRes, diagRes, attemptsRes, setsRes, attendanceRes, schedulesRes, attNotiRes, urgentRes, educatorsRes, lessonReportsRes, studentGroupsRes] = await Promise.all([
+  const [mindRes, alertsRes, counselingRes, tasksRes, learningRes, diaryRes, careerRes, diagRes, attemptsRes, setsRes, attendanceRes, schedulesRes, attNotiRes, urgentRes, educatorsRes, lessonReportsRes, studentGroupsRes, closuresRes, feedbacksRes] = await Promise.all([
     supabase.from('mind_records').select('*', { count: 'exact' }).in('student_id', studentIds).order('date', { ascending: false }).limit(2000),
     supabase.from('alerts').select('*').eq('manager_id', userId).order('created_at', { ascending: false }),
     // 담당 학생의 상담 기록 전체 — 작성자 무관 열람 (2026-07 클라이언트: 학생별 기록은 모든 강사 열람)
@@ -81,6 +82,10 @@ export async function fetchForManager(userId) {
     supabase.from('lesson_reports').select('*').order('date', { ascending: false }).limit(1000),
     // 수업보고 그룹 필터용 — 전체 학생의 소속만 가볍게 조회
     supabase.from('users').select('id, group_names').eq('role', 'student'),
+    // 센터 휴무기간 — 출결판 휴무 표시 (미적용 시 _fetchErrors로 강등)
+    supabase.from('center_closures').select('*').order('start_date', { ascending: false }),
+    // 학생 피드백(수시 코멘트) — 담당 학생분
+    supabase.from('student_feedbacks').select('*').in('student_id', studentIds).order('date', { ascending: false }).limit(2000),
   ])
   const notices = await fetchNotices()
 
@@ -132,6 +137,8 @@ export async function fetchForManager(userId) {
     attendanceSchedules: collectRows(schedulesRes, 'attendance_schedules', errors).map(toAttendanceSchedule),
     attendanceNotifications: collectRows(attNotiRes, 'attendance_notifications', errors).map(toAttendanceNotification),
     notices,
+    centerClosures: collectRows(closuresRes, 'center_closures', errors).map(toCenterClosure),
+    studentFeedbacks: collectRows(feedbacksRes, 'student_feedbacks', errors).map(toStudentFeedback),
     _fetchErrors: errors,
     _fetchMeta: meta,
   }
