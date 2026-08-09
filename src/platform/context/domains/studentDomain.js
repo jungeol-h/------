@@ -9,6 +9,8 @@ import { makeId } from '../dataModel.js'
 import { withWriteRetry } from '../../lib/supabaseRetry.js'
 import { hashPassword, INITIAL_COST } from '../../lib/passwords.js'
 import { PLACEHOLDER_PHONE } from '../../utils/studentDedup.js'
+import { todayStr } from '../../utils/dateUtils.js'
+import { reportError } from '../../lib/sentry.js'
 
 // 초기 비밀번호 = 학생 전화번호(없으면 자리표시 값) 해시.
 // password_changed_at은 null로 두어 첫 로그인 시 강제 재설정을 유도한다.
@@ -215,9 +217,15 @@ export function useStudentDomain(setData) {
     [setData]
   )
 
-  // 학생 등록 상태 변경 (soft delete) — status: data/studentStatus.js 값
+  // 학생 등록 상태 변경 (soft delete) — status: data/studentStatus.js 값.
+  // 퇴원·신청취소 전환 시 연관 일정을 정리한다 (2026-08 클라이언트: 퇴소 학생이
+  // 출결 미처리·예약 목록에 계속 잡히는 문제):
+  //  ① 센터 이용시간 등록 삭제 ② 등·하원 시간표 삭제 ③ 오늘 이후 확정 예약을
+  //  센터 사유로 일괄 취소(booking_cancel RPC — 알림·감사이력 포함).
+  // 정리는 best-effort — 실패해도 상태 변경 자체는 유지하고 Sentry에만 보고.
+  // 반환: { cancelledBookings } (재원 복귀 시 이용시간은 다시 등록해야 한다).
   const setStudentStatus = useCallback(
-    async (studentId, status) => {
+    async (studentId, status, { actorId = null } = {}) => {
       const { error } = await withWriteRetry(
         () => supabase.from('users').update({ status }).eq('id', studentId),
         { label: 'setStudentStatus' }
@@ -229,9 +237,58 @@ export function useStudentDomain(setData) {
           s.id === studentId ? { ...s, status } : s
         ),
       }))
+
+      let cancelledBookings = 0
+      if (status !== 'active') {
+        try {
+          await supabase.from('center_hour_registrations').delete().eq('student_id', studentId)
+          await supabase.from('attendance_schedules').delete().eq('student_id', studentId)
+          setData((prev) => ({
+            ...prev,
+            attendanceSchedules: prev.attendanceSchedules.filter((s) => s.studentId !== studentId),
+          }))
+
+          const { data: future } = await supabase
+            .from('booking_reservations')
+            .select('id, booking_slots!inner(date)')
+            .eq('student_id', studentId)
+            .eq('status', 'confirmed')
+            .gte('booking_slots.date', todayStr())
+          for (const r of future ?? []) {
+            const { data: res } = await supabase.rpc('booking_cancel', {
+              p_reservation_id: r.id,
+              p_actor_id: actorId,
+              p_actor_role: 'admin',
+              p_reason: '학생 퇴원·신청취소 처리에 따른 일괄 취소',
+            })
+            if (res?.ok) cancelledBookings += 1
+          }
+        } catch (err) {
+          reportError(err, { where: 'setStudentStatus.cleanup', studentId, status })
+        }
+      }
+      return { cancelledBookings }
     },
     [setData]
   )
 
-  return { createStudent, bulkCreateStudents, updateStudent, updateEducatorGroups, setStudentStatus }
+  // 학습일지 첨부 메타 저장 (users.study_journals jsonb) — 실파일은 lib/studyJournalFiles.js
+  const setStudentJournals = useCallback(
+    async (studentId, journals) => {
+      const { error } = await withWriteRetry(
+        () => supabase.from('users').update({ study_journals: journals }).eq('id', studentId),
+        { label: 'setStudentJournals' }
+      )
+      if (error) throw error
+      setData((prev) => ({
+        ...prev,
+        students: prev.students.map((s) =>
+          s.id === studentId ? { ...s, studyJournals: journals } : s
+        ),
+      }))
+    },
+    [setData]
+  )
+
+  return { createStudent, bulkCreateStudents, updateStudent, updateEducatorGroups, setStudentStatus, setStudentJournals }
 }

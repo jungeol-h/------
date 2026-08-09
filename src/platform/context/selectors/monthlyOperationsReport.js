@@ -147,7 +147,8 @@ export function buildAttendanceUsage(rows) {
   return { presentCount, usageMinutes, usageText: minutesToText(usageMinutes) }
 }
 
-function rowUsageMinutes(r) {
+// 출결 1행의 이용시간(분) — growthReport(학생별 종합성장리포트)도 재사용한다.
+export function rowUsageMinutes(r) {
   const events = Array.isArray(r.events) ? r.events : []
   const pairs = []
   let pendingIn = null

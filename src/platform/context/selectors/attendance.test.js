@@ -4,6 +4,7 @@ import {
   getWeeklySchedule,
   classifyToday,
   classifyForDate,
+  findClosureFor,
   getTodayAttendanceBoard,
   getDailyAttendanceBoard,
   getUnresolvedAttendanceNotifications,
@@ -136,6 +137,38 @@ describe('getTodayAttendanceBoard — 담당 학생 현황판', () => {
     expect(allIds).toContain('s9')
     expect(allIds).not.toContain('s10')
   })
+
+  it('매니저 경로(all=false)도 퇴원·취소 학생을 제외한다', () => {
+    const withWithdrawn = {
+      ...data,
+      students: [...data.students, { id: 's11', name: '퇴원생', status: 'withdrawn' }],
+      assignments: [...data.assignments, { educatorId: 'm01', studentId: 's11' }],
+    }
+    const board = getTodayAttendanceBoard(withWithdrawn, { educatorId: 'm01', now: MONDAY_15H })
+    const allIds = Object.values(board).flat().map((e) => e.student.id)
+    expect(allIds).not.toContain('s11')
+    expect(allIds).toContain('s1')
+  })
+})
+
+describe('findClosureFor — 휴무기간 판정', () => {
+  const closures = [
+    { id: 'c1', startDate: '2026-08-10', endDate: '2026-08-17', label: '센터 방학' },
+    { id: 'c2', startDate: '2026-09-01', endDate: '2026-09-01', label: '임시휴무' },
+  ]
+
+  it('시작일·종료일 포함 범위 안이면 해당 휴무기간을 반환한다', () => {
+    expect(findClosureFor(closures, '2026-08-10')?.id).toBe('c1')
+    expect(findClosureFor(closures, '2026-08-13')?.id).toBe('c1')
+    expect(findClosureFor(closures, '2026-08-17')?.id).toBe('c1')
+    expect(findClosureFor(closures, '2026-09-01')?.id).toBe('c2')
+  })
+  it('범위 밖·빈 목록·null은 null', () => {
+    expect(findClosureFor(closures, '2026-08-09')).toBeNull()
+    expect(findClosureFor(closures, '2026-08-18')).toBeNull()
+    expect(findClosureFor([], '2026-08-10')).toBeNull()
+    expect(findClosureFor(null, '2026-08-10')).toBeNull()
+  })
 })
 
 describe('classifyForDate — 지난·미래 날짜 분류', () => {
@@ -218,6 +251,30 @@ describe('getDailyAttendanceBoard — 날짜별 현황판 (등록명단 기준)'
     })
     expect(board.not_arrived.map((e) => e.student.id)).toEqual(['s3'])
     expect(board.no_schedule.map((e) => e.student.id)).toEqual(['s2'])
+  })
+
+  it('휴무 날짜: 등록 학생도 예정이 사라져 no_schedule로 분류된다', () => {
+    const closures = [{ id: 'c1', startDate: '2026-07-01', endDate: '2026-07-05', label: '방학' }]
+    const board = getDailyAttendanceBoard(data, {
+      educatorId: 'm01', dateStr: '2026-07-03', registrations, closures, now: MONDAY_15H,
+    })
+    // s2(등록명단)·s3(시간표만)는 예정 없음, s1은 결석 기록이 있어 그대로 absent
+    expect(board.not_arrived).toEqual([])
+    expect(board.no_schedule.map((e) => e.student.id).sort()).toEqual(['s2', 's3'])
+  })
+
+  it('휴무 날짜에도 실등원 기록이 있는 학생은 기록대로 분류된다', () => {
+    const withCheckIn = {
+      ...data,
+      attendanceRecords: [
+        { studentId: 's1', date: '2026-07-03', status: 'present', checkInAt: 'x', checkOutAt: null },
+      ],
+    }
+    const closures = [{ id: 'c1', startDate: '2026-07-01', endDate: '2026-07-05', label: '방학' }]
+    const board = getDailyAttendanceBoard(withCheckIn, {
+      educatorId: 'm01', dateStr: '2026-07-03', registrations, closures, now: MONDAY_15H,
+    })
+    expect(board.present.map((e) => e.student.id)).toEqual(['s1'])
   })
 })
 

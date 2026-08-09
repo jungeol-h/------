@@ -22,6 +22,7 @@ export const toUser = (row) => ({
   subject: row.subject ?? '',
   workSchedule: row.work_schedule ?? '', // 교직원 업무일정 — 보고서 헤더 기본값
   groups: row.group_names ?? [], // 소속 그룹 (빈 배열 = 무소속: 직원이면 전체 열람, 학생이면 공용)
+  studyJournals: toArray(row.study_journals), // 학습일지 첨부 메타 [{ path, name, size, uploadedAt }]
 })
 
 export const toMindRecord = (row) => ({
@@ -345,6 +346,27 @@ export const toQuizAttempt = (row) => ({
   score: row.score ?? 0,
   total: row.total ?? 0,
   submittedAt: row.submitted_at,
+})
+
+// 센터 휴무기간 (방학·임시휴무) — 기간 내 자동 결석 판정 중단 (scripts/add-center-closures.sql)
+export const toCenterClosure = (row) => ({
+  id: row.id,
+  startDate: row.start_date,
+  endDate: row.end_date,
+  label: row.label ?? '',
+  createdBy: row.created_by ?? null,
+  createdAt: row.created_at,
+})
+
+// 학생 피드백(수시 코멘트) — 상담 기록과 별개의 가벼운 코멘트 (scripts/add-student-feedback.sql)
+export const toStudentFeedback = (row) => ({
+  id: row.id,
+  studentId: row.student_id,
+  authorId: row.author_id ?? null,
+  authorName: row.author_name ?? '',
+  date: row.date,
+  content: row.content ?? '',
+  createdAt: row.created_at,
 })
 
 export const toNotice = (row) => ({

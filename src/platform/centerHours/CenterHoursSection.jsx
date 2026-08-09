@@ -17,6 +17,7 @@ import { buildCenterHoursSheets, downloadCenterHoursWorkbook } from './centerHou
 import { selectionToEntries } from './centerHoursSelection.js'
 import CenterHourGrid from './CenterHourGrid.jsx'
 import { todayStr } from '../utils/dateUtils.js'
+import { isActiveStudent } from '../data/studentStatus.js'
 
 // readOnly: 감독관(viewer) 열람용 — 학생 대리 수정 에디터 숨김 (엑셀은 허용)
 export default function CenterHoursSection({
@@ -42,12 +43,12 @@ export default function CenterHoursSection({
     [allStudents],
   )
 
-  // (day#start) → 학생 목록 (학년→이름순)
+  // (day#start) → 학생 목록 (학년→이름순). 퇴원·취소 학생은 명단에서 제외.
   const roster = useMemo(() => {
     const bucket = new Map()
     for (const reg of registrations) {
       const student = studentById.get(reg.studentId)
-      if (!student) continue
+      if (!student || !isActiveStudent(student)) continue
       const k = unitKey(reg.dayOfWeek, reg.startTime)
       if (!bucket.has(k)) bucket.set(k, [])
       bucket.get(k).push(student)
@@ -61,8 +62,15 @@ export default function CenterHoursSection({
   }, [registrations, studentById])
 
   const registeredCount = useMemo(
-    () => new Set(registrations.map((r) => r.studentId)).size,
-    [registrations],
+    () => new Set(
+      registrations
+        .filter((r) => {
+          const student = studentById.get(r.studentId)
+          return student && isActiveStudent(student)
+        })
+        .map((r) => r.studentId)
+    ).size,
+    [registrations, studentById],
   )
 
   const handleToggleOpen = async () => {

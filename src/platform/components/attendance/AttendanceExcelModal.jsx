@@ -76,7 +76,8 @@ export default function AttendanceExcelModal({ open, onClose }) {
         supabase
           .from('users')
           .select('id, name, school, grade')
-          .eq('role', 'student'),
+          .eq('role', 'student')
+          .eq('status', 'active'),
       ])
 
       if (attRes.error) throw attRes.error

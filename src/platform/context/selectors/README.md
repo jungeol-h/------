@@ -43,7 +43,7 @@
 | `studentIndicators.js` | 관리자 학생 탭 지표 컬럼 (1-pass Map — 학생 수×기록 수 이중루프 금지) |
 | `adminStats.js` | 관리자 통계 섹션 (누적 출결 60일·1인당 학습 30일·업무횟수) |
 | `homeMessages.js` | 학생 홈 코멘트 말풍선 (상담 followUp·과제 마감·업무계획 태그) |
-| `reflectionReport.js` | 종합 성장 리포트 데이터 조립 (getTaskSummary/getQuizSummary 포함) |
+| `growthReport.js` | 종합성장리포트(월간) 데이터 조립 — 기간 인자, 이용시간·분포·교과컨설팅(교과별, 시간 미기재 60분 규칙)·코칭 자동 텍스트 (구 reflectionReport.js 대체 2026-08) |
 | `monthlyCounselingReport.js` | 강사별 월간 컨설팅 보고서 조립 + 날짜·기간 서식 유틸 (monthRangeOf 등) |
 | `monthlyLessonReport.js` | 강사별 월간 수업보고서 조립 (수업보고 — 학생 복수·교재·과제) |
 | `monthlyOperationsReport.js` | 월간 종합 보고서 집계 — 시수 규칙(교과60·진로40·수업60분=1시수, 50~70분→60 스냅)·출석 연인원·이용시간(events 쌍) |

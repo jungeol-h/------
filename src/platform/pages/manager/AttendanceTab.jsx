@@ -11,13 +11,14 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Siren, X, MonitorSmartphone, FileSpreadsheet,
+  Siren, X, MonitorSmartphone, FileSpreadsheet, CalendarOff,
   CalendarRange, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Clock3,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
 import { supabase } from '../../lib/supabase.js'
 import AttendanceExcelModal from '../../components/attendance/AttendanceExcelModal.jsx'
+import ClosureManagerModal from '../../components/attendance/ClosureManagerModal.jsx'
 import TodayAttendancePanel from '../../components/attendance/TodayAttendancePanel.jsx'
 import TodayTimeline from '../../centerHours/TodayTimeline.jsx'
 import CenterHoursSection from '../../centerHours/CenterHoursSection.jsx'
@@ -25,6 +26,7 @@ import { useCenterHours } from '../../centerHours/useCenterHours.js'
 import {
   getDailyAttendanceBoard,
   getUnresolvedAttendanceNotifications,
+  findClosureFor,
   dayLabel,
 } from '../../context/selectors/attendance.js'
 import { todayStr, toDateStr, daysAgoStr } from '../../utils/dateUtils.js'
@@ -38,6 +40,12 @@ const STATUS_OPTIONS = [
 const NOTI_PREVIEW = 4 // 긴급 알림 접힘 상태에서 보여줄 개수
 
 const hhmm = (iso) => (iso ? new Date(iso).toTimeString().slice(0, 5) : '')
+
+// 'YYYY-MM-DD' → 'M/D' (휴무기간 배너 표시용)
+const fmtMD = (dateStr) => {
+  const [, m, d] = (dateStr ?? '').split('-').map(Number)
+  return m && d ? `${m}/${d}` : dateStr
+}
 
 export default function AttendanceTab() {
   const navigate = useNavigate()
@@ -91,8 +99,15 @@ export default function AttendanceTab() {
       all: seeAll,
       dateStr,
       registrations: centerHoursReady ? centerHours.registrations : null,
+      closures: data.centerClosures,
     }),
     [data, currentUser?.id, seeAll, dateStr, centerHoursReady, centerHours.registrations]
+  )
+
+  // 조회 날짜가 속한 휴무기간 (없으면 null) — 배너 표시용
+  const closure = useMemo(
+    () => findClosureFor(data.centerClosures, dateStr),
+    [data.centerClosures, dateStr]
   )
 
   const myStudents = useMemo(() => {
@@ -105,11 +120,12 @@ export default function AttendanceTab() {
     const ids = new Set(
       data.assignments.filter((a) => a.educatorId === currentUser?.id).map((a) => a.studentId)
     )
-    return data.students.filter((s) => ids.has(s.id))
+    return data.students.filter((s) => ids.has(s.id) && (s.status ?? 'active') === 'active')
   }, [data.assignments, data.students, currentUser?.id, seeAll])
 
   const [editModal, setEditModal] = useState(null) // { student, record }
   const [excelOpen, setExcelOpen] = useState(false)
+  const [closureOpen, setClosureOpen] = useState(false)
   const [notiExpanded, setNotiExpanded] = useState(false)
   const [notiBusy, setNotiBusy] = useState(false)
 
@@ -220,6 +236,15 @@ export default function AttendanceTab() {
             </button>
           )}
         </div>
+        {!isViewer && (
+          <button
+            onClick={() => setClosureOpen(true)}
+            className="px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-600 flex items-center gap-1.5 active:scale-95 transition-all"
+          >
+            <CalendarOff size={15} className="text-amber-500" />
+            휴무기간 관리
+          </button>
+        )}
         <button
           onClick={() => setExcelOpen(true)}
           className="px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-600 flex items-center gap-1.5 active:scale-95 transition-all"
@@ -238,7 +263,21 @@ export default function AttendanceTab() {
         )}
       </div>
 
+      {/* 휴무기간 배너 — 조회 날짜가 휴무기간에 들면 안내 */}
+      {closure && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3.5 flex items-center gap-2">
+          <CalendarOff size={16} className="flex-shrink-0 text-amber-500" />
+          <p className="text-sm font-bold text-amber-700">
+            휴무기간 — {closure.label || '휴무'} ({fmtMD(closure.startDate)}~{fmtMD(closure.endDate)})
+            <span className="ml-1 font-medium text-amber-600">
+              · 이 기간에는 자동 결석 판정이 중단됩니다
+            </span>
+          </p>
+        </div>
+      )}
+
       <AttendanceExcelModal open={excelOpen} onClose={() => setExcelOpen(false)} />
+      {closureOpen && <ClosureManagerModal onClose={() => setClosureOpen(false)} />}
 
       {/* 날짜별 현황 (명단 테이블) + 시간대별 타임라인 */}
       <div className="grid gap-6 lg:grid-cols-3 items-start">

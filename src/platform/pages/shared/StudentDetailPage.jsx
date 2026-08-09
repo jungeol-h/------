@@ -1,7 +1,7 @@
 // 학생 상세 공용 페이지 — manager/admin/instructor/consultant/viewer 대시보드의
 // student/:studentId 라우트에서 사용. 상단 학생 요약(위험 배지·자기주도지수·담당 매니저) +
-// 내부 7탭: 마인드·일기·학습·과제·학습진단·진로설계·상담. 과제·상담 탭은 CRUD 포함,
-// viewer는 작성 불가(canWrite=false).
+// 내부 8탭: 마인드·일기·학습·과제·피드백·학습진단·진로설계·상담. 과제·피드백·상담 탭은
+// CRUD 포함, viewer는 작성 불가(canWrite=false).
 
 import { useState, useMemo, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
@@ -13,8 +13,8 @@ import {
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
 import { supabase } from '../../lib/supabase.js'
-import { toAttendanceRecord, toAttendanceSchedule } from '../../lib/supabaseHelpers.js'
-import { buildReflectionData } from '../../context/selectors/reflectionReport.js'
+import { toAttendanceSchedule } from '../../lib/supabaseHelpers.js'
+import GrowthReportModal from '../../components/reports/GrowthReportModal.jsx'
 import {
   buildStudentCounselingEntries, formatScheduleBlocks,
 } from '../../context/selectors/studentCounselingReport.js'
@@ -25,11 +25,11 @@ import CounselingRecordBody from '../../components/counseling/CounselingRecordBo
 import { AttachmentChips } from '../../components/counseling/AttachmentField.jsx'
 import { removeCounselingFiles, filterUnreferencedPaths } from '../../lib/counselingFiles.js'
 import { educatorDisplayName } from '../../utils/educatorName.js'
+import { todayStr } from '../../utils/dateUtils.js'
 import TaskFormModal from '../../components/tasks/TaskFormModal.jsx'
 import TaskFileChips from '../../components/tasks/TaskFileChips.jsx'
 import DownloadPdfButton from '../../pdf/components/DownloadPdfButton.jsx'
-import { buildFilename, nowDateTime } from '../../pdf/utils/formatters.js'
-import { authorOf } from '../../pdf/config/meta.js'
+import { buildFilename } from '../../pdf/utils/formatters.js'
 import { STAGE_META, STAGE_ORDER } from '../../data/stageFeedbackLibrary.js'
 import { DOMAIN_LABELS } from '../../data/questions.js'
 import { actualMinutes, methodBreakdown } from '../../context/selectors/learningRecords.js'
@@ -370,6 +370,176 @@ function TaskSection({ studentId, data, currentUser, canWrite = false }) {
   )
 }
 
+// ─── 탭: 피드백 ───────────────────────────────────────────────
+// 수시 코멘트 (studentFeedbacks) — 학생 명단 '피드백' 모달과 같은 데이터.
+function FeedbackSection({ studentId, data, currentUser, canWrite = false }) {
+  const { addStudentFeedback, updateStudentFeedback, deleteStudentFeedback } = useData()
+  const [date, setDate] = useState(todayStr())
+  const [content, setContent] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [editId, setEditId] = useState(null) // 인라인 수정 대상 피드백 id
+  const [editDate, setEditDate] = useState('')
+  const [editContent, setEditContent] = useState('')
+
+  const feedbacks = data.studentFeedbacks
+    .filter((f) => f.studentId === studentId)
+    .slice()
+    .sort((a, b) => (a.date !== b.date
+      ? (b.date > a.date ? 1 : -1)
+      : ((b.createdAt ?? '') > (a.createdAt ?? '') ? 1 : -1)))
+
+  // 본인 작성분 or admin만 수정/삭제
+  const canManage = (f) =>
+    canWrite && (f.authorId === currentUser?.id || currentUser?.role === 'admin')
+
+  const handleAdd = async () => {
+    if (!content.trim() || busy) return
+    setBusy(true)
+    try {
+      await addStudentFeedback({
+        studentId,
+        authorId: currentUser?.id ?? null,
+        authorName: currentUser?.name ?? '',
+        date,
+        content: content.trim(),
+      })
+      setContent('')
+      setDate(todayStr())
+    } catch {
+      alert('피드백 저장 중 오류가 발생했습니다.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleEditSave = async () => {
+    if (!editContent.trim() || busy) return
+    setBusy(true)
+    try {
+      await updateStudentFeedback(editId, { date: editDate, content: editContent.trim() })
+      setEditId(null)
+    } catch {
+      alert('피드백 수정 중 오류가 발생했습니다.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('이 피드백을 삭제할까요?')) return
+    try {
+      await deleteStudentFeedback(id)
+    } catch {
+      alert('피드백 삭제 중 오류가 발생했습니다.')
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      {canWrite && (
+        <div className="bg-white rounded-2xl p-4 shadow-sm space-y-2">
+          <h4 className="text-sm font-bold text-gray-700">피드백 작성</h4>
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="px-3 py-2 rounded-lg border border-gray-200 text-sm"
+          />
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            rows={3}
+            placeholder="기록 내용에 대한 코멘트를 입력하세요"
+            className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm resize-none"
+          />
+          <div className="flex justify-end">
+            <button
+              onClick={handleAdd}
+              disabled={busy || !content.trim()}
+              className="flex items-center gap-1 bg-emerald-500 text-white text-sm font-bold px-3 py-2 rounded-xl hover:bg-emerald-600 active:scale-95 transition-all disabled:opacity-40"
+            >
+              <Plus size={16} /> {busy ? '저장 중…' : '피드백 저장'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {feedbacks.length === 0 ? (
+        <p className="text-sm text-gray-400 py-8 text-center">피드백이 없습니다.</p>
+      ) : (
+        <div className="space-y-2">
+          {feedbacks.map((f) => (
+            <div key={f.id} className="bg-white rounded-xl p-3 shadow-sm">
+              {editId === f.id ? (
+                <div className="space-y-2">
+                  <input
+                    type="date"
+                    value={editDate}
+                    onChange={(e) => setEditDate(e.target.value)}
+                    className="px-2.5 py-1.5 rounded-lg border border-gray-200 text-xs"
+                  />
+                  <textarea
+                    value={editContent}
+                    onChange={(e) => setEditContent(e.target.value)}
+                    rows={3}
+                    className="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 text-xs resize-none"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setEditId(null)}
+                      className="flex-1 py-1.5 rounded-lg bg-gray-100 text-xs font-semibold text-gray-600"
+                    >
+                      취소
+                    </button>
+                    <button
+                      onClick={handleEditSave}
+                      disabled={busy || !editContent.trim()}
+                      className="flex-1 py-1.5 rounded-lg bg-blue-600 text-xs font-semibold text-white disabled:opacity-40"
+                    >
+                      수정 저장
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs text-gray-400">
+                      {f.date}{f.authorName ? ` · ${f.authorName}` : ''}
+                    </span>
+                    {canManage(f) && (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            setEditId(f.id)
+                            setEditDate(f.date)
+                            setEditContent(f.content)
+                          }}
+                          className="text-gray-400 hover:text-blue-600 p-0.5"
+                          aria-label="피드백 수정"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(f.id)}
+                          className="text-gray-400 hover:text-red-600 p-0.5"
+                          aria-label="피드백 삭제"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{f.content}</p>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── 탭: 학습진단 ─────────────────────────────────────────────
 function LearningDiagnosisSection({ studentId, data }) {
   const [resultTab, setResultTab] = useState(0)
@@ -687,52 +857,19 @@ function CounselingSection({ studentId, data, currentUser, canWrite = true }) {
     }
   }, [records, student, studentId, data.educators, data.attendanceSchedules])
 
-  const buildReflectionPdf = useCallback(async () => {
-    // admin/manager fetch에는 이 학생의 출결이 없다 → 여기서만 lazy fetch.
-    let attendanceRecords = []
-    try {
-      const res = await supabase
-        .from('attendance_records')
-        .select('*')
-        .eq('student_id', studentId)
-        .order('date', { ascending: false })
-      if (res.error) throw res.error
-      attendanceRecords = (res.data ?? []).map(toAttendanceRecord)
-    } catch {
-      alert('출결 기록을 불러오지 못했습니다. 출결 없이 리포트를 생성합니다.')
-      attendanceRecords = []
-    }
-
-    // learning/tasks/quiz/mind는 page data에 이미 있음. 출결만 주입해 selector 재사용.
-    const merged = { ...data, attendanceRecords }
-    const { attendance, learning, tasks, quiz, mind } = buildReflectionData(merged, studentId)
-
-    const { default: ReflectionReport } = await import('../../pdf/reports/ReflectionReport.jsx')
-    return {
-      element: (
-        <ReflectionReport
-          student={{ name: student?.name, school: student?.school, grade: student?.grade }}
-          attendance={attendance}
-          learning={learning}
-          tasks={tasks}
-          quiz={quiz}
-          mind={mind}
-          generatedAt={nowDateTime()}
-          author={authorOf(currentUser)}
-        />
-      ),
-      filename: buildFilename('종합성장리포트', student?.name),
-    }
-  }, [studentId, student, data, currentUser])
+  // 종합성장리포트 — 월 선택·차트·코칭 편집이 있는 전용 모달로 이동 (2026-08 개편)
+  const [showGrowthReport, setShowGrowthReport] = useState(false)
 
   return (
     <div className="space-y-3">
       <div className="flex justify-end gap-2">
-        <DownloadPdfButton
-          buildDocument={buildReflectionPdf}
-          label="종합 성장 리포트"
-          className="bg-blue-600 hover:bg-blue-700"
-        />
+        <button
+          type="button"
+          onClick={() => setShowGrowthReport(true)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 active:scale-95 transition"
+        >
+          종합성장리포트
+        </button>
         <DownloadPdfButton
           buildDocument={buildCounselingPdf}
           label="상담 보고서"
@@ -794,6 +931,13 @@ function CounselingSection({ studentId, data, currentUser, canWrite = true }) {
         })
       )}
 
+      {showGrowthReport && (
+        <GrowthReportModal
+          student={student}
+          onClose={() => setShowGrowthReport(false)}
+        />
+      )}
+
       {showForm && (
         <CounselingFormModal
           fixedStudent={student}
@@ -814,7 +958,7 @@ function CounselingSection({ studentId, data, currentUser, canWrite = true }) {
 }
 
 // ─── 메인 ─────────────────────────────────────────────────────
-const TABS = ['마인드', '일기', '학습', '과제', '학습진단', '진로설계', '상담']
+const TABS = ['마인드', '일기', '학습', '과제', '피드백', '학습진단', '진로설계', '상담']
 
 export default function StudentDetailPage() {
   const { studentId } = useParams()
@@ -879,9 +1023,10 @@ export default function StudentDetailPage() {
       {activeTab === 1 && <DiarySection studentId={studentId} data={data} />}
       {activeTab === 2 && <LearningSection studentId={studentId} data={data} />}
       {activeTab === 3 && <TaskSection studentId={studentId} data={data} currentUser={currentUser} canWrite={currentUser?.role !== 'viewer'} />}
-      {activeTab === 4 && <LearningDiagnosisSection studentId={studentId} data={data} />}
-      {activeTab === 5 && <CareerDesignSection studentId={studentId} data={data} />}
-      {activeTab === 6 && <CounselingSection studentId={studentId} data={data} currentUser={currentUser} canWrite={currentUser?.role !== 'viewer'} />}
+      {activeTab === 4 && <FeedbackSection studentId={studentId} data={data} currentUser={currentUser} canWrite={currentUser?.role !== 'viewer'} />}
+      {activeTab === 5 && <LearningDiagnosisSection studentId={studentId} data={data} />}
+      {activeTab === 6 && <CareerDesignSection studentId={studentId} data={data} />}
+      {activeTab === 7 && <CounselingSection studentId={studentId} data={data} currentUser={currentUser} canWrite={currentUser?.role !== 'viewer'} />}
     </div>
   )
 }

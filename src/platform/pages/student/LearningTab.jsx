@@ -3,7 +3,7 @@
 // 돌아보기: 과목별 통계·출결·오늘의 자기점수·성찰 리포트. 순수 로직은 learningTabLogic.js 분리.
 // [임시] TEMP_ALLOW_PAST_ACTUAL_EDIT로 과거 실제시간 보정 허용 — tempBetaNotice.js 참고.
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   CalendarDays, Check, ChevronDown, ChevronUp, Clock, GripVertical, Pause, Play, Plus,
   RotateCcw, Save, Trash2,
@@ -13,11 +13,8 @@ import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
 import { toDateStr } from '../../utils/dateUtils.js'
 import { getAttendanceSummary } from '../../context/selectors/attendanceStats.js'
-import { buildReflectionData } from '../../context/selectors/reflectionReport.js'
-import DownloadPdfButton from '../../pdf/components/DownloadPdfButton.jsx'
+import GrowthReportModal from '../../components/reports/GrowthReportModal.jsx'
 import TimeField from '../../components/common/TimeField.jsx'
-import { buildFilename, nowDateTime } from '../../pdf/utils/formatters.js'
-import { authorOf } from '../../pdf/config/meta.js'
 import {
   STUDY_LOCATIONS,
   STUDY_METHODS,
@@ -1287,41 +1284,35 @@ function tsToHM(ts) {
 
 function AttendanceSection({ data, studentId, currentUser, hasLearning }) {
   const [showAll, setShowAll] = useState(false)
+  // 종합성장리포트 — 월 선택·차트가 있는 전용 모달로 이동 (2026-08 개편)
+  const [showGrowthReport, setShowGrowthReport] = useState(false)
   const { counts, records: attRecords } = getAttendanceSummary(data, studentId)
   const visible = showAll ? attRecords : attRecords.slice(0, 30)
   const hasAttendance = attRecords.length > 0
 
-  const buildPdf = useCallback(async () => {
-    const student = data.students.find((s) => s.id === studentId)
-    const { attendance, learning, tasks, quiz, mind } = buildReflectionData(data, studentId)
-    const { default: ReflectionReport } = await import('../../pdf/reports/ReflectionReport.jsx')
-    return {
-      element: (
-        <ReflectionReport
-          student={{ name: student?.name, school: student?.school, grade: student?.grade }}
-          attendance={attendance}
-          learning={learning}
-          tasks={tasks}
-          quiz={quiz}
-          mind={mind}
-          generatedAt={nowDateTime()}
-          author={authorOf(currentUser)}
-        />
-      ),
-      filename: buildFilename('종합성장리포트', student?.name),
-    }
-  }, [data, studentId, currentUser])
+  // 학생 본인 fetch의 students에는 자기 자신이 없을 수 있어 currentUser로 보강
+  const student = data.students.find((s) => s.id === studentId) ?? currentUser
 
   return (
     <section className="bg-white rounded-xl p-4 shadow-sm space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-bold text-gray-700">출결 기록</h3>
-        <DownloadPdfButton
-          buildDocument={buildPdf}
-          label="종합 성장 리포트"
+        <button
+          type="button"
+          onClick={() => setShowGrowthReport(true)}
           disabled={!hasAttendance && !hasLearning}
-        />
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-600 text-white text-xs font-semibold hover:bg-violet-700 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed transition"
+        >
+          종합성장리포트
+        </button>
       </div>
+
+      {showGrowthReport && (
+        <GrowthReportModal
+          student={student}
+          onClose={() => setShowGrowthReport(false)}
+        />
+      )}
 
       <div className="grid grid-cols-4 gap-2">
         <div className="rounded-lg bg-emerald-50 p-2 text-center">
