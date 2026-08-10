@@ -152,7 +152,10 @@ export default function UserManagementTab({ readOnly = false }) {
   }
 
   const buildPdf = useCallback(async () => {
-    const identifier = `${showInactive ? '전체' : '활성'}_${sortKey}${sortDir === 'desc' ? '내림' : '오름'}`
+    // 그룹을 파일명·제목에 넣는다 — 그룹별로 여러 부를 뽑을 때 파일이 구분되지 않아
+    // "그룹별 인쇄가 안 된다"는 클라이언트 제보(2026-08-10). 필터 자체는 원래 적용됐다.
+    const groupLabel = filterGroup === 'all' ? '전체그룹' : filterGroup
+    const identifier = `${groupLabel}_${showInactive ? '전체' : '활성'}_${sortKey}${sortDir === 'desc' ? '내림' : '오름'}`
     const filename = buildFilename('학생목록', identifier)
     const { default: UserListReport } = await import('../../pdf/reports/UserListReport.jsx')
     return {
@@ -160,7 +163,7 @@ export default function UserManagementTab({ readOnly = false }) {
         <UserListReport
           students={visibleStudents}
           managerNameOf={managerNameOf}
-          filters={{ showInactive, query, sortKey, sortDir }}
+          filters={{ showInactive, query, sortKey, sortDir, group: filterGroup }}
           period={`조회일 ${nowDateTime().slice(0, 10)}`}
           generatedAt={nowDateTime()}
           author={authorOf(currentUser)}
@@ -169,7 +172,7 @@ export default function UserManagementTab({ readOnly = false }) {
       filename,
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visibleStudents, showInactive, query, sortKey, sortDir, currentUser])
+  }, [visibleStudents, showInactive, query, sortKey, sortDir, filterGroup, currentUser])
 
   // ── 교육자 CRUD 핸들러 ──
   const activeEducators = data.educators.filter((e) => e.status !== 'inactive')
