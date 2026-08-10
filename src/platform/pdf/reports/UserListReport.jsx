@@ -95,20 +95,26 @@ export default function UserListReport({
   generatedAt,
   author,
 }) {
-  const { showInactive, query, sortKey, sortDir } = filters || {}
+  const { showInactive, query, sortKey, sortDir, group } = filters || {}
   const dirLabel = sortDir === 'desc' ? '내림차순' : '오름차순'
   const sortLabel = `${SORT_LABELS[sortKey] || sortKey} · ${dirLabel}`
+  // 그룹별로 여러 부를 뽑을 때 어느 그룹의 명단인지 문서 자체로 구분되게 한다.
+  const groupLabel = !group || group === 'all' ? '전체 그룹' : group
 
+  // '전체 그룹' 출력에서는 행만 봐서 소속을 알 수 없으므로 그룹 컬럼을 추가한다
+  // (특정 그룹 출력이면 전 행이 같은 값이라 넣지 않고 학교 칸을 넓게 쓴다).
+  const showGroupColumn = !group || group === 'all'
   const columns = [
     { key: 'idx', header: '순번', width: '6%', align: 'center' },
     { key: 'name', header: '이름', width: '12%' },
     { key: 'gender', header: '성별', width: '6%', align: 'center' },
-    { key: 'school', header: '학교', width: '20%' },
-    { key: 'grade', header: '학년', width: '8%', align: 'center' },
-    { key: 'className', header: '반', width: '8%', align: 'center' },
-    { key: 'manager', header: '담당 매니저', width: '12%', align: 'center' },
-    { key: 'risk', header: '위험도', width: '10%', align: 'center' },
-    { key: 'selfIndex', header: '자기주도지수', width: '10%', align: 'right' },
+    ...(showGroupColumn ? [{ key: 'group', header: '소속 그룹', width: '13%' }] : []),
+    { key: 'school', header: '학교', width: showGroupColumn ? '14%' : '20%' },
+    { key: 'grade', header: '학년', width: showGroupColumn ? '7%' : '8%', align: 'center' },
+    { key: 'className', header: '반', width: showGroupColumn ? '7%' : '8%', align: 'center' },
+    { key: 'manager', header: '담당 매니저', width: showGroupColumn ? '11%' : '12%', align: 'center' },
+    { key: 'risk', header: '위험도', width: showGroupColumn ? '9%' : '10%', align: 'center' },
+    { key: 'selfIndex', header: '자기주도지수', width: showGroupColumn ? '13%' : '10%', align: 'right' },
     { key: 'status', header: '상태', width: '8%', align: 'center' },
   ]
 
@@ -120,6 +126,7 @@ export default function UserListReport({
       idx: idx + 1,
       name: s.name || '-',
       gender: s.gender ? GENDER_LABELS[s.gender] : '-',
+      group: (s.groups ?? []).join(', ') || '무소속',
       school: s.school || '-',
       grade: s.grade || '-',
       className: s.className || '-',
@@ -136,13 +143,14 @@ export default function UserListReport({
 
   return (
     <PageWrapper
-      reportTitle="학생 목록 보고서"
+      reportTitle={`학생 목록 보고서 — ${groupLabel}`}
       period={period}
       generatedAt={generatedAt}
       author={author}
     >
       <Section title="조회 조건">
         <View style={filterStyles.grid}>
+          <FilterRow label="소속 그룹" value={groupLabel} />
           <FilterRow
             label="표시 범위"
             value={showInactive ? '전체 (재원 + 퇴원·취소)' : '재원 학생만'}
@@ -161,7 +169,7 @@ export default function UserListReport({
         </View>
       </Section>
 
-      <Section title="학생 목록">
+      <Section title={`학생 목록 (${groupLabel})`}>
         <Table columns={columns} rows={rows} />
       </Section>
     </PageWrapper>
