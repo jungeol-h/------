@@ -14,6 +14,7 @@ import {
   toAttendanceRecord, toAttendanceNotification,
 } from '../../lib/supabaseHelpers.js'
 import { withWriteRetry } from '../../lib/supabaseRetry.js'
+import { makeId } from '../dataModel.js'
 
 export function useAttendanceDomain(setData) {
   // 키오스크 번호(전화번호 뒷 4자리) 매칭 — 로컬 상태를 건드리지 않는 조회
@@ -105,6 +106,40 @@ export function useAttendanceDomain(setData) {
     [setData]
   )
 
+  // 수동 출결 기록 생성 — 기록이 아직 없는 미등원(no_show) 학생에게 결석 사유를
+  // 남길 때 사용 (2026-08 클라이언트: 긴급확인 → 사유 입력 연결). cron이 30분 후
+  // auto 결석을 만들려 해도 UNIQUE(student_id, date) + ON CONFLICT DO NOTHING이라
+  // 이 수동 기록이 유지된다. 이미 기록이 있으면(23505) 명확한 에러로 안내.
+  const createManualAttendance = useCallback(
+    async (studentId, date, { status = 'absent', note = '' } = {}) => {
+      const row = {
+        id: makeId('at-'),
+        student_id: studentId,
+        date,
+        status,
+        note,
+        source: 'manual',
+      }
+      const { error } = await withWriteRetry(
+        () => supabase.from('attendance_records').insert(row),
+        { label: 'createManualAttendance' }
+      )
+      if (error) {
+        if (error.code === '23505') {
+          throw new Error('해당 날짜에 이미 출결 기록이 있습니다. 새로고침 후 정정으로 수정해 주세요.')
+        }
+        throw error
+      }
+      const local = toAttendanceRecord({ ...row, created_at: new Date().toISOString() })
+      setData((prev) => ({
+        ...prev,
+        attendanceRecords: [local, ...prev.attendanceRecords],
+      }))
+      return local
+    },
+    [setData]
+  )
+
   // 긴급 알림 확인 처리
   const resolveAttendanceNotification = useCallback(
     async (notificationId) => {
@@ -167,6 +202,7 @@ export function useAttendanceDomain(setData) {
     kioskCheckIn,
     kioskCheckOut,
     updateAttendance,
+    createManualAttendance,
     resolveAttendanceNotification,
     resolveAllAttendanceNotifications,
     ingestAttendanceNotification,

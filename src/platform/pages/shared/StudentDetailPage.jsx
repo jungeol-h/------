@@ -1,7 +1,8 @@
 // 학생 상세 공용 페이지 — manager/admin/instructor/consultant/viewer 대시보드의
 // student/:studentId 라우트에서 사용. 상단 학생 요약(위험 배지·자기주도지수·담당 매니저) +
-// 내부 8탭: 마인드·일기·학습·과제·피드백·학습진단·진로설계·상담. 과제·피드백·상담 탭은
-// CRUD 포함, viewer는 작성 불가(canWrite=false).
+// 내부 9탭: 이용시간·마인드·일기·학습·과제·피드백·학습진단·진로설계·상담. 과제·피드백·상담
+// 탭은 CRUD 포함, viewer는 작성 불가(canWrite=false). 첫 탭은 센터 이용시간+예약 현황
+// (클라이언트 요청 2026-08: "명단에서 클릭하면 첫 화면이 센터 이용시간 등록 상황").
 
 import { useState, useMemo, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
@@ -15,6 +16,7 @@ import { useData } from '../../context/DataContext.jsx'
 import { supabase } from '../../lib/supabase.js'
 import { toAttendanceSchedule } from '../../lib/supabaseHelpers.js'
 import GrowthReportModal from '../../components/reports/GrowthReportModal.jsx'
+import StudentScheduleSection from './StudentScheduleSection.jsx'
 import {
   buildStudentCounselingEntries, formatScheduleBlocks,
 } from '../../context/selectors/studentCounselingReport.js'
@@ -958,7 +960,7 @@ function CounselingSection({ studentId, data, currentUser, canWrite = true }) {
 }
 
 // ─── 메인 ─────────────────────────────────────────────────────
-const TABS = ['마인드', '일기', '학습', '과제', '피드백', '학습진단', '진로설계', '상담']
+const TABS = ['이용시간', '마인드', '일기', '학습', '과제', '피드백', '학습진단', '진로설계', '상담']
 
 export default function StudentDetailPage() {
   const { studentId } = useParams()
@@ -1019,14 +1021,15 @@ export default function StudentDetailPage() {
         ))}
       </div>
 
-      {activeTab === 0 && <MindSection studentId={studentId} data={data} getWeeklyLearning={getWeeklyLearning} />}
-      {activeTab === 1 && <DiarySection studentId={studentId} data={data} />}
-      {activeTab === 2 && <LearningSection studentId={studentId} data={data} />}
-      {activeTab === 3 && <TaskSection studentId={studentId} data={data} currentUser={currentUser} canWrite={currentUser?.role !== 'viewer'} />}
-      {activeTab === 4 && <FeedbackSection studentId={studentId} data={data} currentUser={currentUser} canWrite={currentUser?.role !== 'viewer'} />}
-      {activeTab === 5 && <LearningDiagnosisSection studentId={studentId} data={data} />}
-      {activeTab === 6 && <CareerDesignSection studentId={studentId} data={data} />}
-      {activeTab === 7 && <CounselingSection studentId={studentId} data={data} currentUser={currentUser} canWrite={currentUser?.role !== 'viewer'} />}
+      {activeTab === 0 && <StudentScheduleSection student={student} />}
+      {activeTab === 1 && <MindSection studentId={studentId} data={data} getWeeklyLearning={getWeeklyLearning} />}
+      {activeTab === 2 && <DiarySection studentId={studentId} data={data} />}
+      {activeTab === 3 && <LearningSection studentId={studentId} data={data} />}
+      {activeTab === 4 && <TaskSection studentId={studentId} data={data} currentUser={currentUser} canWrite={currentUser?.role !== 'viewer'} />}
+      {activeTab === 5 && <FeedbackSection studentId={studentId} data={data} currentUser={currentUser} canWrite={currentUser?.role !== 'viewer'} />}
+      {activeTab === 6 && <LearningDiagnosisSection studentId={studentId} data={data} />}
+      {activeTab === 7 && <CareerDesignSection studentId={studentId} data={data} />}
+      {activeTab === 8 && <CounselingSection studentId={studentId} data={data} currentUser={currentUser} canWrite={currentUser?.role !== 'viewer'} />}
     </div>
   )
 }

@@ -9,6 +9,7 @@ import AttendanceTab from './AttendanceTab.jsx'
 import KioskPage from './KioskPage.jsx'
 
 const updateAttendance = vi.fn()
+const createManualAttendance = vi.fn()
 const resolveAttendanceNotification = vi.fn()
 const resolveAllAttendanceNotifications = vi.fn()
 const ingestAttendanceNotification = vi.fn()
@@ -62,6 +63,7 @@ vi.mock('../../context/DataContext.jsx', () => ({
   useData: () => ({
     data,
     updateAttendance,
+    createManualAttendance,
     resolveAttendanceNotification,
     resolveAllAttendanceNotifications,
     ingestAttendanceNotification,
@@ -95,11 +97,31 @@ describe('AttendanceTab', () => {
     expect(screen.getByText('미등원')).toBeTruthy()
   })
 
-  it('알림 확인 버튼이 resolveAttendanceNotification을 호출한다', () => {
+  // 확인 클릭 → 사유 입력 모달 (2026-08 클라이언트: 확인 시 출결 기록으로 연결)
+  it('알림 확인 버튼이 사유 입력 모달을 연다 — 기록 없으면 수동 결석 생성 후 확인 처리', async () => {
+    createManualAttendance.mockResolvedValue()
     resolveAttendanceNotification.mockResolvedValue()
     renderTab()
     fireEvent.click(screen.getByText('확인'))
-    expect(resolveAttendanceNotification).toHaveBeenCalledWith('an1')
+    // s2는 기록이 없어 신규 생성 모드
+    expect(screen.getByText(`박미등원 출결 확인 (${todayStr})`)).toBeTruthy()
+    fireEvent.change(screen.getByPlaceholderText(/사유 메모/), { target: { value: '병결 확인' } })
+    fireEvent.click(screen.getByText('저장'))
+    await waitFor(() => {
+      expect(createManualAttendance).toHaveBeenCalledWith('s2', todayStr, { status: 'absent', note: '병결 확인' })
+      expect(resolveAttendanceNotification).toHaveBeenCalledWith('an1')
+    })
+  })
+
+  it("'기록 없이 확인만'은 기록 생성 없이 알림만 확인 처리한다", async () => {
+    resolveAttendanceNotification.mockResolvedValue()
+    renderTab()
+    fireEvent.click(screen.getByText('확인'))
+    fireEvent.click(screen.getByText('기록 없이 확인만'))
+    await waitFor(() => {
+      expect(resolveAttendanceNotification).toHaveBeenCalledWith('an1')
+    })
+    expect(createManualAttendance).not.toHaveBeenCalled()
   })
 
   it('전체 확인 버튼이 미해결 알림 id 전부로 일괄 확인을 호출한다', () => {

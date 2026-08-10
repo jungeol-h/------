@@ -55,7 +55,7 @@ export default function AttendanceTab() {
   const isViewer = currentUser?.role === 'viewer'
   const seeAll = isAdmin || isViewer
   const {
-    data, updateAttendance,
+    data, updateAttendance, createManualAttendance,
     resolveAttendanceNotification, resolveAllAttendanceNotifications,
     ingestAttendanceNotification,
   } = useData()
@@ -124,6 +124,28 @@ export default function AttendanceTab() {
   }, [data.assignments, data.students, currentUser?.id, seeAll])
 
   const [editModal, setEditModal] = useState(null) // { student, record }
+  // 긴급 알림 '확인' → 결석 사유 입력 (2026-08 클라이언트: 확인 시 출결 기록으로 연결)
+  const [notiModal, setNotiModal] = useState(null) // { notification, student, record|null }
+
+  const openNotiModal = (n) => {
+    const student = data.students.find((s) => s.id === n.studentId)
+      ?? { id: n.studentId, name: n.studentName || '학생' }
+    const record = data.attendanceRecords.find(
+      (r) => r.studentId === n.studentId && r.date === n.date
+    ) ?? null
+    setNotiModal({ notification: n, student, record })
+  }
+
+  // 사유 저장 → 기록 없으면 수동 결석 생성, 있으면 정정 → 알림 확인 처리
+  const handleNotiSave = async (patch) => {
+    const { notification, record } = notiModal
+    if (record) {
+      await updateAttendance(record.id, patch)
+    } else {
+      await createManualAttendance(notification.studentId, notification.date, patch)
+    }
+    await resolveAttendanceNotification(notification.id)
+  }
   const [excelOpen, setExcelOpen] = useState(false)
   const [closureOpen, setClosureOpen] = useState(false)
   const [notiExpanded, setNotiExpanded] = useState(false)
@@ -174,7 +196,7 @@ export default function AttendanceTab() {
                 </div>
                 {!isViewer && (
                   <button
-                    onClick={() => resolveAttendanceNotification(n.id).catch(() => {})}
+                    onClick={() => openNotiModal(n)}
                     className="flex-shrink-0 px-3 py-2 bg-white border border-red-200 rounded-xl text-xs font-bold text-red-600 active:scale-95 transition-all"
                   >
                     확인
@@ -352,7 +374,20 @@ export default function AttendanceTab() {
           student={editModal.student}
           record={editModal.record}
           onClose={() => setEditModal(null)}
-          onSave={updateAttendance}
+          onSave={(patch) => updateAttendance(editModal.record.id, patch)}
+        />
+      )}
+
+      {/* 긴급 알림 확인 → 결석 사유 입력 (기록 없으면 수동 생성) */}
+      {notiModal && (
+        <CorrectionModal
+          student={notiModal.student}
+          record={notiModal.record}
+          title={`${notiModal.student.name} 출결 확인 (${notiModal.notification.date})`}
+          onClose={() => setNotiModal(null)}
+          onSave={handleNotiSave}
+          secondaryLabel="기록 없이 확인만"
+          onSecondary={() => resolveAttendanceNotification(notiModal.notification.id)}
         />
       )}
     </div>
@@ -377,19 +412,35 @@ function CenterHoursError({ onRetry }) {
   )
 }
 
-// 출결 수동 정정 — 병결 처리 등 (source='manual'로 기록됨)
-function CorrectionModal({ student, record, onClose, onSave }) {
-  const [status, setStatus] = useState(record.status)
-  const [note, setNote] = useState(record.note ?? '')
+// 출결 수동 정정 — 병결 처리 등 (source='manual'로 기록됨).
+// record가 null이면 신규 수동 기록 폼(긴급 알림 확인 경로 — 기본 결석).
+// onSave(patch): 저장 로직은 호출부가 바인딩. secondaryLabel/onSecondary는
+// 선택적 보조 액션(예: 기록 없이 알림만 확인).
+function CorrectionModal({ student, record = null, title, onClose, onSave, secondaryLabel, onSecondary }) {
+  const [status, setStatus] = useState(record?.status ?? 'absent')
+  const [note, setNote] = useState(record?.note ?? '')
   const [saving, setSaving] = useState(false)
 
   const handleSave = async () => {
     setSaving(true)
     try {
-      await onSave(record.id, { status, note })
+      await onSave({ status, note })
+      onClose()
+    } catch (e) {
+      // 저장 실패는 전역 Toast가 표면화한다. (수동 생성 충돌 등 메시지가 있으면 노출)
+      if (e?.message) alert(e.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleSecondary = async () => {
+    setSaving(true)
+    try {
+      await onSecondary()
       onClose()
     } catch {
-      // 저장 실패는 전역 Toast가 표면화한다.
+      // 실패는 전역 Toast가 표면화한다.
     } finally {
       setSaving(false)
     }
@@ -399,12 +450,19 @@ function CorrectionModal({ student, record, onClose, onSave }) {
     <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center px-4 pb-4">
       <div className="bg-white rounded-3xl w-full max-w-lg p-5 space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="font-bold text-gray-900 text-base">{student.name} 출결 정정</h3>
+          <h3 className="font-bold text-gray-900 text-base">{title ?? `${student.name} 출결 정정`}</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1">
             <X size={20} />
           </button>
         </div>
-        <div className="flex gap-2">
+        {!record && (
+          <p className="text-xs text-gray-400 -mt-2">
+            아직 출결 기록이 없는 학생입니다. 저장하면 <span className="font-bold">결석(수동)</span> 기록이
+            생성되고 알림이 확인 처리됩니다. 등원은 키오스크로만 기록됩니다.
+          </p>
+        )}
+        {/* 신규 생성 모드는 결석 고정 — 등원/지각은 키오스크 체크인 시각이 정본이라 수동 생성 불가 */}
+        <div className={record ? 'flex gap-2' : 'hidden'}>
           {STATUS_OPTIONS.map((opt) => (
             <button
               key={opt.value}
@@ -430,6 +488,15 @@ function CorrectionModal({ student, record, onClose, onSave }) {
           <button onClick={onClose} className="flex-1 py-3 border border-gray-200 rounded-xl text-gray-600 font-medium">
             취소
           </button>
+          {secondaryLabel && onSecondary && (
+            <button
+              onClick={handleSecondary}
+              disabled={saving}
+              className="flex-1 py-3 border border-red-200 rounded-xl text-red-600 font-bold active:scale-95 transition-all disabled:opacity-40"
+            >
+              {secondaryLabel}
+            </button>
+          )}
           <button
             onClick={handleSave}
             disabled={saving}
