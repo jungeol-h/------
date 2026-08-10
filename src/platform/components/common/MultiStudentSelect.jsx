@@ -3,7 +3,7 @@
 // value: studentId 배열, onChange(nextIds), max: 최대 인원(선택).
 
 import { X } from 'lucide-react'
-import StudentCombobox from '../counseling/StudentCombobox.jsx'
+import StudentCombobox from './StudentCombobox.jsx'
 
 export default function MultiStudentSelect({
   students = [],

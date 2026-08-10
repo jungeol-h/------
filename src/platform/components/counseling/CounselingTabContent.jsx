@@ -9,7 +9,7 @@ import {
 } from '../../data/counselingTypes.js'
 import { hasMultipleDuties } from '../../data/educatorDuties.js'
 import { educatorDisplayName } from '../../utils/educatorName.js'
-import StudentCombobox from './StudentCombobox.jsx'
+import StudentCombobox from '../common/StudentCombobox.jsx'
 import MultiStudentSelect from '../common/MultiStudentSelect.jsx'
 import TimeField from '../common/TimeField.jsx'
 import CounselingFormModal, { COUNSELING_MAX_STUDENTS } from './CounselingFormModal.jsx'

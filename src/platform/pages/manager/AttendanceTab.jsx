@@ -30,6 +30,7 @@ import {
   dayLabel,
 } from '../../context/selectors/attendance.js'
 import { todayStr, toDateStr, daysAgoStr } from '../../utils/dateUtils.js'
+import { isActiveStudent } from '../../data/studentStatus.js'
 
 const STATUS_OPTIONS = [
   { value: 'present', label: '등원' },
@@ -122,6 +123,17 @@ export default function AttendanceTab() {
     )
     return data.students.filter((s) => ids.has(s.id) && (s.status ?? 'active') === 'active')
   }, [data.assignments, data.students, currentUser?.id, seeAll])
+
+  // 이용시간 대리 수정 대상 — 재원 외(신청취소·퇴원)도 이름 검색으로 고칠 수 있어야
+  // 한다 (2026-08 클라이언트). 매니저는 fetch 자체가 active만이라 사실상 관리자 범위.
+  const centerHoursEditable = useMemo(() => {
+    if (!seeAll) return myStudents
+    return data.students
+      .slice()
+      .sort((a, b) =>
+        Number(!isActiveStudent(a)) - Number(!isActiveStudent(b)) ||
+        a.name.localeCompare(b.name, 'ko'))
+  }, [data.students, myStudents, seeAll])
 
   const [editModal, setEditModal] = useState(null) // { student, record }
   // 긴급 알림 '확인' → 결석 사유 입력 (2026-08 클라이언트: 확인 시 출결 기록으로 연결)
@@ -359,7 +371,7 @@ export default function AttendanceTab() {
           <CenterHoursSection
             role={currentUser?.role}
             allStudents={data.students}
-            editableStudents={myStudents}
+            editableStudents={centerHoursEditable}
             registrations={centerHours.registrations}
             config={centerHours.config}
             reload={centerHours.reload}

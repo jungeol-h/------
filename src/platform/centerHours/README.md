@@ -36,6 +36,13 @@ CenterHoursSection.jsx           관리자·매니저 명단·설정 섹션 — 
 - **정원(40)·잠금 최종 검증은 RPC(`center_save_hours`) 안.** 클라 잔여 표시는 안내용.
   admin/manager 역할이면 정원·잠금을 건너뛴다(대리 수정). 저장은 학생 단위
   전면 교체 + 전역 advisory lock 직렬화.
+- **'학생 이용시간 수정' 대상은 재원생만이 아니다** (2026-08 클라이언트) — 신청취소·퇴원
+  학생도 이름 검색으로 골라 고칠 수 있다. 시간대별 명단·등록 인원 집계는 종전대로
+  `isActiveStudent`로 거른다(퇴원생이 출석부에 뜨면 안 되므로). 후보 목록은
+  AttendanceTab의 `centerHoursEditable`, 검색 UI는 공용 `StudentCombobox`이며
+  비재원 학생에는 상태 배지가 붙는다. RPC `center_save_hours`는 `role='student'`만
+  보고 status는 안 보므로 SQL 변경 불필요. 미등원 알림 cron은 `u.status='active'`로
+  걸러 퇴원생 이용시간을 넣어도 긴급 알림이 새로 생기지 않는다.
 - 설정은 `admin_config('center_hours')` = `{"isOpen", "capacity", "operatingDays"}`.
   잠그면 학생은 읽기 전용. **운영 요일(operatingDays, JS getDay int 배열)은 이
   설정이 단일 진실원이다** (2026-07-27 "이번 주는 수·목도 오픈" 요청으로 설정화 —

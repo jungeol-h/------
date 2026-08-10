@@ -16,6 +16,7 @@ import { saveCenterHours, updateCenterHoursConfig, syncAttendanceSchedules } fro
 import { buildCenterHoursSheets, downloadCenterHoursWorkbook } from './centerHoursExcel.js'
 import { selectionToEntries } from './centerHoursSelection.js'
 import CenterHourGrid from './CenterHourGrid.jsx'
+import StudentCombobox from '../components/common/StudentCombobox.jsx'
 import { todayStr } from '../utils/dateUtils.js'
 import { isActiveStudent } from '../data/studentStatus.js'
 
@@ -364,16 +365,14 @@ function StudentHoursEditor({ role, students, registrations, capacity, operating
         <h4 className="text-sm font-bold text-gray-700">학생 이용시간 수정</h4>
         <span className="text-[11px] text-gray-400">정원 무시 · 저장 시 등·하원 시간표 자동 반영</span>
       </div>
-      <select
-        value={studentId}
-        onChange={(e) => setStudentId(e.target.value)}
-        className="w-full border border-gray-200 rounded-xl p-3 text-sm bg-white mb-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-      >
-        <option value="">학생을 선택하세요</option>
-        {students.map((s) => (
-          <option key={s.id} value={s.id}>{s.name} ({s.grade})</option>
-        ))}
-      </select>
+      <div className="mb-2">
+        <StudentCombobox
+          students={students}
+          value={studentId}
+          onChange={setStudentId}
+          placeholder="학생 이름으로 검색..."
+        />
+      </div>
       {studentId && (
         <div className="space-y-2">
           <CenterHourGrid

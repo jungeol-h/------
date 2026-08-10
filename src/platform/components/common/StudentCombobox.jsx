@@ -1,11 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Search, ChevronDown, X } from 'lucide-react'
+import { isActiveStudent, STUDENT_STATUS_LABELS } from '../../data/studentStatus.js'
 
 const labelOf = (s) => `${s.name} (${s.school ?? ''} ${s.grade ?? ''})`.replace(/\s+\)/, ')')
+
+// 검색 대상 문자열 — 라벨 + 상태 라벨(퇴원·신청취소로도 찾을 수 있게).
+const haystackOf = (s) =>
+  (isActiveStudent(s) ? labelOf(s) : `${labelOf(s)} ${STUDENT_STATUS_LABELS[s.status] ?? ''}`)
+    .toLowerCase()
 
 // 검색형 학생 선택 콤보박스. 학생 수가 많아 일반 select 드롭다운이 비효율이라 도입.
 // 라이브러리 없이 input + 필터링 목록 + 키보드 내비(↑↓/Enter/Esc) + 외부 클릭 닫기.
 // value는 선택된 studentId, onChange(id)로 상위에 전달.
+// students에 재원 외(퇴원·신청취소) 학생이 섞여 오면 목록·선택칸에 상태 배지를 단다
+// — 호출부가 의도적으로 넘긴 경우만 나타나므로 기존 사용처(재원만)엔 변화 없음.
 export default function StudentCombobox({ students, value, onChange, placeholder = '피상담자 검색...' }) {
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
@@ -18,7 +26,7 @@ export default function StudentCombobox({ students, value, onChange, placeholder
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     if (!q) return students
-    return students.filter((s) => labelOf(s).toLowerCase().includes(q))
+    return students.filter((s) => haystackOf(s).includes(q))
   }, [students, query])
 
   // 외부 클릭 시 닫기.
@@ -85,7 +93,9 @@ export default function StudentCombobox({ students, value, onChange, placeholder
       <input
         type="text"
         // 선택된 상태에서 검색 중이 아니면 선택 학생명을 보여준다.
-        value={open ? query : selected ? labelOf(selected) : ''}
+        value={open ? query : selected
+          ? `${labelOf(selected)}${isActiveStudent(selected) ? '' : ` · ${STUDENT_STATUS_LABELS[selected.status] ?? ''}`}`
+          : ''}
         onChange={(e) => {
           setQuery(e.target.value)
           setActiveIdx(0)
@@ -132,11 +142,16 @@ export default function StudentCombobox({ students, value, onChange, placeholder
                   choose(s)
                 }}
                 onMouseEnter={() => setActiveIdx(idx)}
-                className={`px-3 py-2.5 text-sm cursor-pointer ${
+                className={`px-3 py-2.5 text-sm cursor-pointer flex items-center gap-1.5 ${
                   idx === activeIdx ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
                 } ${s.id === value ? 'font-semibold' : ''}`}
               >
-                {labelOf(s)}
+                <span className="truncate">{labelOf(s)}</span>
+                {!isActiveStudent(s) && (
+                  <span className="flex-shrink-0 px-1.5 py-0.5 rounded-md bg-gray-100 text-gray-500 text-[10px] font-bold">
+                    {STUDENT_STATUS_LABELS[s.status] ?? '비활성'}
+                  </span>
+                )}
               </li>
             ))
           )}
