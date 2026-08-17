@@ -1,4 +1,5 @@
-// 확인평가 보고서 출력 모달 — 과목·학년(다중 체크)·회차를 지정해 QuizReport PDF를 부분 출력한다.
+// 확인평가 보고서 출력 모달 — 과목·학년·그룹(다중 체크)·회차를 지정해 QuizReport PDF를 부분 출력한다.
+// 그룹은 회차가 아니라 대상 학생·응시를 거른다 — 그룹 전체 선택 시엔 무소속 학생도 포함.
 // QuizMonitorTab(관리자·강사·감독관 공용)에서 오픈. quizSets/attempts는 이미 강사 스코핑된 것을 받는다.
 // 주의: 실DB에서 (과목, 학년, 회차)가 유니크하지 않다 — 같은 회차 번호를 공유하는 별개 시험이
 // 여러 개일 수 있으므로 회차 선택은 "필터"이며, 미리보기의 회차 개수로 실제 매칭 수를 보여준다.
@@ -10,6 +11,7 @@ import { buildFilename, nowDateTime } from '../../pdf/utils/formatters.js'
 import { authorOf } from '../../pdf/config/meta.js'
 import { QUIZ_SUBJECTS, SUBJECT_BADGE } from '../../utils/quizSubjects.js'
 import { GRADES } from '../../data/grades.js'
+import { GROUP_OPTIONS } from '../../data/groups.js'
 import { buildQuizSummaries } from '../../utils/quizSummaries.js'
 
 const fieldClass =
@@ -30,6 +32,7 @@ export default function QuizReportModal({
   currentUser,
   defaultSubject = '전체',
   defaultGrade = '전체',
+  defaultGroup = '전체',
   onClose,
 }) {
   // 강사는 자기 과목 고정, 관리자·감독관은 현재 탭 선택값으로 프리필
@@ -39,6 +42,10 @@ export default function QuizReportModal({
     GRADES.includes(defaultGrade) ? [defaultGrade] : [...GRADES]
   )
   const [round, setRound] = useState('전체') // '전체' | number
+  // 그룹 다중 선택 — 기본 전체, 탭에서 특정 그룹을 보고 있었으면 그 그룹만
+  const [groupSel, setGroupSel] = useState(() =>
+    GROUP_OPTIONS.includes(defaultGroup) ? [defaultGroup] : [...GROUP_OPTIONS]
+  )
 
   // 토글하되 GRADES 순서를 유지한 배열로 보관 (라벨·파일명 표기 일관성)
   const toggleGrade = (g) => {
@@ -48,6 +55,24 @@ export default function QuizReportModal({
         : GRADES.filter((x) => prev.includes(x) || x === g)
     )
   }
+
+  const toggleGroup = (g) => {
+    setGroupSel((prev) =>
+      prev.includes(g)
+        ? prev.filter((x) => x !== g)
+        : GROUP_OPTIONS.filter((x) => prev.includes(x) || x === g)
+    )
+  }
+
+  // 그룹은 학생을 거른다 — 전체 선택이면 필터 없음(무소속 포함)
+  const allGroups = groupSel.length === GROUP_OPTIONS.length
+  const targetStudents = useMemo(
+    () =>
+      allGroups
+        ? students
+        : students.filter((s) => (s.groups ?? []).some((g) => groupSel.includes(g))),
+    [students, allGroups, groupSel]
+  )
 
   const gradeSet = useMemo(() => new Set(grades), [grades])
 
@@ -96,15 +121,19 @@ export default function QuizReportModal({
 
   const matchedAttempts = useMemo(() => {
     const ids = new Set(matchedSets.map((s) => s.id))
-    return attempts.filter((a) => ids.has(a.quizSetId))
-  }, [attempts, matchedSets])
+    const bySet = attempts.filter((a) => ids.has(a.quizSetId))
+    if (allGroups) return bySet
+    const studentIds = new Set(targetStudents.map((s) => s.id))
+    return bySet.filter((a) => studentIds.has(a.studentId))
+  }, [attempts, matchedSets, allGroups, targetStudents])
 
-  const canBuild = grades.length > 0 && matchedSets.length > 0
+  const canBuild = grades.length > 0 && groupSel.length > 0 && matchedSets.length > 0
 
   // 조건 표기 — PDF period 라인·파일명 공용 재료
   const subjectLabel = subject === '전체' ? '전체 과목' : subject
   const roundLabel = round === '전체' ? '전체 회차' : `${round}회`
   const gradeLabel = grades.length === GRADES.length ? '전체 학년' : grades.join('·')
+  const groupLabel = allGroups ? '전체 그룹' : groupSel.join('·')
 
   return (
     <ModalShell title="확인평가 보고서" onClose={onClose}>
@@ -143,6 +172,17 @@ export default function QuizReportModal({
       </div>
 
       <div>
+        <label className="text-xs text-gray-500 mb-1.5 block">그룹 (복수 선택)</label>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {GROUP_OPTIONS.map((g) => (
+            <button key={g} type="button" onClick={() => toggleGroup(g)} className={pillClass(groupSel.includes(g))}>
+              {g}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
         <label className="text-xs text-gray-500 mb-1.5 block">회차</label>
         <select
           value={round === '전체' ? '전체' : String(round)}
@@ -160,6 +200,8 @@ export default function QuizReportModal({
       <div className="text-sm">
         {grades.length === 0 ? (
           <span className="text-red-500">학년을 하나 이상 선택하세요.</span>
+        ) : groupSel.length === 0 ? (
+          <span className="text-red-500">그룹을 하나 이상 선택하세요.</span>
         ) : matchedSets.length === 0 ? (
           <span className="text-gray-400">조건에 해당하는 회차가 없습니다.</span>
         ) : (
@@ -176,7 +218,7 @@ export default function QuizReportModal({
           disabled={!canBuild}
           buildDocument={async () => {
             const { default: QuizReport } = await import('../../pdf/reports/QuizReport.jsx')
-            const summaries = buildQuizSummaries(matchedSets, matchedAttempts, students)
+            const summaries = buildQuizSummaries(matchedSets, matchedAttempts, targetStudents)
             return {
               element: (
                 <QuizReport
@@ -184,7 +226,7 @@ export default function QuizReportModal({
                   attempts={matchedAttempts}
                   students={students}
                   quizSets={matchedSets}
-                  period={`${subjectLabel} · ${roundLabel} · ${gradeLabel} · 조회일 ${nowDateTime().slice(0, 10)}`}
+                  period={`${subjectLabel} · ${roundLabel} · ${gradeLabel} · ${groupLabel} · 조회일 ${nowDateTime().slice(0, 10)}`}
                   generatedAt={nowDateTime()}
                   author={authorOf(currentUser)}
                 />
@@ -195,6 +237,7 @@ export default function QuizReportModal({
                   subject === '전체' ? '전체과목' : subject,
                   round === '전체' ? '전체회차' : `${round}회`,
                   grades.length === GRADES.length ? '전체학년' : grades.join('·'),
+                  ...(allGroups ? [] : [groupSel.join('·')]),
                 ].join('_')
               ),
             }

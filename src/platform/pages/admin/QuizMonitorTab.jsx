@@ -1,5 +1,6 @@
 // 확인평가 모니터링 탭 — 관리자(/admin/quiz)와 교과강사(/instructor/quiz) 공용.
-// 과목 탭 > 학년 필터로 좁히고, 요약 카드를 "{과목} · {학년}" 섹션(회차 오름차순)으로 계층 표시.
+// 과목 탭 > 학년·그룹 필터로 좁히고, 요약 카드를 "{과목} · {학년}" 섹션(회차 오름차순)으로 계층 표시.
+// 그룹 필터는 회차가 아니라 대상 학생·응시를 거른다 (회차엔 그룹 소속이 없다).
 // + 회차 관리(QuizSetManagement) + 응시 결과·채점 테이블 + 조건 지정 PDF 보고서(QuizReportModal).
 // 강사는 본인 과목(instructorQuizSubject) 회차·응시만 필터, 관리자는 전체를 본다.
 
@@ -13,6 +14,7 @@ import QuizReportModal from '../../components/admin/QuizReportModal.jsx'
 import RefreshButton from '../../components/RefreshButton.jsx'
 import { QUIZ_SUBJECTS, instructorQuizSubject } from '../../utils/quizSubjects.js'
 import { GRADES } from '../../data/grades.js'
+import { GROUP_OPTIONS } from '../../data/groups.js'
 import { buildQuizSummaries } from '../../utils/quizSummaries.js'
 
 const pillClass = (active) =>
@@ -39,10 +41,20 @@ export default function QuizMonitorTab({ readOnly = false }) {
     return data.quizAttempts.filter((a) => setIds.has(a.quizSetId))
   }, [data.quizAttempts, scopedSets, mySubject])
 
-  // 과목·학년 계층 필터 (강사는 과목 탭 숨김 — 자기 과목 고정)
+  // 과목·학년·그룹 계층 필터 (강사는 과목 탭 숨김 — 자기 과목 고정)
   const [activeSubject, setActiveSubject] = useState('전체')
   const [activeGrade, setActiveGrade] = useState('전체')
+  const [activeGroup, setActiveGroup] = useState('전체')
   const [reportOpen, setReportOpen] = useState(false)
+
+  // 그룹 필터는 학생을 거른다 — '전체'는 무소속(빈 배열) 학생도 포함
+  const viewStudents = useMemo(
+    () =>
+      activeGroup === '전체'
+        ? data.students
+        : data.students.filter((s) => (s.groups ?? []).includes(activeGroup)),
+    [data.students, activeGroup]
+  )
 
   const viewSets = useMemo(
     () =>
@@ -55,15 +67,22 @@ export default function QuizMonitorTab({ readOnly = false }) {
   )
   const viewAttempts = useMemo(() => {
     // 필터가 없으면 스코프 전체 그대로 (세트 미상 응시도 기존처럼 테이블에 남긴다)
-    if ((mySubject || activeSubject === '전체') && activeGrade === '전체') return scopedAttempts
-    const setIds = new Set(viewSets.map((s) => s.id))
-    return scopedAttempts.filter((a) => setIds.has(a.quizSetId))
-  }, [scopedAttempts, viewSets, mySubject, activeSubject, activeGrade])
+    let result = scopedAttempts
+    if (!((mySubject || activeSubject === '전체') && activeGrade === '전체')) {
+      const setIds = new Set(viewSets.map((s) => s.id))
+      result = result.filter((a) => setIds.has(a.quizSetId))
+    }
+    if (activeGroup !== '전체') {
+      const studentIds = new Set(viewStudents.map((s) => s.id))
+      result = result.filter((a) => studentIds.has(a.studentId))
+    }
+    return result
+  }, [scopedAttempts, viewSets, viewStudents, mySubject, activeSubject, activeGrade, activeGroup])
 
   // 회차별 응시자 수 / 미응시자 수 / 평균 — 간단 요약 카드 (계산은 quizSummaries.js 공용)
   const summaries = useMemo(
-    () => buildQuizSummaries(viewSets, viewAttempts, data.students),
-    [viewSets, viewAttempts, data.students]
+    () => buildQuizSummaries(viewSets, viewAttempts, viewStudents),
+    [viewSets, viewAttempts, viewStudents]
   )
 
   // "{과목} · {학년}" 섹션으로 그룹핑 — 과목(QUIZ_SUBJECTS 순) > 학년(GRADES 순) > 회차 오름차순
@@ -130,11 +149,22 @@ export default function QuizMonitorTab({ readOnly = false }) {
         </div>
       )}
 
-      {/* 학년 pill */}
+      {/* 학년 pill + 그룹 pill — 그룹은 대상 학생·응시를 거른다 */}
       <div className="flex items-center gap-1.5 overflow-x-auto">
         {['전체', ...GRADES].map((g) => (
           <button key={g} type="button" onClick={() => setActiveGrade(g)} className={pillClass(activeGrade === g)}>
             {g}
+          </button>
+        ))}
+        <span className="w-px h-4 bg-gray-200 flex-shrink-0" aria-hidden />
+        {['전체', ...GROUP_OPTIONS].map((g) => (
+          <button
+            key={`group-${g}`}
+            type="button"
+            onClick={() => setActiveGroup(g)}
+            className={pillClass(activeGroup === g)}
+          >
+            {g === '전체' ? '전체 그룹' : g}
           </button>
         ))}
       </div>
@@ -197,6 +227,7 @@ export default function QuizMonitorTab({ readOnly = false }) {
           currentUser={currentUser}
           defaultSubject={activeSubject}
           defaultGrade={activeGrade}
+          defaultGroup={activeGroup}
           onClose={() => setReportOpen(false)}
         />
       )}
