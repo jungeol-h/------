@@ -3,18 +3,27 @@
 
 // 파생 계산은 React Compiler가 자동 메모이즈한다 — 수동 useMemo는 클로저 의존성
 // 추론과 충돌해 컴파일 스킵을 유발하므로 쓰지 않는다.
-import { useNavigate } from 'react-router-dom'
+import { useState } from 'react'
+import { ChevronRight } from 'lucide-react'
 import { todayStr } from '../../utils/dateUtils.js'
 import { useBooking } from '../BookingContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
 import { overlaps, todayStrKst } from '../bookingRules.js'
 import { recordState } from '../bookingStatus.js'
+import AttendanceProcessModal from './AttendanceProcessModal.jsx'
+import { AdminCancelModal, AdminChangeModal } from './AdminReservationModals.jsx'
+import RecordFormModal from './RecordFormModal.jsx'
 
 export default function BookingOpsDashboard() {
-  const { config, slots, reservations, records, userNames } = useBooking()
+  const { config, slots, reservations, records, userNames, slotCounts, cancel, change } = useBooking()
   const { data } = useData()
-  const navigate = useNavigate()
   const today = todayStr()
+
+  // 미처리 카드 클릭 → 출결 처리 모달 → 변경·취소·상담기록 모달로 연결
+  const [processTarget, setProcessTarget] = useState(null)
+  const [changeTarget, setChangeTarget] = useState(null)
+  const [cancelTarget, setCancelTarget] = useState(null)
+  const [recordTarget, setRecordTarget] = useState(null)
 
   const studentName = (id) => userNames[id]?.name ?? id
   const educatorName = (id) => userNames[id]?.name ?? (id ? id : '미지정')
@@ -171,16 +180,20 @@ export default function BookingOpsDashboard() {
     return Math.round((new Date(ty, tm - 1, td) - new Date(y, m - 1, d)) / 86_400_000)
   }
 
-  // 누르면 해당 학생의 기록 페이지로 이동 (2026-07-30 클라이언트 요청)
+  // 누르면 출결 처리 모달 — 출결·변경·취소·상담기록·학생 상세를 한곳에서
+  // (2026-08 클라이언트 요청, 기존 학생 상세 이동은 모달 내 버튼으로 보존)
   const resLine = (r) => (
     <button
       key={r.id}
       type="button"
-      onClick={() => navigate(`/admin/student/${r.studentId}`)}
-      className="w-full bg-white rounded-lg shadow-sm px-3 py-2 text-xs text-gray-600 flex justify-between gap-2 text-left hover:bg-blue-50/50"
+      onClick={() => setProcessTarget(r)}
+      className="w-full bg-white rounded-lg shadow-sm px-3 py-2 text-xs text-gray-600 flex items-center justify-between gap-2 text-left hover:bg-blue-50/50"
     >
       <span>{r.slot.date} {r.slot.startTime} · {studentName(r.studentId)} · {programName(r.programId)}</span>
-      <span className="text-gray-400 flex-shrink-0">{educatorName(r.slot.educatorId)} · {daysSince(r.slot.date)}일 경과</span>
+      <span className="text-gray-400 flex-shrink-0 flex items-center gap-0.5">
+        {educatorName(r.slot.educatorId)} · {daysSince(r.slot.date)}일 경과
+        <ChevronRight size={14} />
+      </span>
     </button>
   )
 
@@ -227,6 +240,53 @@ export default function BookingOpsDashboard() {
         <p className="py-6 text-center text-sm text-gray-400 bg-white rounded-2xl shadow-sm">
           미처리 업무와 일정 이상이 없습니다.
         </p>
+      )}
+
+      {processTarget && (
+        <AttendanceProcessModal
+          reservation={processTarget}
+          onClose={() => setProcessTarget(null)}
+          onChangeReservation={(r) => { setProcessTarget(null); setChangeTarget(r) }}
+          onCancelReservation={(r) => { setProcessTarget(null); setCancelTarget(r) }}
+          onWriteRecord={(r) => { setProcessTarget(null); setRecordTarget(r) }}
+        />
+      )}
+      {changeTarget && (
+        <AdminChangeModal
+          reservation={changeTarget}
+          studentName={studentName(changeTarget.studentId)}
+          slots={slots}
+          slotCounts={slotCounts}
+          reservations={reservations}
+          userNames={userNames}
+          change={change}
+          onClose={() => setChangeTarget(null)}
+        />
+      )}
+      {cancelTarget && (
+        <AdminCancelModal
+          reservation={cancelTarget}
+          studentName={studentName(cancelTarget.studentId)}
+          cancel={cancel}
+          onClose={() => setCancelTarget(null)}
+        />
+      )}
+      {recordTarget && (
+        <RecordFormModal
+          reservation={recordTarget}
+          record={records.find((x) => x.reservationId === recordTarget.id)}
+          studentName={studentName(recordTarget.studentId)}
+          programName={programName(recordTarget.programId)}
+          groupMembers={reservations
+            .filter((x) => x.slotId === recordTarget.slotId && x.id !== recordTarget.id
+              && x.status === 'confirmed' && x.attendanceStatus === 'attended' && x.slot)
+            .map((x) => ({
+              reservation: x,
+              record: records.find((rr) => rr.reservationId === x.id),
+              name: studentName(x.studentId),
+            }))}
+          onClose={() => setRecordTarget(null)}
+        />
       )}
     </div>
   )
