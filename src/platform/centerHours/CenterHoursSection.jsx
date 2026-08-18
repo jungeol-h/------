@@ -30,7 +30,7 @@ export default function CenterHoursSection({
     const dow = new Date().getDay()
     return operatingDayOrder(config.operatingDays).includes(dow) ? dow : operatingDayOrder(config.operatingDays)[0]
   })
-  const [busy, setBusy] = useState(null) // 'toggle' | 'sync' | 'excel' | 'days'
+  const [busy, setBusy] = useState(null) // 'toggle' | 'sync' | 'excel' | 'days' | 'unit'
   const [notice, setNotice] = useState(null) // { kind, text }
 
   // 운영 요일이 바뀌어 현재 선택 요일이 빠지면 첫 운영 요일로 이동
@@ -43,6 +43,9 @@ export default function CenterHoursSection({
     () => new Map(allStudents.map((s) => [s.id, s])),
     [allStudents],
   )
+
+  // 닫힌 시간 단위 — 학생은 새로 선택 불가, 기존 등록은 유지 (관리자 토글로 수정)
+  const closedUnitSet = useMemo(() => new Set(config.closedUnits ?? []), [config.closedUnits])
 
   // (day#start) → 학생 목록 (학년→이름순). 퇴원·취소 학생은 명단에서 제외.
   const roster = useMemo(() => {
@@ -117,6 +120,40 @@ export default function CenterHoursSection({
       await reload()
     } catch {
       setNotice({ kind: 'error', text: '운영 요일 변경에 실패했습니다.' })
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  // 시간 단위(요일×1시간) 열기/닫기 (관리자 전용) — handleToggleDay 패턴 승계.
+  // 닫아도 기존 등록은 유지되고 학생의 새 선택만 막힌다 (RPC v4가 최종 검증).
+  const handleToggleUnit = async (d, unit) => {
+    const k = unitKey(d, unit.start)
+    const isClosed = closedUnitSet.has(k)
+    if (!isClosed) {
+      const count = new Set(
+        registrations
+          .filter((r) => r.dayOfWeek === d && r.startTime === unit.start)
+          .map((r) => r.studentId),
+      ).size
+      if (count > 0 && !window.confirm(
+        `${DAY_LABEL[d]} ${unitLabel(unit)}에 학생 ${count}명 등록돼 있습니다. 닫아도 기존 등록은 유지되지만 학생이 새로 선택할 수는 없게 됩니다. 계속할까요?`,
+      )) return
+    }
+    setBusy('unit')
+    setNotice(null)
+    try {
+      const next = isClosed
+        ? (config.closedUnits ?? []).filter((x) => x !== k)
+        : [...(config.closedUnits ?? []), k]
+      await updateCenterHoursConfig({ closedUnits: next })
+      setNotice({
+        kind: 'ok',
+        text: `${DAY_LABEL[d]} ${unitLabel(unit)} 시간을 ${isClosed ? '열었습니다' : '닫았습니다'}.`,
+      })
+      await reload()
+    } catch {
+      setNotice({ kind: 'error', text: '시간 열기/닫기에 실패했습니다.' })
     } finally {
       setBusy(null)
     }
@@ -259,10 +296,30 @@ export default function CenterHoursSection({
           {CENTER_HOUR_UNITS[day].map((unit) => {
             const students = roster.get(unitKey(day, unit.start)) ?? []
             const over = students.length >= config.capacity
+            const isClosed = closedUnitSet.has(unitKey(day, unit.start))
             return (
               <div key={unit.start} className="border-r border-gray-100 last:border-r-0">
                 <div className="px-3 py-2.5 border-b border-gray-100 bg-gray-50/60 sticky top-0">
-                  <p className="text-xs font-bold text-gray-700">{unitLabel(unit)}</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-xs font-bold text-gray-700">{unitLabel(unit)}</p>
+                    {isClosed && (
+                      <span className="text-[10px] font-bold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded-full">
+                        닫힘
+                      </span>
+                    )}
+                    {isAdmin && (
+                      <button
+                        onClick={() => handleToggleUnit(day, unit)}
+                        disabled={busy !== null}
+                        title={isClosed
+                          ? '클릭하여 이 시간 열기 — 학생이 다시 선택할 수 있게 됩니다'
+                          : '클릭하여 이 시간 닫기 — 기존 등록은 유지되고 새 선택만 막힙니다'}
+                        className="text-gray-300 hover:text-amber-500 transition-colors disabled:opacity-40"
+                      >
+                        {isClosed ? <Lock size={12} /> : <LockOpen size={12} />}
+                      </button>
+                    )}
+                  </div>
                   <p className={`text-[11px] font-bold ${over ? 'text-red-500' : 'text-gray-400'}`}>
                     {students.length}/{config.capacity}명{over && ' · 정원 초과'}
                   </p>
@@ -295,6 +352,7 @@ export default function CenterHoursSection({
           registrations={registrations}
           capacity={config.capacity}
           operatingDays={config.operatingDays}
+          closedUnits={closedUnitSet}
           onSaved={reload}
           busyGlobal={busy}
         />
@@ -303,7 +361,7 @@ export default function CenterHoursSection({
   )
 }
 
-function StudentHoursEditor({ role, students, registrations, capacity, operatingDays, onSaved, busyGlobal }) {
+function StudentHoursEditor({ role, students, registrations, capacity, operatingDays, closedUnits, onSaved, busyGlobal }) {
   const [studentId, setStudentId] = useState('')
   const [selected, setSelected] = useState(() => new Set())
   const [dirty, setDirty] = useState(false)
@@ -380,8 +438,9 @@ function StudentHoursEditor({ role, students, registrations, capacity, operating
             othersCount={othersCount}
             capacity={capacity}
             days={operatingDays}
+            closedUnits={closedUnits}
             editable
-            ignoreCapacity
+            adminOverride
             onToggle={(day, unit) => {
               setDirty(true)
               setSelected((prev) => {

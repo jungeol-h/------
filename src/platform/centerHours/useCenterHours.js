@@ -7,7 +7,7 @@ import { fetchCenterHours, isMigrationMissing } from './centerHoursApi.js'
 
 export function useCenterHours() {
   const [registrations, setRegistrations] = useState([])
-  const [config, setConfig] = useState({ isOpen: false, capacity: 40, operatingDays: DEFAULT_OPERATING_DAYS })
+  const [config, setConfig] = useState({ isOpen: false, capacity: 40, operatingDays: DEFAULT_OPERATING_DAYS, closedUnits: [] })
   const [state, setState] = useState({ loading: true, error: null, migrationNeeded: false })
 
   const reload = useCallback(async () => {

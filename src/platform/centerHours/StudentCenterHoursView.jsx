@@ -11,7 +11,7 @@ import CenterHourGrid from './CenterHourGrid.jsx'
 
 export default function StudentCenterHoursView({ student }) {
   const [state, setState] = useState({ loading: true, error: null, migrationNeeded: false })
-  const [config, setConfig] = useState({ isOpen: false, capacity: 40, operatingDays: DEFAULT_OPERATING_DAYS })
+  const [config, setConfig] = useState({ isOpen: false, capacity: 40, operatingDays: DEFAULT_OPERATING_DAYS, closedUnits: [] })
   const [othersCount, setOthersCount] = useState({})
   const [selected, setSelected] = useState(() => new Set())
   const [dirty, setDirty] = useState(false)
@@ -47,6 +47,9 @@ export default function StudentCenterHoursView({ student }) {
 
   const summary = useMemo(() => summarizeDays(selected), [selected])
 
+  // 닫힌 시간 단위 — 새로 선택 불가, 기존 등록의 해제만 가능 (셀에 '닫힘' 표기)
+  const closedUnits = useMemo(() => new Set(config.closedUnits), [config.closedUnits])
+
   const handleToggle = (day, unit) => {
     setNotice(null)
     setDirty(true)
@@ -76,6 +79,12 @@ export default function StudentCenterHoursView({ student }) {
           .map((f) => `${DAY_LABEL[f.day] ?? ''} ${f.start}`)
           .join(', ')
         setNotice({ kind: 'error', text: `정원이 가득 찬 시간이 있어요: ${full}. 다른 시간을 선택해 주세요.` })
+        await load({ keepSelection: true })
+      } else if (result?.code === 'UNIT_CLOSED') {
+        const closed = (result.closed ?? [])
+          .map((f) => `${DAY_LABEL[f.day] ?? ''} ${f.start}`)
+          .join(', ')
+        setNotice({ kind: 'error', text: `운영하지 않는 시간이 포함돼 있어요: ${closed}. 다른 시간을 선택해 주세요.` })
         await load({ keepSelection: true })
       } else if (result?.code === 'LOCKED') {
         setNotice({ kind: 'error', text: '등록이 마감되었습니다. 변경은 선생님께 문의해 주세요.' })
@@ -132,6 +141,7 @@ export default function StudentCenterHoursView({ student }) {
         capacity={config.capacity}
         editable={config.isOpen}
         days={config.operatingDays}
+        closedUnits={closedUnits}
         onToggle={handleToggle}
       />
 

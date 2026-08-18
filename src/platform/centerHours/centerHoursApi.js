@@ -25,6 +25,7 @@ const toConfig = (value) => ({
   operatingDays: Array.isArray(value?.operatingDays) && value.operatingDays.length > 0
     ? value.operatingDays
     : DEFAULT_OPERATING_DAYS,
+  closedUnits: Array.isArray(value?.closedUnits) ? value.closedUnits.filter((s) => typeof s === 'string') : [],
 })
 
 export async function fetchCenterHours() {
@@ -81,6 +82,7 @@ export async function updateCenterHoursConfig(patch) {
     isOpen: false,
     capacity: CENTER_CAPACITY_DEFAULT,
     operatingDays: DEFAULT_OPERATING_DAYS,
+    closedUnits: [],
     ...row?.value,
     ...patch,
   }

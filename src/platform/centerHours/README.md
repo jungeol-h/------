@@ -19,6 +19,7 @@
 
 ```
 scripts/add-center-hours.sql     테이블 + SECURITY DEFINER RPC 2종 (정원·잠금 최종심)
+scripts/add-center-closed-units.sql  closedUnits 백필 + center_save_hours v4 (닫힌 단위 UNIT_CLOSED 거절)
 scripts/seed-center-hours.sql    NAVI 4기 신청서(7.17) 초기 시드 — 헤더의 생성 규칙 필독
 data/centerHours.js              ★ 요일별 1시간 단위 정의의 단일 진실원 (DB는 시각 저장만)
 centerHoursApi.js                fetch + RPC 래퍼 + admin_config('center_hours') 설정
@@ -43,8 +44,12 @@ CenterHoursSection.jsx           관리자·매니저 명단·설정 섹션 — 
   비재원 학생에는 상태 배지가 붙는다. RPC `center_save_hours`는 `role='student'`만
   보고 status는 안 보므로 SQL 변경 불필요. 미등원 알림 cron은 `u.status='active'`로
   걸러 퇴원생 이용시간을 넣어도 긴급 알림이 새로 생기지 않는다.
-- 설정은 `admin_config('center_hours')` = `{"isOpen", "capacity", "operatingDays"}`.
-  잠그면 학생은 읽기 전용. **운영 요일(operatingDays, JS getDay int 배열)은 이
+- 설정은 `admin_config('center_hours')` = `{"isOpen", "capacity", "operatingDays", "closedUnits"}`.
+  잠그면 학생은 읽기 전용. **closedUnits**(unitKey `"<day>#<HH:MM>"` 문자열 배열)는
+  시간 블록 단위 열기/닫기 (2026-08-18 클라이언트 요청, `scripts/add-center-closed-units.sql`) —
+  닫힌 단위는 학생이 **새로 선택할 수 없고**, 이미 등록돼 있던 학생의 기존 등록은
+  유지되며 해제만 가능하다 (RPC v4가 UNIT_CLOSED로 최종 거절). 관리자·매니저
+  대리 수정은 잠금·정원처럼 닫힘도 무시하며, 시간대별 명단 헤더의 토글이 수정한다. **운영 요일(operatingDays, JS getDay int 배열)은 이
   설정이 단일 진실원이다** (2026-07-27 "이번 주는 수·목도 오픈" 요청으로 설정화 —
   `scripts/add-center-operating-days.sql`). 관리자 출결 탭의 운영 요일 토글이 수정하며,
   단위 시각표(`data/centerHours.js`)는 7일 전부 정의돼 있고 어떤 요일을 노출할지만
