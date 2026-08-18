@@ -64,6 +64,7 @@ DB 스키마 변경은 **Supabase Studio SQL Editor에서 수동 실행**한다 
 | `add-center-closures.sql` | 센터 휴무기간(2026-08-09 클라이언트: 8/10~17 방학 결석 오판정): center_closures 테이블 + judge_attendance() 휴무 가드(기간 내 미등원 알림·자동 결석 중단) + 2026 여름 방학(8/10~17) 시드. 소급 정리는 앱 휴무기간 관리 UI(purgeClosureAbsences — auto·미등원 기록만 삭제) | 적용됨 (2026-08-09, Studio — 실DB 검증: 테이블·시드·judge_attendance 가드) |
 | `add-student-feedback.sql` | 학생 피드백(수시 코멘트): student_feedbacks 테이블 — 과제 내기 옆 피드백 버튼·학생 상세 피드백 탭·종합성장리포트 '피드백' 섹션이 소비. 기존 feedback(버그리포트) 테이블과 별개 | 적용됨 (2026-08-09, Studio — 실DB 검증) |
 | `add-study-journal.sql` | 학습일지 첨부: users.study_journals jsonb + 'study-journals' 버킷(이미지/PDF) — 관리자 학생 명단 '일지' 칸 | 적용됨 (2026-08-09, Studio — 실DB 검증: 컬럼·버킷) |
+| `add-center-closed-units.sql` | 센터 시간 블록(요일×1시간 단위) 열기/닫기(2026-08-18 클라이언트): admin_config('center_hours').closedUnits(unitKey `"<day>#<HH:MM>"` 배열) 백필 + center_save_hours v4 — 닫힌 단위 신규 선택을 UNIT_CLOSED로 거절(기존 등록 유지·해제 허용, 관리자·매니저 무시). 시간표 파생·sync RPC 무변경 | 미적용 |
 
 ## 시드·일회성 유틸 (재실행 금지 또는 불필요)
 

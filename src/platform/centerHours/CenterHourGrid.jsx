@@ -5,11 +5,12 @@
 import { CENTER_HOUR_UNITS, CENTER_DAY_LABEL, DEFAULT_OPERATING_DAYS, operatingDayOrder, unitKey } from '../data/centerHours.js'
 
 // selected: Set(unitKey) · othersCount: { [unitKey]: 본인 제외 등록 수 }
-// ignoreCapacity: 관리자 대리 수정 — 마감 셀도 토글 가능
+// adminOverride: 관리자 대리 수정 — 마감·닫힘 셀도 토글 가능
+// closedUnits: 닫힌 단위 Set(unitKey) — 학생은 새로 선택 불가, 기존 선택 해제만 가능
 // days: 운영 요일 (admin_config operatingDays — 표시 순서 정렬은 여기서 처리)
 export default function CenterHourGrid({
-  selected, othersCount, capacity, editable, ignoreCapacity = false, onToggle,
-  days = DEFAULT_OPERATING_DAYS,
+  selected, othersCount, capacity, editable, adminOverride = false, onToggle,
+  closedUnits = new Set(), days = DEFAULT_OPERATING_DAYS,
 }) {
   const dayOrder = operatingDayOrder(days)
   const maxRows = Math.max(...dayOrder.map((d) => CENTER_HOUR_UNITS[d].length))
@@ -33,10 +34,14 @@ export default function CenterHourGrid({
             const others = othersCount[k] ?? 0
             const remaining = Math.max(0, capacity - others - (isSelected ? 1 : 0))
             const isFull = !isSelected && others >= capacity
-            const clickable = editable && (!isFull || ignoreCapacity)
+            const isClosed = closedUnits.has(k)
+            // 닫힘 & 미선택은 학생이 새로 고를 수 없다. 닫힘 & 선택됨(기존 등록)은
+            // 해제(선택 취소)가 가능해야 하므로 clickable 유지.
+            const clickable = editable && (adminOverride || (!isFull && !(isClosed && !isSelected)))
 
             let style = 'bg-gray-100 text-gray-500'
             if (isSelected) style = 'bg-blue-600 text-white font-bold'
+            else if (isClosed) style = 'bg-gray-200/70 text-gray-400'
             else if (isFull) style = 'bg-gray-200/70 text-gray-400'
             else if (editable) style = 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700'
 
@@ -50,7 +55,7 @@ export default function CenterHourGrid({
               >
                 <span className="text-[11px] font-bold">{unit.start}</span>
                 <span className="text-[9px] opacity-80">
-                  {isFull ? '마감' : `잔여 ${remaining}`}
+                  {isClosed ? '닫힘' : isFull ? '마감' : `잔여 ${remaining}`}
                 </span>
               </button>
             )
@@ -60,6 +65,7 @@ export default function CenterHourGrid({
       <div className="flex gap-3 items-center justify-end pt-1.5 pr-1 text-[10px] text-gray-400">
         <span className="flex items-center gap-1"><i className="w-3 h-3 rounded bg-emerald-50 border border-emerald-200 inline-block" />선택 가능</span>
         <span className="flex items-center gap-1"><i className="w-3 h-3 rounded bg-gray-200 inline-block" />마감</span>
+        <span className="flex items-center gap-1"><i className="w-3 h-3 rounded bg-gray-200/70 inline-block" />닫힘</span>
         <span className="flex items-center gap-1"><i className="w-3 h-3 rounded bg-blue-600 inline-block" />내 이용시간</span>
       </div>
     </div>
