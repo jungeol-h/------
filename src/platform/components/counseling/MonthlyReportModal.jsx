@@ -105,8 +105,10 @@ export default function MonthlyReportModal({
     setEndDate(range[1])
   }, [datesTouched, loaded, educatorId, startDate, endDate, selectedTypes])
 
-  const { entries, totalCount } = useMemo(() => {
-    if (!loaded || !educatorId || !startDate || !endDate) return { entries: [], totalCount: 0 }
+  const { entries, totalCount, totalHours } = useMemo(() => {
+    if (!loaded || !educatorId || !startDate || !endDate) {
+      return { entries: [], totalCount: 0, totalHours: 0 }
+    }
     return buildMonthlyCounselingEntries(loaded.records, loaded.getStudent, {
       educatorId,
       startDate,
@@ -285,7 +287,7 @@ export default function MonthlyReportModal({
             return {
               element: (
                 <MonthlyCounselingReport
-                  header={{ managerName, periodText, duty, schedule, totalCount }}
+                  header={{ managerName, periodText, duty, schedule, totalCount, totalHours }}
                   entries={entries}
                 />
               ),

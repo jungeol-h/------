@@ -8,7 +8,7 @@ import {
 // 재원생/외생(외부 학생) 공용. DataContext에 의존하지 않고 순수 props만 받는다.
 // 서식 골격·페이지 분할 규칙은 components/CounselingFormLayout.jsx 주석 참조.
 // props:
-//   header: { studentName, schoolGrade, periodText, scheduleText, totalCount }
+//   header: { studentName, schoolGrade, periodText, scheduleText, totalCount, totalHours }
 //     scheduleText: 자동 출결 등록 시간블록 기호 (selectors/studentCounselingReport.js
 //                   formatScheduleBlocks 산출물, 예: 'M1 M3 · T2 · SA1'). 외생은 빈칸.
 //   entries: [{ no, educatorName, typeLabel, dateTimeText, cumulativeText,
@@ -27,9 +27,11 @@ export default function StudentCounselingReport({ header = {}, entries = [], log
       { width: '10%', text: '학교학년', label: true },
       { width: '30%', text: header.schoolGrade },
       { width: '10%', text: '등록일정', label: true },
-      { width: '30%', text: header.scheduleText },
-      { width: '8%', text: '시수', label: true },
-      { width: '12%', text: `총 ${header.totalCount}회` },
+      { width: '21%', text: header.scheduleText },
+      { width: '6%', text: '횟수', label: true },
+      { width: '8%', text: `총 ${header.totalCount}회` },
+      { width: '7%', text: '총시수', label: true },
+      { width: '8%', text: `${header.totalHours ?? 0}시수` },
     ],
   ]
 

@@ -63,7 +63,19 @@ describe('buildMonthlyLessonEntries', () => {
     expect(entries[1].dateTimeText).toBe('7. 11.(토) 14:00~14:50 (50분)')
   })
 
+  it('총시수 — 기간 내 건별 분 합산의 시수 환산, 시간 미기록·기간 밖 제외', () => {
+    const reports = [
+      { id: 'r1', authorId: 'e1', date: '2026-07-04', studentIds: ['s1'], ...base, startTime: '14:00', endTime: '14:50' }, // 50분
+      { id: 'r2', authorId: 'e1', date: '2026-07-11', studentIds: ['s1'], ...base, startTime: '15:00', endTime: '15:40' }, // 40분
+      { id: 'r3', authorId: 'e1', date: '2026-07-18', studentIds: ['s2'], ...base }, // 시간 미기록 → 0분
+      // 기간 밖 — 합산 제외
+      { id: 'r4', authorId: 'e1', date: '2026-06-30', studentIds: ['s1'], ...base, startTime: '14:00', endTime: '16:00' },
+    ]
+    const { totalHours } = buildMonthlyLessonEntries(reports, getStudent, opts)
+    expect(totalHours).toBe(2) // 50+40=90분 → 2시수
+  })
+
   it('빈 reports 방어', () => {
-    expect(buildMonthlyLessonEntries([], getStudent, opts)).toEqual({ entries: [], totalCount: 0 })
+    expect(buildMonthlyLessonEntries([], getStudent, opts)).toEqual({ entries: [], totalCount: 0, totalHours: 0 })
   })
 })
