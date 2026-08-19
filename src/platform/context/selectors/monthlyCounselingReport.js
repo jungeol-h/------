@@ -37,6 +37,13 @@ export function durationMinutes(startTime, endTime) {
   return e - s
 }
 
+// 총 분 → 시수. 60분=1시수, 잔여 30분 이상이면 올림 (2026-08 클라 확정).
+// 예: 89분→1시수, 90분→2시수. 음수·비정상 입력은 0분 취급.
+export function hoursFromMinutes(totalMinutes) {
+  const mins = Math.max(0, totalMinutes | 0)
+  return Math.floor(mins / 60) + (mins % 60 >= 30 ? 1 : 0)
+}
+
 // date + start/end → '2026. 7. 5.(토) pm 2:00 ~ pm 2:20 (20분)'
 // 시간이 없으면 날짜만, 시작만 있으면 종료·소요분 생략.
 export function formatCounselingDateTime(date, startTime, endTime) {
@@ -104,7 +111,8 @@ export function sessionKey(r) {
 // getStudent: (studentId) => { name, school, grade } | undefined
 // types: 상담유형 키 배열(담당업무별 보고서 분리 — 예: ['career_path','career']).
 //        null/빈 배열이면 전체. 누적 회차도 필터된 유형 안에서만 센다(업무별 회차).
-// 반환: { entries, totalCount } — entries는 MonthlyCounselingReport props 형태.
+// 반환: { entries, totalCount, totalHours } — entries는 MonthlyCounselingReport props 형태.
+//        totalHours는 기간 내 세션별 (종료−시작)분 합산의 시수 환산(hoursFromMinutes).
 export function buildMonthlyCounselingEntries(records, getStudent, { educatorId, startDate, endDate, types = null }) {
   const typeSet = types?.length ? new Set(types) : null
   const mine = (records ?? []).filter(
@@ -140,6 +148,12 @@ export function buildMonthlyCounselingEntries(records, getStudent, { educatorId,
     }
   }
 
+  // 총시수 — 세션(병합) 단위로 분 합산, 시간 미기록 건은 0분 취급
+  const totalMinutes = sessions.reduce(
+    (sum, group) => sum + (durationMinutes(group[0].startTime, group[0].endTime) ?? 0),
+    0,
+  )
+
   const entries = sessions.map((group, i) => {
     const r = group[0]
     const members = group.map((g) => ({
@@ -171,5 +185,5 @@ export function buildMonthlyCounselingEntries(records, getStudent, { educatorId,
     }
   })
 
-  return { entries, totalCount: entries.length }
+  return { entries, totalCount: entries.length, totalHours: hoursFromMinutes(totalMinutes) }
 }

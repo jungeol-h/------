@@ -51,7 +51,7 @@ export default function ExternalStudentDetail({
   }
 
   const buildPdf = useCallback(async () => {
-    const { entries, totalCount, periodText } = buildStudentCounselingEntries(
+    const { entries, totalCount, totalHours, periodText } = buildStudentCounselingEntries(
       records.map((r) => {
         const typeLabel = COUNSELING_TYPE_LABELS[r.type] || r.type
         const targetLabel = COUNSELING_TARGET_LABELS[r.targetType]
@@ -76,6 +76,7 @@ export default function ExternalStudentDetail({
             periodText,
             scheduleText: '', // 외생은 자동 출결(등록일정) 없음
             totalCount,
+            totalHours, // 외부상담은 시각 미기록 → 0시수
           }}
           entries={entries}
         />

@@ -828,7 +828,7 @@ function CounselingSection({ studentId, data, currentUser, canWrite = true }) {
       }
     }
 
-    const { entries, totalCount, periodText } = buildStudentCounselingEntries(
+    const { entries, totalCount, totalHours, periodText } = buildStudentCounselingEntries(
       records.map((r) => {
         const typeLabel = COUNSELING_TYPE_LABELS[r.type] || r.type
         const targetLabel = COUNSELING_TARGET_LABELS[r.targetType]
@@ -851,6 +851,7 @@ function CounselingSection({ studentId, data, currentUser, canWrite = true }) {
             periodText,
             scheduleText: formatScheduleBlocks(schedules),
             totalCount,
+            totalHours,
           }}
           entries={entries}
         />

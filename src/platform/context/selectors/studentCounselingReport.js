@@ -5,7 +5,9 @@
 import { hasStructuredContent } from '../../data/counselingTypes.js'
 import { ATTENDANCE_BLOCKS } from '../../data/attendanceBlocks.js'
 import { timeToMinutes, dayLabel } from './attendance.js'
-import { formatKoreanDate, formatCompactDateTime } from './monthlyCounselingReport.js'
+import {
+  formatKoreanDate, formatCompactDateTime, durationMinutes, hoursFromMinutes,
+} from './monthlyCounselingReport.js'
 
 // 하루의 등원~하원 구간을 블록으로 그리디 타일링 — 겹침(staggered) 블록 중
 // 시작시각이 진행 지점과 맞는 것만 차례로 채운다. 예: 월 16:00~20:50 → [M1, M3].
@@ -56,7 +58,8 @@ function byDateTime(a, b) {
 
 // 한 학생의 전체 상담 이력 → 리포트 항목 + 조회기간.
 // 누적횟수(N회차)는 학생 기준 통산 순번(작성 강사 무관).
-// 반환: { entries, totalCount, periodText }
+// 반환: { entries, totalCount, totalHours, periodText }
+//        totalHours는 건별 (종료−시작)분 합산의 시수 환산(hoursFromMinutes).
 export function buildStudentCounselingEntries(records) {
   const entries = (records ?? [])
     .slice()
@@ -78,6 +81,12 @@ export function buildStudentCounselingEntries(records) {
       }
     })
 
+  // 총시수 — 건별 분 합산, 시간 미기록 건(외생 등)은 0분 취급
+  const totalMinutes = (records ?? []).reduce(
+    (sum, r) => sum + (durationMinutes(r.startTime, r.endTime) ?? 0),
+    0,
+  )
+
   const dates = (records ?? []).map((r) => r.date).filter(Boolean).sort()
   const firstDate = dates[0]
   const lastDate = dates[dates.length - 1]
@@ -87,5 +96,5 @@ export function buildStudentCounselingEntries(records) {
       : `${formatKoreanDate(firstDate)} ~ ${formatKoreanDate(lastDate)}`
     : '-'
 
-  return { entries, totalCount: entries.length, periodText }
+  return { entries, totalCount: entries.length, totalHours: hoursFromMinutes(totalMinutes), periodText }
 }

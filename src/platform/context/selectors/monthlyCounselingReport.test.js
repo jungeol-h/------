@@ -3,6 +3,7 @@ import {
   formatKoreanDate,
   formatAmPm,
   durationMinutes,
+  hoursFromMinutes,
   formatCounselingDateTime,
   formatCompactDateTime,
   currentMonthRange,
@@ -48,6 +49,22 @@ describe('durationMinutes', () => {
     expect(durationMinutes('14:20', '14:00')).toBe(null)
     expect(durationMinutes('14:00', '14:00')).toBe(null)
     expect(durationMinutes('', '14:00')).toBe(null)
+  })
+})
+
+describe('hoursFromMinutes', () => {
+  it('60분=1시수, 잔여 30분 이상 올림', () => {
+    expect(hoursFromMinutes(0)).toBe(0)
+    expect(hoursFromMinutes(29)).toBe(0)
+    expect(hoursFromMinutes(30)).toBe(1)
+    expect(hoursFromMinutes(60)).toBe(1)
+    expect(hoursFromMinutes(89)).toBe(1)
+    expect(hoursFromMinutes(90)).toBe(2)
+  })
+
+  it('음수·비정상 입력은 0분 취급', () => {
+    expect(hoursFromMinutes(-10)).toBe(0)
+    expect(hoursFromMinutes(undefined)).toBe(0)
   })
 })
 
@@ -168,6 +185,19 @@ describe('buildMonthlyCounselingEntries', () => {
     expect(entries[0].cumulativeText).toBe('김학생 2회차 · 이학생 1회차')
   })
 
+  it('총시수 — 세션 단위 분 합산의 시수 환산, 시간 미기록 건은 0분', () => {
+    const session = { date: '2026-07-11', startTime: '14:00', endTime: '15:10', ...base } // 70분 (fan-out 1회만 합산)
+    const records = [
+      { id: 'r1', studentId: 's1', educatorId: 'e1', date: '2026-07-04', startTime: '14:00', endTime: '14:20', ...base }, // 20분
+      { id: 'r2', studentId: 's1', educatorId: 'e1', ...session },
+      { id: 'r3', studentId: 's2', educatorId: 'e1', ...session },
+      { id: 'r4', studentId: 's2', educatorId: 'e1', date: '2026-07-18', ...base, topic: '시간 미기록' }, // 0분
+    ]
+    const { totalCount, totalHours } = buildMonthlyCounselingEntries(records, getStudent, opts)
+    expect(totalCount).toBe(3)
+    expect(totalHours).toBe(2) // 20+70=90분 → 2시수
+  })
+
   it('그룹 상담 회차가 전원 동일하면 "각 N회차"로 압축', () => {
     const session = { date: '2026-07-04', startTime: '14:00', endTime: '14:40', ...base }
     const records = [
@@ -210,6 +240,6 @@ describe('buildMonthlyCounselingEntries', () => {
     const { entries } = buildMonthlyCounselingEntries(records, getStudent, opts)
     expect(entries[0].studentName).toBe('-')
     expect(entries[0].schoolGrade).toBe('')
-    expect(buildMonthlyCounselingEntries([], getStudent, opts)).toEqual({ entries: [], totalCount: 0 })
+    expect(buildMonthlyCounselingEntries([], getStudent, opts)).toEqual({ entries: [], totalCount: 0, totalHours: 0 })
   })
 })

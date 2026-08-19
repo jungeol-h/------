@@ -52,8 +52,10 @@ export default function LessonReportModal({
     setEndDate(range[1])
   }, [datesTouched, reports, educatorId, startDate, endDate])
 
-  const { entries, totalCount } = useMemo(() => {
-    if (!educatorId || !startDate || !endDate) return { entries: [], totalCount: 0 }
+  const { entries, totalCount, totalHours } = useMemo(() => {
+    if (!educatorId || !startDate || !endDate) {
+      return { entries: [], totalCount: 0, totalHours: 0 }
+    }
     return buildMonthlyLessonEntries(reports, getStudent, {
       educatorId,
       startDate,
@@ -163,7 +165,7 @@ export default function LessonReportModal({
             return {
               element: (
                 <MonthlyLessonReport
-                  header={{ managerName, periodText, duty, schedule, totalCount }}
+                  header={{ managerName, periodText, duty, schedule, totalCount, totalHours }}
                   entries={entries}
                 />
               ),

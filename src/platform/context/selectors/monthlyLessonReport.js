@@ -1,13 +1,16 @@
 // 강사별 월간 수업보고서(pdf/reports/MonthlyLessonReport)용 데이터 조립.
 // monthlyCounselingReport.js와 같은 구조 — 수업보고(lesson_reports)는 학생이
 // 복수(studentIds)이고 교재·과제 필드가 있어 별도 선택자로 둔다.
-import { byDateTime, formatCompactDateTime } from './monthlyCounselingReport.js'
+import {
+  byDateTime, formatCompactDateTime, durationMinutes, hoursFromMinutes,
+} from './monthlyCounselingReport.js'
 
 // 강사 1명의 기간 내 수업보고 항목 조립.
 // reports: 강사 무관 **전체 이력**(data.lessonReports) — 누적횟수(N회차)가
 //          조회기간 이전을 포함해 강사 기준으로 세어지므로 기간으로 미리 자르면 안 된다.
 // getStudent: (studentId) => { name } | undefined
-// 반환: { entries, totalCount } — entries는 MonthlyLessonReport props 형태.
+// 반환: { entries, totalCount, totalHours } — entries는 MonthlyLessonReport props 형태.
+//        totalHours는 기간 내 건별 (종료−시작)분 합산의 시수 환산(hoursFromMinutes).
 export function buildMonthlyLessonEntries(reports, getStudent, { educatorId, startDate, endDate }) {
   const mine = (reports ?? []).filter((r) => r.authorId === educatorId)
 
@@ -15,9 +18,17 @@ export function buildMonthlyLessonEntries(reports, getStudent, { educatorId, sta
   const sorted = mine.slice().sort(byDateTime)
   const roundOf = new Map(sorted.map((r, i) => [r.id, i + 1]))
 
-  const entries = mine
+  const inRange = mine
     .filter((r) => r.date && r.date >= startDate && r.date <= endDate)
     .sort(byDateTime)
+
+  // 총시수 — 기간 내 건별 분 합산, 시간 미기록 건은 0분 취급
+  const totalMinutes = inRange.reduce(
+    (sum, r) => sum + (durationMinutes(r.startTime, r.endTime) ?? 0),
+    0,
+  )
+
+  const entries = inRange
     .map((r, i) => {
       const ids = r.studentIds ?? []
       return {
@@ -34,5 +45,5 @@ export function buildMonthlyLessonEntries(reports, getStudent, { educatorId, sta
       }
     })
 
-  return { entries, totalCount: entries.length }
+  return { entries, totalCount: entries.length, totalHours: hoursFromMinutes(totalMinutes) }
 }

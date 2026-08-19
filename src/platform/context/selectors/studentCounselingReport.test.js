@@ -84,7 +84,17 @@ describe('buildStudentCounselingEntries', () => {
     expect(entries[0].fallbackContent).toBe('단일 텍스트 상담 내용')
   })
 
+  it('총시수 — 건별 분 합산의 시수 환산, 시간 미기록 건은 0분', () => {
+    const records = [
+      { id: 'r1', date: '2026-05-10', ...base }, // 시간 미기록 → 0분
+      { id: 'r2', date: '2026-07-04', startTime: '14:00', endTime: '14:35', ...base }, // 35분
+      { id: 'r3', date: '2026-07-11', startTime: '15:00', endTime: '16:00', ...base }, // 60분
+    ]
+    const { totalHours } = buildStudentCounselingEntries(records)
+    expect(totalHours).toBe(2) // 35+60=95분 → 2시수
+  })
+
   it('빈 records 방어', () => {
-    expect(buildStudentCounselingEntries([])).toEqual({ entries: [], totalCount: 0, periodText: '-' })
+    expect(buildStudentCounselingEntries([])).toEqual({ entries: [], totalCount: 0, totalHours: 0, periodText: '-' })
   })
 })
