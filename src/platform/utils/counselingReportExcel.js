@@ -13,13 +13,20 @@ const THIN = { style: 'thin', color: { argb: 'FF9CA3AF' } }
 const ALL_BORDERS = { top: THIN, left: THIN, bottom: THIN, right: THIN }
 
 // 병합 셀은 엑셀이 행높이를 자동조정하지 못하므로, 텍스트 길이/열폭으로 줄 수를 추정해
-// row.height를 직접 계산한다. charsPerLine은 병합된 셀의 대략적인 표시 가능 글자 수.
+// row.height를 직접 계산한다. charsPerLine은 병합된 셀의 대략적인 표시 가능 글자 수
+// (엑셀 열폭 문자 단위 기준 — 한글 등 전각 문자는 2칸을 차지하므로 폭 2로 센다).
+function lineWidthOf(line) {
+  let w = 0
+  for (const ch of line) w += ch.charCodeAt(0) > 0x2e7f ? 2 : 1
+  return w
+}
+
 function estimateRowHeight(text, charsPerLine) {
   const str = String(text ?? '')
   if (!str) return 18
   const lines = str.split('\n')
   let wrapped = 0
-  for (const line of lines) wrapped += Math.max(1, Math.ceil(line.length / charsPerLine))
+  for (const line of lines) wrapped += Math.max(1, Math.ceil(lineWidthOf(line) / charsPerLine))
   return wrapped * 14 + 6
 }
 
@@ -158,7 +165,8 @@ export async function downloadCounselingReportExcel({ header = {}, entries = [],
     }
   }
 
-  ws.views = [{ state: 'frozen', ySplit: 5 }]
+  // 제목(1)+헤더 표(2~3)+세부 내용 밴드(4)까지 고정
+  ws.views = [{ state: 'frozen', ySplit: 4 }]
 
   const buffer = await workbook.xlsx.writeBuffer()
   const blob = new Blob([buffer], {
