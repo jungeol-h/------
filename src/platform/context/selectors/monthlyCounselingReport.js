@@ -39,9 +39,34 @@ export function durationMinutes(startTime, endTime) {
 
 // 총 분 → 시수. 60분=1시수, 잔여 30분 이상이면 올림 (2026-08 클라 확정).
 // 예: 89분→1시수, 90분→2시수. 음수·비정상 입력은 0분 취급.
+// monthlyLessonReport / studentCounselingReport(관공서 서식 2종)가 소비 — 유지.
 export function hoursFromMinutes(totalMinutes) {
   const mins = Math.max(0, totalMinutes | 0)
   return Math.floor(mins / 60) + (mins % 60 >= 30 ? 1 : 0)
+}
+
+// 총 분 → 시수(T). 40분=1시수, 잔여 20분 이상이면 올림 (컨설팅보고서 전용, 2026-08-20 클라 확정).
+// 예: 1,090분 → 27T(1,080분=27시수, 잔여 10분은 올림 미적용).
+export function unitsFromMinutes(totalMinutes) {
+  const mins = Math.max(0, totalMinutes | 0)
+  return Math.floor(mins / 40) + (mins % 40 >= 20 ? 1 : 0)
+}
+
+// 진로진학 컨설팅으로 집계하는 상담유형 (구 체계 '진로' 포함).
+// assessment(검사 결과 분석 상담 — NEO·CET·MLST·WISE 등)도 진로진학 컨설팅으로 집계한다.
+// 2026-08-20 클라 확인 요청 기반: assessment 유형은 전 DB에서 황광희만 사용하며,
+// 이전에는 월간보고서 집계에서 빠져 "황광희 진로진학 컨설팅 총 시간 미집계" 버그였다.
+export const CAREER_COUNSELING_TYPES = ['career_path', 'career', 'assessment']
+
+// 50~70분 → 60분 스냅. 그 외 구간은 실측 분 그대로 (monthlyOperationsReport와 공용 규칙).
+export function snapMinutes(minutes) {
+  return minutes >= 50 && minutes <= 70 ? 60 : minutes
+}
+
+// 세션 1건의 집계 분 — 시간 미입력·역전은 fallback(최소 단위).
+export function sessionMinutesOf(startTime, endTime, fallbackMinutes) {
+  const d = durationMinutes(startTime, endTime)
+  return d == null ? fallbackMinutes : snapMinutes(d)
 }
 
 // date + start/end → '2026. 7. 5.(토) pm 2:00 ~ pm 2:20 (20분)'
@@ -111,8 +136,10 @@ export function sessionKey(r) {
 // getStudent: (studentId) => { name, school, grade } | undefined
 // types: 상담유형 키 배열(담당업무별 보고서 분리 — 예: ['career_path','career']).
 //        null/빈 배열이면 전체. 누적 회차도 필터된 유형 안에서만 센다(업무별 회차).
-// 반환: { entries, totalCount, totalHours } — entries는 MonthlyCounselingReport props 형태.
-//        totalHours는 기간 내 세션별 (종료−시작)분 합산의 시수 환산(hoursFromMinutes).
+// 반환: { entries, totalCount, totalMinutes, totalUnits } — entries는 MonthlyCounselingReport
+//        props 형태. totalMinutes는 기간 내 세션별 집계 분 합산(월간보고서와 동일 규칙 —
+//        50~70분 스냅, 시간 미기록은 진로진학 40분·그 외 20분 폴백), totalUnits는
+//        unitsFromMinutes(totalMinutes)(40분=1T, 잔여 20분 이상 올림).
 export function buildMonthlyCounselingEntries(records, getStudent, { educatorId, startDate, endDate, types = null }) {
   const typeSet = types?.length ? new Set(types) : null
   const mine = (records ?? []).filter(
@@ -148,11 +175,13 @@ export function buildMonthlyCounselingEntries(records, getStudent, { educatorId,
     }
   }
 
-  // 총시수 — 세션(병합) 단위로 분 합산, 시간 미기록 건은 0분 취급
-  const totalMinutes = sessions.reduce(
-    (sum, group) => sum + (durationMinutes(group[0].startTime, group[0].endTime) ?? 0),
-    0,
-  )
+  // 총시간 — 세션(병합) 단위로 월간보고서 집계 규칙과 동일하게 분 합산:
+  // 실측 분에 50~70분→60분 스냅, 시간 미입력/역전 세션은 진로진학 40분·그 외 20분 폴백.
+  const totalMinutes = sessions.reduce((sum, group) => {
+    const r = group[0]
+    const fallback = CAREER_COUNSELING_TYPES.includes(r.type) ? 40 : 20
+    return sum + sessionMinutesOf(r.startTime, r.endTime, fallback)
+  }, 0)
 
   const entries = sessions.map((group, i) => {
     const r = group[0]
@@ -185,5 +214,5 @@ export function buildMonthlyCounselingEntries(records, getStudent, { educatorId,
     }
   })
 
-  return { entries, totalCount: entries.length, totalHours: hoursFromMinutes(totalMinutes) }
+  return { entries, totalCount: entries.length, totalMinutes, totalUnits: unitsFromMinutes(totalMinutes) }
 }

@@ -17,6 +17,7 @@ describe('educatorDuties', () => {
     expect(dutyOfType('a-hwang', 'study')?.key).toBe('korean')
     expect(dutyOfType('a-hwang', 'career_path')?.key).toBe('career')
     expect(dutyOfType('a-hwang', 'career')?.key).toBe('career')
+    expect(dutyOfType('a-hwang', 'assessment')?.key).toBe('career')
   })
 
   it('dutyOfType — 자기주도학습코칭 등 duty 밖 유형은 null(보고서 미포함)', () => {

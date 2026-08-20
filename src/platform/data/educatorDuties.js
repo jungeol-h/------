@@ -12,7 +12,8 @@
 export const EDUCATOR_DUTIES = {
   'a-hwang': [
     { key: 'korean', label: '국어', reportDuty: '국어 컨설팅', type: 'subject_learning', types: ['subject_learning', 'study'] },
-    { key: 'career', label: '진로진학컨설팅', reportDuty: '진로진학 컨설팅', type: 'career_path', types: ['career_path', 'career'] },
+    // assessment(검사 결과 분석 상담 — NEO·CET 등)는 진로진학컨설팅 업무로 귀속 — 2026-08-20.
+    { key: 'career', label: '진로진학컨설팅', reportDuty: '진로진학 컨설팅', type: 'career_path', types: ['career_path', 'career', 'assessment'] },
   ],
 }
 

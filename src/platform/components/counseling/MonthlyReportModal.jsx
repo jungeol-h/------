@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Loader, AlertCircle } from 'lucide-react'
+import { Loader, AlertCircle, FileSpreadsheet } from 'lucide-react'
 import ModalShell from '../common/ModalShell.jsx'
 import DownloadPdfButton from '../../pdf/components/DownloadPdfButton.jsx'
 import { educatorDisplayName } from '../../utils/educatorName.js'
@@ -16,8 +16,10 @@ const DEFAULT_SCHEDULE = '매주 토요일 12:00~19:00'
 
 // 담당업무(유형)별 보고서 분리 시 구 체계(counselingTypes.js 표시 전용 키)로 저장된
 // 기존 기록도 함께 잡히도록 하는 별칭 — 예: '진로진학' 선택 시 구 '진로' 기록 포함.
+// assessment(검사 결과 분석 상담)는 진로진학 duty/유형 필터 선택 시 함께 잡히도록
+// career_path 별칭에 포함 — 2026-08-20 클라 확인 요청 기반(황광희 진로진학 컨설팅 집계 정합).
 const LEGACY_TYPE_ALIASES = {
-  career_path: ['career'],
+  career_path: ['career', 'assessment'],
   subject_learning: ['study'],
   adjustment: ['habit'],
 }
@@ -60,6 +62,7 @@ export default function MonthlyReportModal({
   const [loading, setLoading] = useState(false)
   const [loadError, setLoadError] = useState(false)
   const [retryKey, setRetryKey] = useState(0)
+  const [excelBusy, setExcelBusy] = useState(false)
 
   const selectedEducator =
     fixedEducator ?? educators?.find((e) => e.id === educatorId) ?? null
@@ -105,9 +108,9 @@ export default function MonthlyReportModal({
     setEndDate(range[1])
   }, [datesTouched, loaded, educatorId, startDate, endDate, selectedTypes])
 
-  const { entries, totalCount, totalHours } = useMemo(() => {
+  const { entries, totalCount, totalMinutes, totalUnits } = useMemo(() => {
     if (!loaded || !educatorId || !startDate || !endDate) {
-      return { entries: [], totalCount: 0, totalHours: 0 }
+      return { entries: [], totalCount: 0, totalMinutes: 0, totalUnits: 0 }
     }
     return buildMonthlyCounselingEntries(loaded.records, loaded.getStudent, {
       educatorId,
@@ -155,6 +158,37 @@ export default function MonthlyReportModal({
   const managerName = selectedEducator?.name ?? ''
   const periodText = `${formatKoreanDate(startDate)} ~ ${formatKoreanDate(endDate)}`
   const canBuild = !!educatorId && !loading && !loadError && entries.length > 0
+
+  // PDF/엑셀 파일명 공용 식별자 조각 — buildFilename이 .pdf를 붙이므로 엑셀은 라벨만 재사용해 직접 조립.
+  const filenameIdentifier = [
+    managerName,
+    selectedDuty && filterType === selectedDuty.type
+      ? selectedDuty.label
+      : filterType && COUNSELING_TYPE_LABELS[filterType],
+    startDate.slice(0, 7),
+  ]
+    .filter(Boolean)
+    .join('_')
+
+  const handleExcelDownload = async () => {
+    if (excelBusy || !canBuild) return
+    setExcelBusy(true)
+    try {
+      const { downloadCounselingReportExcel } = await import(
+        '../../utils/counselingReportExcel.js'
+      )
+      const { buildFilename } = await import('../../pdf/utils/formatters.js')
+      const pdfFilename = buildFilename(reportLabel, filenameIdentifier)
+      const filename = pdfFilename.replace(/\.pdf$/, '.xlsx')
+      await downloadCounselingReportExcel({
+        header: { managerName, periodText, duty, schedule, totalUnits, totalMinutes },
+        entries,
+        filename,
+      })
+    } finally {
+      setExcelBusy(false)
+    }
+  }
 
   return (
     <ModalShell title="월간 컨설팅 보고서" onClose={onClose}>
@@ -275,7 +309,20 @@ export default function MonthlyReportModal({
         </div>
       )}
 
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <button
+          type="button"
+          onClick={handleExcelDownload}
+          disabled={!canBuild || excelBusy}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed transition"
+        >
+          {excelBusy ? (
+            <Loader size={14} className="animate-spin" />
+          ) : (
+            <FileSpreadsheet size={14} />
+          )}
+          {excelBusy ? '생성 중…' : '엑셀(A4)'}
+        </button>
         <DownloadPdfButton
           label="보고서 PDF"
           disabled={!canBuild}
@@ -287,22 +334,11 @@ export default function MonthlyReportModal({
             return {
               element: (
                 <MonthlyCounselingReport
-                  header={{ managerName, periodText, duty, schedule, totalCount, totalHours }}
+                  header={{ managerName, periodText, duty, schedule, totalUnits, totalMinutes }}
                   entries={entries}
                 />
               ),
-              filename: buildFilename(
-                reportLabel,
-                [
-                  managerName,
-                  selectedDuty && filterType === selectedDuty.type
-                    ? selectedDuty.label
-                    : filterType && COUNSELING_TYPE_LABELS[filterType],
-                  startDate.slice(0, 7),
-                ]
-                  .filter(Boolean)
-                  .join('_'),
-              ),
+              filename: buildFilename(reportLabel, filenameIdentifier),
             }
           }}
         />

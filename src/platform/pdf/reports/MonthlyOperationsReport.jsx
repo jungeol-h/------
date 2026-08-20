@@ -25,7 +25,7 @@ const COUNSELING_COLUMNS = [
   { key: 'name', header: '담당자', width: '26%' },
   { key: 'category', header: '구분', width: '24%' },
   { key: 'sessions', header: '상담횟수', width: '14%', align: 'right' },
-  { key: 'minutesText', header: '상담시간', width: '20%', align: 'right' },
+  { key: 'minutesLabel', header: '상담시간', width: '20%', align: 'right' },
   { key: 'hours', header: '시수', width: '16%', align: 'right' },
 ]
 
@@ -40,6 +40,7 @@ const NOTES = [
   '집계 기준: 교과·기타 컨설팅 60분(20분×3)=1시수 · 진로진학 컨설팅 40분=1시수 · 교과 수업 60분=1시수',
   '세션 50~70분은 60분으로 계산 · 시간 미입력 세션은 최소 단위(교과 컨설팅 20분·진로진학 40분·수업 60분)로 계산',
   '그룹 상담은 1회로 집계 · 이용시간은 입실~퇴실(재등원 시 체류 구간 합) 기준 · 출석 인원은 지각 포함 연인원',
+  '검사 결과 분석 상담은 진로진학 컨설팅으로 집계',
 ]
 
 function statRow(row) {
@@ -48,6 +49,10 @@ function statRow(row) {
     sessions: `${row.sessions}회`,
     hours: `${row.hours}시수`,
   }
+}
+
+function counselingStatRow(row) {
+  return { ...statRow(row), minutesLabel: `${(row.minutes ?? 0).toLocaleString('ko-KR')}분` }
 }
 
 export default function MonthlyOperationsReport({
@@ -62,8 +67,8 @@ export default function MonthlyOperationsReport({
   const counselingRows = (counseling?.rows ?? []).length === 0
     ? []
     : [
-        ...counseling.rows.map(statRow),
-        statRow({ ...counseling.totals, name: '합계', category: '' }),
+        ...counseling.rows.map(counselingStatRow),
+        counselingStatRow({ ...counseling.totals, name: '합계', category: '' }),
       ]
   const lessonRows = (lessons?.rows ?? []).length === 0
     ? []
