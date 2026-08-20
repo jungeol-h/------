@@ -24,6 +24,10 @@ export default function RecordFormModal({ reservation, record, studentName, prog
     note: record?.note ?? '',
     nextAppointment: record?.nextAppointment ?? '',
   })
+  // 실제 상담 시간 — 월간·컨설팅 보고서 집계가 예약 슬롯이 아닌 이 값을 쓴다
+  // (2026-08-20 클라 요청). 기본값은 슬롯 시간이라 안 고치면 기존 집계와 동일.
+  const [startTime, setStartTime] = useState(record?.startTime || reservation.slot?.startTime || '')
+  const [endTime, setEndTime] = useState(record?.endTime || reservation.slot?.endTime || '')
   const [copyToGroup, setCopyToGroup] = useState(false) // 공통내용 전원 복사 (명세 11.5)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
@@ -37,6 +41,8 @@ export default function RecordFormModal({ reservation, record, studentName, prog
     educatorId: target.slot?.educatorId ?? undefined,
     date: target.slot?.date ?? slotDate,
     status,
+    startTime,
+    endTime,
     ...fields,
   })
 
@@ -66,6 +72,29 @@ export default function RecordFormModal({ reservation, record, studentName, prog
         <p className={overdue ? 'text-red-500 font-bold' : ''}>
           작성기한: {deadline} 23:59{overdue ? ' — 기한 초과 작성으로 기록됩니다' : ''}
         </p>
+      </div>
+
+      <div>
+        <label className="text-xs text-gray-500 mb-1 block">
+          실제 상담 시간 <span className="text-gray-400">— 보고서 집계에 이 시간이 쓰입니다</span>
+        </label>
+        <div className="flex items-center gap-2">
+          <input
+            type="time"
+            value={startTime}
+            onChange={(e) => setStartTime(e.target.value)}
+            className={FIELD}
+            aria-label="실제 상담 시작 시간"
+          />
+          <span className="text-gray-400 text-sm">~</span>
+          <input
+            type="time"
+            value={endTime}
+            onChange={(e) => setEndTime(e.target.value)}
+            className={FIELD}
+            aria-label="실제 상담 종료 시간"
+          />
+        </div>
       </div>
 
       <CounselingContentFields value={fields} onChange={setFields} fieldClass={FIELD} />

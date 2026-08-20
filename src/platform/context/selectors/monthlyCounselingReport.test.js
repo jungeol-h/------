@@ -239,13 +239,15 @@ describe('buildMonthlyCounselingEntries', () => {
     expect(totalUnits).toBe(3) // 100분 → 2T(80분)+잔여20분 이상 올림 = 3T
   })
 
-  it('진로진학(career_path/career/assessment) 세션은 시간 미기록 시 40분 폴백으로 집계', () => {
+  it('진로진학(career_path/career/assessment) 세션은 실측과 무관하게 회당 40분 정액으로 집계', () => {
     const records = [
       { id: 'r1', studentId: 's1', educatorId: 'e1', date: '2026-07-04', type: 'assessment', startTime: '', endTime: '', ...base },
+      // 실측 80분이어도 정액 40분 (2026-08-20 클라: 총 상담 시간 = 40 × 상담횟수)
+      { id: 'r2', studentId: 's1', educatorId: 'e1', date: '2026-07-05', type: 'career_path', startTime: '16:00', endTime: '17:20', ...base, topic: '주제2' },
     ]
     const { totalMinutes, totalUnits } = buildMonthlyCounselingEntries(records, getStudent, opts)
-    expect(totalMinutes).toBe(40)
-    expect(totalUnits).toBe(1)
+    expect(totalMinutes).toBe(80)
+    expect(totalUnits).toBe(2)
   })
 
   it('세션 실측 50~70분은 60분으로 스냅되어 집계된다', () => {

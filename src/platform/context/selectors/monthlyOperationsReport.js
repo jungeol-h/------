@@ -1,25 +1,25 @@
-// 월간 종합 보고서(pdf/reports/MonthlyOperationsReport)용 집계 — 2026-08 클라 확정 규칙.
+// 월간 종합 보고서(pdf/reports/MonthlyOperationsReport)용 집계 — 2026-08-20 클라 확정 규칙.
 //
-// 시수 기준 (분 ÷ 기준분, 소수 1자리):
-//   진로진학 컨설팅 40분 = 1시수 · 교과·기타 컨설팅 60분(20분×3) = 1시수 · 교과 수업 60분 = 1시수
-// 세션 시간 스냅: 50~70분은 60분으로 계산(클라: "50이상~60미만, 60초과~70이하 모두 60분").
-// 시간 미입력 세션(구 기록 다수)은 최소 단위로 간주 — 교과 컨설팅 20분(1회),
-// 진로진학 40분(1시수), 수업 60분(1시수). 클라가 별도 규칙을 주지 않아 정한 기본값.
+// 시수 = 분 ÷ 60 (모든 유형 60분 = 1시수, 소수 1자리).
+// 상담시간: 진로진학 컨설팅(검사 포함)은 상담 1회 = 40분 정액(총 상담 시간 = 40 × 횟수),
+//   그 외는 실측 분에 50~70분→60분 스냅(클라: "50이상~60미만, 60초과~70이하 모두 60분"),
+//   시간 미입력 세션은 최소 단위(교과 컨설팅 20분, 수업 60분) — counselingSessionMinutes 참조.
 // 클라의 "일일 누적 시간 ÷ 60" 규칙은 일 단위 반올림이 없어 월 합산 ÷ 기준분과 동치.
 //
 // 그룹 상담 fan-out(학생별 개별 행)은 sessionKey로 병합해 근무시간에 1회만 센다.
 import { educatorDisplayName } from '../../utils/educatorName.js'
 import {
   sessionKey, CAREER_COUNSELING_TYPES, snapMinutes, sessionMinutesOf,
+  counselingSessionMinutes,
 } from './monthlyCounselingReport.js'
 
-// CAREER_COUNSELING_TYPES/snapMinutes/sessionMinutesOf의 정본은 monthlyCounselingReport.js —
-// 여기서 동명으로 re-export해 기존 소비처·테스트의 import 경로를 보존한다.
-export { CAREER_COUNSELING_TYPES, snapMinutes, sessionMinutesOf }
+// CAREER_COUNSELING_TYPES/snapMinutes/sessionMinutesOf/counselingSessionMinutes의 정본은
+// monthlyCounselingReport.js — 여기서 동명으로 re-export해 기존 소비처·테스트 경로를 보존한다.
+export { CAREER_COUNSELING_TYPES, snapMinutes, sessionMinutesOf, counselingSessionMinutes }
 
 export const COUNSELING_CATEGORIES = {
-  career: { label: '진로진학 컨설팅', unitMinutes: 40, fallbackMinutes: 40 },
-  subject: { label: '교과·기타 컨설팅', unitMinutes: 60, fallbackMinutes: 20 },
+  career: { label: '진로진학 컨설팅', unitMinutes: 60 },
+  subject: { label: '교과·기타 컨설팅', unitMinutes: 60 },
 }
 
 export const LESSON_CATEGORY = { label: '교과 수업', unitMinutes: 60, fallbackMinutes: 60 }
@@ -55,8 +55,7 @@ export function buildMonthlyCounselingStats(records, educators, month) {
     if (seen.has(key)) continue
     seen.add(key)
     const catKey = CAREER_COUNSELING_TYPES.includes(r.type) ? 'career' : 'subject'
-    const cat = COUNSELING_CATEGORIES[catKey]
-    const minutes = sessionMinutesOf(r.startTime, r.endTime, cat.fallbackMinutes)
+    const minutes = counselingSessionMinutes(r)
     if (!acc.has(r.educatorId)) {
       acc.set(r.educatorId, {
         career: { sessions: 0, minutes: 0 },

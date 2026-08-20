@@ -69,6 +69,16 @@ export function sessionMinutesOf(startTime, endTime, fallbackMinutes) {
   return d == null ? fallbackMinutes : snapMinutes(d)
 }
 
+// 상담 세션 1건의 집계 분 — 월간 종합 보고서·컨설팅보고서 총시간 공용 규칙.
+// 진로진학 컨설팅(검사 포함)은 실측 시간과 무관하게 상담 1회 = 40분 정액
+// ("총 상담 시간 = 40 × 상담횟수, 모든 시수는 60분 기준 1시수" — 2026-08-20 클라 확정,
+// 기존 '진로진학 40분=1시수' 규칙을 대체). 그 외 유형은 실측(스냅) + 미입력 20분 폴백.
+export const CAREER_SESSION_MINUTES = 40
+export function counselingSessionMinutes(r) {
+  if (CAREER_COUNSELING_TYPES.includes(r.type)) return CAREER_SESSION_MINUTES
+  return sessionMinutesOf(r.startTime, r.endTime, 20)
+}
+
 // date + start/end → '2026. 7. 5.(토) pm 2:00 ~ pm 2:20 (20분)'
 // 시간이 없으면 날짜만, 시작만 있으면 종료·소요분 생략.
 export function formatCounselingDateTime(date, startTime, endTime) {
@@ -175,13 +185,12 @@ export function buildMonthlyCounselingEntries(records, getStudent, { educatorId,
     }
   }
 
-  // 총시간 — 세션(병합) 단위로 월간보고서 집계 규칙과 동일하게 분 합산:
-  // 실측 분에 50~70분→60분 스냅, 시간 미입력/역전 세션은 진로진학 40분·그 외 20분 폴백.
-  const totalMinutes = sessions.reduce((sum, group) => {
-    const r = group[0]
-    const fallback = CAREER_COUNSELING_TYPES.includes(r.type) ? 40 : 20
-    return sum + sessionMinutesOf(r.startTime, r.endTime, fallback)
-  }, 0)
+  // 총시간 — 세션(병합) 단위로 월간보고서 집계 규칙(counselingSessionMinutes)과 동일:
+  // 진로진학(검사 포함)은 회당 40분 정액, 그 외는 실측(50~70분→60 스냅) + 미입력 20분 폴백.
+  const totalMinutes = sessions.reduce(
+    (sum, group) => sum + counselingSessionMinutes(group[0]),
+    0,
+  )
 
   const entries = sessions.map((group, i) => {
     const r = group[0]

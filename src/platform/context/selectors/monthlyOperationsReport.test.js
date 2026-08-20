@@ -63,7 +63,7 @@ describe('buildMonthlyCounselingStats', () => {
     expect(totals.minutesText).toBe('1시간')
   })
 
-  it('진로진학(구 진로 포함)은 40분 = 1시수로 분리 집계', () => {
+  it('진로진학(구 진로 포함)은 회당 40분 정액으로 분리 집계, 시수는 60분 기준', () => {
     const records = [
       { id: 'r1', studentId: 's1', educatorId: 'e1', date: '2026-07-04', type: 'career_path', startTime: '14:00', endTime: '14:40', ...base },
       { id: 'r2', studentId: 's1', educatorId: 'e1', date: '2026-07-11', type: 'career', startTime: '', endTime: '', ...base, topic: '주제2' },
@@ -72,7 +72,8 @@ describe('buildMonthlyCounselingStats', () => {
     const { rows } = buildMonthlyCounselingStats(records, educators, '2026-07')
     expect(rows.map((r) => r.category)).toEqual(['교과·기타 컨설팅', '진로진학 컨설팅'])
     const career = rows.find((r) => r.category === '진로진학 컨설팅')
-    expect(career).toMatchObject({ sessions: 2, minutes: 80, hours: 2 })
+    // 실측 40분 + 미기록 → 둘 다 정액 40분. 시수 = 80/60 = 1.3
+    expect(career).toMatchObject({ sessions: 2, minutes: 80, hours: 1.3 })
   })
 
   it('assessment(검사 결과 분석 상담)도 진로진학 컨설팅으로 집계 — 2026-08-20 (황광희 진로진학 미집계 버그 수정)', () => {
@@ -81,7 +82,7 @@ describe('buildMonthlyCounselingStats', () => {
     ]
     const { rows } = buildMonthlyCounselingStats(records, educators, '2026-07')
     expect(rows).toHaveLength(1)
-    expect(rows[0]).toMatchObject({ category: '진로진학 컨설팅', sessions: 1, minutes: 40, hours: 1 })
+    expect(rows[0]).toMatchObject({ category: '진로진학 컨설팅', sessions: 1, minutes: 40, hours: 0.7 })
   })
 
   it('그룹 상담 fan-out은 1세션으로 센다', () => {

@@ -66,6 +66,7 @@ DB 스키마 변경은 **Supabase Studio SQL Editor에서 수동 실행**한다 
 | `add-study-journal.sql` | 학습일지 첨부: users.study_journals jsonb + 'study-journals' 버킷(이미지/PDF) — 관리자 학생 명단 '일지' 칸 | 적용됨 (2026-08-09, Studio — 실DB 검증: 컬럼·버킷) |
 | `add-center-closed-units.sql` | 센터 시간 블록(요일×1시간 단위) 열기/닫기(2026-08-18 클라이언트): admin_config('center_hours').closedUnits(unitKey `"<day>#<HH:MM>"` 배열) 백필 + center_save_hours v4 — 닫힌 단위 신규 선택을 UNIT_CLOSED로 거절(기존 등록 유지·해제 허용, 관리자·매니저 무시). 시간표 파생·sync RPC 무변경 | 미적용 |
 | `add-staff-attendance.sql` | 강사(교직원) 키오스크 출퇴근 기록(2026-08-20): staff_attendance_records 테이블(학생 attendance_records와 완전 분리, UNIQUE staff_id·date + events jsonb 이벤트 로그) + RPC 3종(kiosk_find_staff/kiosk_staff_check_in/kiosk_staff_check_out — 시간표·지각판정 없는 순수 기록, 재출근은 학생판 재등원과 동일 패턴). 학생 출결 관련 테이블·RPC는 무변경. 소비처: KioskPage.jsx(교직원 출퇴근), StaffAttendancePage.jsx(강사 출근부 월간 표) | 적용 (2026-08-20) |
+| `add-booking-record-times.sql` | 예약 상담기록(지도보고서) 실제 상담 시간(2026-08-20): booking_records에 start_time/end_time TEXT 컬럼 추가(널 허용). 월간·컨설팅 보고서 집계가 예약 슬롯 시간 대신 작성된 실제 시간을 쓰고, 미기록은 슬롯 폴백. ⚠️ 신코드 배포 전 적용 필수 — 미적용 상태에서 지도보고서 저장 시 upsert 실패. 소비처: RecordFormModal.jsx, bookingApi.saveRecord, supabaseHelpers.toBookingCounselingRecord | 적용 (2026-08-20) |
 
 ## 시드·일회성 유틸 (재실행 금지 또는 불필요)
 

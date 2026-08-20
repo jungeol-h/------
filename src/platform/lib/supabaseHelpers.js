@@ -140,6 +140,8 @@ export const toCounselingRecord = (row) => ({
 // 상담보고 리스트·월간 보고서·통계가 counseling_records와 합쳐 소비한다.
 // source: 'booking' — 상담보고 화면에서 수정·삭제 금지(예약 화면이 원본).
 // 유형은 프로그램명으로 추정: '진로' 포함 → 진로진학, 그 외 → 교과학습.
+// 시간은 지도보고서에 작성된 실제 상담 시간(start_time/end_time) 우선, 미입력(구 기록)은
+// 예약 슬롯 시간 폴백 — "집계는 예약 기준이 아니라 작성 결과 기준"(2026-08-20 클라).
 export const toBookingCounselingRecord = (row) => {
   const slot = row.booking_reservations?.booking_slots ?? null
   const hhmm = (v) => (v ? String(v).slice(0, 5) : '')
@@ -158,8 +160,8 @@ export const toBookingCounselingRecord = (row) => {
     followUp: row.follow_up ?? '',
     note: row.note ?? '',
     nextAppointment: row.next_appointment ?? '',
-    startTime: hhmm(slot?.start_time),
-    endTime: hhmm(slot?.end_time),
+    startTime: hhmm(row.start_time) || hhmm(slot?.start_time),
+    endTime: hhmm(row.end_time) || hhmm(slot?.end_time),
     attachments: [],
     source: 'booking',
   }
