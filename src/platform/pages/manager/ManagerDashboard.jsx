@@ -16,6 +16,7 @@ import AttendanceTab from './AttendanceTab.jsx'
 import KioskPage from './KioskPage.jsx'
 import StudentDetailPage from '../shared/StudentDetailPage.jsx'
 import EducatorBookingTab from '../educator/EducatorBookingTab.jsx'
+import StaffAttendancePage from '../shared/StaffAttendancePage.jsx'
 
 const TABS = [
   { path: '/manager/home', label: '홈', icon: Home },
@@ -62,6 +63,12 @@ export default function ManagerDashboard() {
       <Route path="attendance" element={
         <PageLayout title="학습매니저" badge={unresolved} tabs={TABS} wide>
           <AttendanceTab />
+        </PageLayout>
+      } />
+      {/* 강사 출근부 — 교직원 키오스크 출퇴근 월간 표 */}
+      <Route path="staff-attendance" element={
+        <PageLayout title="학습매니저" badge={unresolved} tabs={TABS} wide>
+          <StaffAttendancePage />
         </PageLayout>
       } />
       <Route path="*" element={

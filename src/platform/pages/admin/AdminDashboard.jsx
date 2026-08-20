@@ -16,6 +16,7 @@ import StudentDetailPage from '../shared/StudentDetailPage.jsx'
 import KioskPage from '../manager/KioskPage.jsx'
 import AttendanceTab from '../manager/AttendanceTab.jsx'
 import AdminBookingTab from './AdminBookingTab.jsx'
+import StaffAttendancePage from '../shared/StaffAttendancePage.jsx'
 
 // '업무계획'+'업무보고' 탭은 '업무기록' 통합 탭(5메뉴)으로 합쳐짐 (2026-07 클라이언트 요청)
 // '예약' 탭은 컨설팅·코칭 예약 시스템 — 내부 5메뉴(운영현황·예약현황·타임테이블·프로그램·이력)
@@ -73,6 +74,12 @@ export default function AdminDashboard() {
       <Route path="attendance" element={
         <PageLayout title="관리자" tabs={TABS} wide>
           <AttendanceTab />
+        </PageLayout>
+      } />
+      {/* 강사 출근부 — 교직원 키오스크 출퇴근 월간 표 */}
+      <Route path="staff-attendance" element={
+        <PageLayout title="관리자" tabs={TABS} wide>
+          <StaffAttendancePage />
         </PageLayout>
       } />
       <Route path="*" element={

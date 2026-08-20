@@ -32,6 +32,41 @@ export function useAttendanceDomain(setData) {
     }))
   }, [])
 
+  // 교직원 키오스크 번호(전화번호 뒷 4자리) 매칭 — 학생과 완전히 분리된
+  // staff_attendance_records 조회. role: admin/manager/instructor/consultant.
+  // 로컬 data 컬렉션에 안 실리므로 setData 동기화 없음(scripts/add-staff-attendance.sql).
+  const kioskFindStaff = useCallback(async (digits) => {
+    const { data, error } = await supabase.rpc('kiosk_find_staff', { p_digits: digits })
+    if (error) throw error
+    return (data ?? []).map((row) => ({
+      id: row.id,
+      name: row.name,
+      role: row.role,
+      checkedIn: row.checked_in ?? false,
+      checkedOut: row.checked_out ?? false,
+    }))
+  }, [])
+
+  // 교직원 출근 — 시간표/지각 판정 없는 순수 기록. { result: 'ok'|'already_in', reentry }
+  const kioskStaffCheckIn = useCallback(async (staffId) => {
+    const { data, error } = await withWriteRetry(
+      () => supabase.rpc('kiosk_staff_check_in', { p_staff_id: staffId }),
+      { label: 'kioskStaffCheckIn' }
+    )
+    if (error) throw error
+    return { result: data?.result, reentry: data?.reentry ?? false }
+  }, [])
+
+  // 교직원 퇴근. { result: 'ok'|'no_check_in' }
+  const kioskStaffCheckOut = useCallback(async (staffId) => {
+    const { data, error } = await withWriteRetry(
+      () => supabase.rpc('kiosk_staff_check_out', { p_staff_id: staffId }),
+      { label: 'kioskStaffCheckOut' }
+    )
+    if (error) throw error
+    return { result: data?.result }
+  }, [])
+
   // RPC 결과의 record(jsonb)를 로컬 attendanceRecords에 반영
   const applyRecord = useCallback(
     (recordRow) => {
@@ -201,6 +236,9 @@ export function useAttendanceDomain(setData) {
     kioskFindStudents,
     kioskCheckIn,
     kioskCheckOut,
+    kioskFindStaff,
+    kioskStaffCheckIn,
+    kioskStaffCheckOut,
     updateAttendance,
     createManualAttendance,
     resolveAttendanceNotification,
