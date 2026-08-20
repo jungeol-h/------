@@ -9,10 +9,13 @@
 //
 // 그룹 상담 fan-out(학생별 개별 행)은 sessionKey로 병합해 근무시간에 1회만 센다.
 import { educatorDisplayName } from '../../utils/educatorName.js'
-import { durationMinutes, sessionKey } from './monthlyCounselingReport.js'
+import {
+  sessionKey, CAREER_COUNSELING_TYPES, snapMinutes, sessionMinutesOf,
+} from './monthlyCounselingReport.js'
 
-// 진로진학 컨설팅으로 집계하는 상담유형 (구 체계 '진로' 포함)
-export const CAREER_COUNSELING_TYPES = ['career_path', 'career']
+// CAREER_COUNSELING_TYPES/snapMinutes/sessionMinutesOf의 정본은 monthlyCounselingReport.js —
+// 여기서 동명으로 re-export해 기존 소비처·테스트의 import 경로를 보존한다.
+export { CAREER_COUNSELING_TYPES, snapMinutes, sessionMinutesOf }
 
 export const COUNSELING_CATEGORIES = {
   career: { label: '진로진학 컨설팅', unitMinutes: 40, fallbackMinutes: 40 },
@@ -20,17 +23,6 @@ export const COUNSELING_CATEGORIES = {
 }
 
 export const LESSON_CATEGORY = { label: '교과 수업', unitMinutes: 60, fallbackMinutes: 60 }
-
-// 50~70분 → 60분 스냅. 그 외 구간은 실측 분 그대로.
-export function snapMinutes(minutes) {
-  return minutes >= 50 && minutes <= 70 ? 60 : minutes
-}
-
-// 세션 1건의 집계 분 — 시간 미입력·역전은 fallback(최소 단위).
-export function sessionMinutesOf(startTime, endTime, fallbackMinutes) {
-  const d = durationMinutes(startTime, endTime)
-  return d == null ? fallbackMinutes : snapMinutes(d)
-}
 
 // 분 → '12시간 40분' (시 없으면 '40분', 0분이면 '0분')
 export function minutesToText(minutes) {

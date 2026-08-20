@@ -75,6 +75,15 @@ describe('buildMonthlyCounselingStats', () => {
     expect(career).toMatchObject({ sessions: 2, minutes: 80, hours: 2 })
   })
 
+  it('assessment(검사 결과 분석 상담)도 진로진학 컨설팅으로 집계 — 2026-08-20 (황광희 진로진학 미집계 버그 수정)', () => {
+    const records = [
+      { id: 'r1', studentId: 's1', educatorId: 'e1', date: '2026-07-04', type: 'assessment', startTime: '14:00', endTime: '14:40', ...base },
+    ]
+    const { rows } = buildMonthlyCounselingStats(records, educators, '2026-07')
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({ category: '진로진학 컨설팅', sessions: 1, minutes: 40, hours: 1 })
+  })
+
   it('그룹 상담 fan-out은 1세션으로 센다', () => {
     const session = { date: '2026-07-04', type: 'subject_learning', startTime: '14:00', endTime: '14:20', ...base }
     const records = [

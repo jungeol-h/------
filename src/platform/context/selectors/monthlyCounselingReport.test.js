@@ -4,10 +4,14 @@ import {
   formatAmPm,
   durationMinutes,
   hoursFromMinutes,
+  unitsFromMinutes,
   formatCounselingDateTime,
   formatCompactDateTime,
   currentMonthRange,
   buildMonthlyCounselingEntries,
+  CAREER_COUNSELING_TYPES,
+  snapMinutes,
+  sessionMinutesOf,
 } from './monthlyCounselingReport.js'
 
 describe('formatKoreanDate', () => {
@@ -65,6 +69,41 @@ describe('hoursFromMinutes', () => {
   it('음수·비정상 입력은 0분 취급', () => {
     expect(hoursFromMinutes(-10)).toBe(0)
     expect(hoursFromMinutes(undefined)).toBe(0)
+  })
+})
+
+describe('unitsFromMinutes', () => {
+  it('40분=1T, 잔여 20분 이상 올림', () => {
+    expect(unitsFromMinutes(0)).toBe(0)
+    expect(unitsFromMinutes(19)).toBe(0)
+    expect(unitsFromMinutes(20)).toBe(1)
+    expect(unitsFromMinutes(40)).toBe(1)
+    expect(unitsFromMinutes(59)).toBe(1)
+    expect(unitsFromMinutes(60)).toBe(2)
+  })
+
+  it('음수·비정상 입력은 0분 취급', () => {
+    expect(unitsFromMinutes(-10)).toBe(0)
+    expect(unitsFromMinutes(undefined)).toBe(0)
+  })
+
+  it('1,090분 → 27T (실DB 검증 케이스, 2026-08-20)', () => {
+    expect(unitsFromMinutes(1090)).toBe(27)
+  })
+})
+
+describe('CAREER_COUNSELING_TYPES', () => {
+  it('assessment(검사) 포함 — 황광희 진로진학 컨설팅 집계용', () => {
+    expect(CAREER_COUNSELING_TYPES).toEqual(['career_path', 'career', 'assessment'])
+  })
+})
+
+describe('snapMinutes / sessionMinutesOf', () => {
+  it('50~70분은 60분으로 스냅, 시간 미입력·역전은 fallback', () => {
+    expect(snapMinutes(60)).toBe(60)
+    expect(snapMinutes(20)).toBe(20)
+    expect(sessionMinutesOf('', '', 40)).toBe(40)
+    expect(sessionMinutesOf('14:00', '14:47', 20)).toBe(47)
   })
 })
 
@@ -185,17 +224,36 @@ describe('buildMonthlyCounselingEntries', () => {
     expect(entries[0].cumulativeText).toBe('김학생 2회차 · 이학생 1회차')
   })
 
-  it('총시수 — 세션 단위 분 합산의 시수 환산, 시간 미기록 건은 0분', () => {
-    const session = { date: '2026-07-11', startTime: '14:00', endTime: '15:10', ...base } // 70분 (fan-out 1회만 합산)
+  it('총시간 — 세션 단위 월간보고서 집계 규칙(스냅·폴백)으로 분 합산, totalUnits는 40분=1T', () => {
+    const session = { date: '2026-07-11', startTime: '14:00', endTime: '15:10', ...base } // 70분→스냅 60분 (fan-out 1회만 합산)
     const records = [
-      { id: 'r1', studentId: 's1', educatorId: 'e1', date: '2026-07-04', startTime: '14:00', endTime: '14:20', ...base }, // 20분
+      { id: 'r1', studentId: 's1', educatorId: 'e1', date: '2026-07-04', startTime: '14:00', endTime: '14:20', ...base }, // 20분(그 외 유형)
       { id: 'r2', studentId: 's1', educatorId: 'e1', ...session },
       { id: 'r3', studentId: 's2', educatorId: 'e1', ...session },
-      { id: 'r4', studentId: 's2', educatorId: 'e1', date: '2026-07-18', ...base, topic: '시간 미기록' }, // 0분
+      // 시간 미기록, type 없음(그 외 유형) → 폴백 20분
+      { id: 'r4', studentId: 's2', educatorId: 'e1', date: '2026-07-18', ...base, topic: '시간 미기록' },
     ]
-    const { totalCount, totalHours } = buildMonthlyCounselingEntries(records, getStudent, opts)
+    const { totalCount, totalMinutes, totalUnits } = buildMonthlyCounselingEntries(records, getStudent, opts)
     expect(totalCount).toBe(3)
-    expect(totalHours).toBe(2) // 20+70=90분 → 2시수
+    expect(totalMinutes).toBe(20 + 60 + 20) // 100분
+    expect(totalUnits).toBe(3) // 100분 → 2T(80분)+잔여20분 이상 올림 = 3T
+  })
+
+  it('진로진학(career_path/career/assessment) 세션은 시간 미기록 시 40분 폴백으로 집계', () => {
+    const records = [
+      { id: 'r1', studentId: 's1', educatorId: 'e1', date: '2026-07-04', type: 'assessment', startTime: '', endTime: '', ...base },
+    ]
+    const { totalMinutes, totalUnits } = buildMonthlyCounselingEntries(records, getStudent, opts)
+    expect(totalMinutes).toBe(40)
+    expect(totalUnits).toBe(1)
+  })
+
+  it('세션 실측 50~70분은 60분으로 스냅되어 집계된다', () => {
+    const records = [
+      { id: 'r1', studentId: 's1', educatorId: 'e1', date: '2026-07-04', startTime: '14:00', endTime: '15:05', ...base }, // 65분
+    ]
+    const { totalMinutes } = buildMonthlyCounselingEntries(records, getStudent, opts)
+    expect(totalMinutes).toBe(60)
   })
 
   it('그룹 상담 회차가 전원 동일하면 "각 N회차"로 압축', () => {
@@ -240,6 +298,8 @@ describe('buildMonthlyCounselingEntries', () => {
     const { entries } = buildMonthlyCounselingEntries(records, getStudent, opts)
     expect(entries[0].studentName).toBe('-')
     expect(entries[0].schoolGrade).toBe('')
-    expect(buildMonthlyCounselingEntries([], getStudent, opts)).toEqual({ entries: [], totalCount: 0, totalHours: 0 })
+    expect(buildMonthlyCounselingEntries([], getStudent, opts)).toEqual({
+      entries: [], totalCount: 0, totalMinutes: 0, totalUnits: 0,
+    })
   })
 })
