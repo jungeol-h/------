@@ -1,6 +1,9 @@
 // 등·하원 키오스크 — 센터 공용 태블릿용 전체화면 (Header/TabBar 없음).
 // 학생이 전화번호 뒷 4자리 입력 → 본인 이름 확인 → 등원/하원.
 // 지각·조퇴 판정은 서버 RPC가 DB 시각으로 한다. 여기서는 입력·표시만.
+// 같은 화면에서 교직원(admin/manager/instructor/consultant) 출퇴근도 함께 받는다
+// (kiosk_find_staff 등 — scripts/add-staff-attendance.sql). 교직원 조회는 마이그레이션
+// 미적용이어도 학생 흐름이 깨지지 않도록 항상 .catch(() => [])로 감싼다.
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
@@ -8,6 +11,13 @@ import { Delete, X, LogIn, LogOut, CheckCircle2, AlertCircle, Loader } from 'luc
 import { useData } from '../../context/DataContext.jsx'
 
 const RESET_DELAY_MS = 3000
+
+const STAFF_ROLE_LABEL = {
+  admin: '센터장',
+  manager: '매니저',
+  instructor: '강사',
+  consultant: '컨설턴트',
+}
 
 // RPC 결과 → 결과 화면 문구
 function checkInMessage(student, { result, corrected, noSchedule, reentry }) {
@@ -25,6 +35,18 @@ function checkOutMessage(student, { result }) {
   return { tone: 'ok', text: `${student.name}님 하원 완료` }
 }
 
+// 교직원 출퇴근 결과 문구
+function staffCheckInMessage(staff, { result, reentry }) {
+  if (result === 'already_in') return { tone: 'info', text: `${staff.name}님은 이미 출근 상태입니다` }
+  if (reentry) return { tone: 'ok', text: `${staff.name}님 재출근이 기록되었습니다` }
+  return { tone: 'ok', text: `${staff.name}님 출근이 기록되었습니다` }
+}
+
+function staffCheckOutMessage(staff, { result }) {
+  if (result === 'no_check_in') return { tone: 'error', text: '출근 기록이 없어 퇴근 처리할 수 없습니다' }
+  return { tone: 'ok', text: `${staff.name}님 퇴근이 기록되었습니다` }
+}
+
 const TONE_STYLES = {
   ok: 'bg-emerald-50 text-emerald-700',
   warn: 'bg-yellow-50 text-yellow-700',
@@ -35,7 +57,10 @@ const TONE_STYLES = {
 export default function KioskPage() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
-  const { kioskFindStudents, kioskCheckIn, kioskCheckOut } = useData()
+  const {
+    kioskFindStudents, kioskCheckIn, kioskCheckOut,
+    kioskFindStaff, kioskStaffCheckIn, kioskStaffCheckOut,
+  } = useData()
   // /admin·/manager·/instructor·/consultant/kiosk 어디에나 마운트된다 — 종료 시 각자 첫 화면으로.
   const exitTo =
     pathname.startsWith('/admin') ? '/admin/home'
@@ -46,6 +71,7 @@ export default function KioskPage() {
   const [digits, setDigits] = useState('')
   const [step, setStep] = useState('input')
   const [candidates, setCandidates] = useState([])
+  const [staffCandidates, setStaffCandidates] = useState([])
   const [message, setMessage] = useState(null) // { tone, text }
   const [busy, setBusy] = useState(false)
   const resetTimer = useRef(null)
@@ -55,6 +81,7 @@ export default function KioskPage() {
     setDigits('')
     setStep('input')
     setCandidates([])
+    setStaffCandidates([])
     setMessage(null)
     setBusy(false)
   }, [])
@@ -71,11 +98,16 @@ export default function KioskPage() {
   const search = async (fourDigits) => {
     setBusy(true)
     try {
-      const found = await kioskFindStudents(fourDigits)
-      if (found.length === 0) {
+      // 교직원 조회는 마이그레이션 미적용 시에도 학생 흐름이 절대 깨지지 않게 감싼다.
+      const [found, foundStaff] = await Promise.all([
+        kioskFindStudents(fourDigits),
+        kioskFindStaff(fourDigits).catch(() => []),
+      ])
+      if (found.length === 0 && foundStaff.length === 0) {
         showResult({ tone: 'error', text: '해당 번호의 학생이 없어요. 다시 확인해 주세요.' })
       } else {
         setCandidates(found)
+        setStaffCandidates(foundStaff)
         setStep('select')
       }
     } catch {
@@ -111,6 +143,32 @@ export default function KioskPage() {
     try {
       const res = await kioskCheckOut(student.id)
       showResult(checkOutMessage(student, res))
+    } catch {
+      showResult({ tone: 'error', text: '처리에 실패했어요. 다시 시도해 주세요.' })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleStaffCheckIn = async (staff) => {
+    if (busy) return
+    setBusy(true)
+    try {
+      const res = await kioskStaffCheckIn(staff.id)
+      showResult(staffCheckInMessage(staff, res))
+    } catch {
+      showResult({ tone: 'error', text: '처리에 실패했어요. 다시 시도해 주세요.' })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleStaffCheckOut = async (staff) => {
+    if (busy) return
+    setBusy(true)
+    try {
+      const res = await kioskStaffCheckOut(staff.id)
+      showResult(staffCheckOutMessage(staff, res))
     } catch {
       showResult({ tone: 'error', text: '처리에 실패했어요. 다시 시도해 주세요.' })
     } finally {
@@ -224,6 +282,42 @@ export default function KioskPage() {
                 {s.checkedOut && (
                   <p className="text-center text-[11px] text-gray-400">
                     하원 완료 상태예요 · 다시 등원하려면 재등원을 눌러 주세요
+                  </p>
+                )}
+              </div>
+            ))}
+            {staffCandidates.map((st) => (
+              <div key={st.id} className="bg-white rounded-2xl p-4 shadow-sm space-y-3 border border-indigo-100">
+                <div className="text-center">
+                  <p className="text-xl font-bold text-gray-900">
+                    {st.name}
+                    <span className="ml-1.5 align-middle text-[11px] font-bold text-indigo-500 bg-indigo-50 rounded-full px-2 py-0.5">
+                      {STAFF_ROLE_LABEL[st.role] ?? '교직원'}
+                    </span>
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleStaffCheckIn(st)}
+                    disabled={busy || st.checkedIn}
+                    className="flex-1 h-16 rounded-xl bg-indigo-500 text-white text-lg font-bold flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <LogIn size={22} /> 출근
+                  </button>
+                  <button
+                    onClick={() => handleStaffCheckOut(st)}
+                    disabled={busy || !st.checkedIn}
+                    className="flex-1 h-16 rounded-xl bg-emerald-500 text-white text-lg font-bold flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <LogOut size={22} /> 퇴근
+                  </button>
+                </div>
+                {st.checkedIn && !st.checkedOut && (
+                  <p className="text-center text-[11px] text-gray-400">출근 완료 상태예요</p>
+                )}
+                {st.checkedOut && (
+                  <p className="text-center text-[11px] text-gray-400">
+                    퇴근 완료 상태예요 · 다시 출근하려면 출근을 눌러 주세요
                   </p>
                 )}
               </div>

@@ -16,6 +16,9 @@ const ingestAttendanceNotification = vi.fn()
 const kioskFindStudents = vi.fn()
 const kioskCheckIn = vi.fn()
 const kioskCheckOut = vi.fn()
+const kioskFindStaff = vi.fn()
+const kioskStaffCheckIn = vi.fn()
+const kioskStaffCheckOut = vi.fn()
 
 // 오늘 날짜 기준 데이터 — 셀렉터가 로컬 날짜를 쓰므로 UTC(toISOString)가 아닌 로컬로 생성
 const now = new Date()
@@ -70,6 +73,9 @@ vi.mock('../../context/DataContext.jsx', () => ({
     kioskFindStudents,
     kioskCheckIn,
     kioskCheckOut,
+    kioskFindStaff,
+    kioskStaffCheckIn,
+    kioskStaffCheckOut,
   }),
 }))
 
@@ -83,6 +89,7 @@ vi.mock('../../lib/supabase.js', () => ({
 
 beforeEach(() => {
   vi.clearAllMocks()
+  kioskFindStaff.mockResolvedValue([])
 })
 
 describe('AttendanceTab', () => {

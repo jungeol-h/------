@@ -12,7 +12,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Siren, X, MonitorSmartphone, FileSpreadsheet, CalendarOff,
-  CalendarRange, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Clock3,
+  CalendarRange, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Clock3, ClipboardList,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
@@ -279,6 +279,13 @@ export default function AttendanceTab() {
             휴무기간 관리
           </button>
         )}
+        <button
+          onClick={() => navigate(isAdmin ? '/admin/staff-attendance' : '/manager/staff-attendance')}
+          className="px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-600 flex items-center gap-1.5 active:scale-95 transition-all"
+        >
+          <ClipboardList size={15} className="text-indigo-400" />
+          강사 출근부
+        </button>
         <button
           onClick={() => setExcelOpen(true)}
           className="px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-600 flex items-center gap-1.5 active:scale-95 transition-all"
