@@ -158,6 +158,9 @@ export function toBookingRecord(row) {
     followUp: row.follow_up ?? '',
     note: row.note ?? '',
     nextAppointment: row.next_appointment ?? '',
+    // 실제 상담 시간('HH:MM') — 미입력(구 기록)은 빈 문자열, 소비처가 슬롯 시간으로 폴백
+    startTime: row.start_time ?? '',
+    endTime: row.end_time ?? '',
     completedAt: row.completed_at ?? null,
     createdAt: row.created_at,
   }
@@ -685,6 +688,9 @@ export async function saveRecord(input, actor) {
     follow_up: input.followUp ?? '',
     note: input.note ?? '',
     next_appointment: input.nextAppointment ?? '',
+    // 실제 상담 시간 — 집계는 예약 슬롯이 아닌 작성된 시간 기준(2026-08-20 클라 요청)
+    start_time: input.startTime ?? null,
+    end_time: input.endTime ?? null,
     // 작성 완료 시각 — 기한 초과 작성 판정용 (7일 지평의 저위험 판정이라 클라 시각 허용)
     completed_at: done ? new Date().toISOString() : null,
   }
