@@ -197,6 +197,23 @@ export function toBookingAuditLog(row) {
 
 // ─── 조회 ─────────────────────────────────────────────────────
 
+// PostgREST는 서버 max-rows(기본 1000행)에서 응답을 조용히 자른다 — 2026-08-31
+// 관리자 예약현황 누락 사태(윈도 내 예약 1022건 중 22건 증발)의 원인.
+// 1000행을 넘을 수 있는 조회는 전부 이 헬퍼로 페이지를 이어 붙인다.
+// makeQuery는 호출마다 새 쿼리를 만들어야 하며(빌더는 range로 변형됨),
+// 페이지 경계가 흔들리지 않도록 고유 컬럼(id) 정렬을 포함해야 한다.
+const FETCH_PAGE_SIZE = 1000
+
+async function fetchAllPages(makeQuery) {
+  const rows = []
+  for (let offset = 0; ; offset += FETCH_PAGE_SIZE) {
+    const { data, error } = await makeQuery().range(offset, offset + FETCH_PAGE_SIZE - 1)
+    if (error) throw error
+    rows.push(...(data ?? []))
+    if (!data || data.length < FETCH_PAGE_SIZE) return rows
+  }
+}
+
 // 타임블럭 템플릿 기본값 — 클라이언트 고정 운영시간 (2026-07-27 요청).
 // 슬롯 단위(40분/20분)는 프로그램(slotMinutes)이 정하고, 템플릿은 요일·시간창만 담는다.
 export const DEFAULT_TIMETABLE_TEMPLATES = [
@@ -242,56 +259,60 @@ export async function fetchBookingConfig() {
 
 // 기간 슬롯 조회. filters: { educatorId, programId, statuses, publicOnly }
 export async function fetchSlots({ from, to, educatorId, programId, statuses, publicOnly } = {}) {
-  let q = supabase.from('booking_slots').select('*')
-  if (from) q = q.gte('date', from)
-  if (to) q = q.lte('date', to)
-  if (educatorId) q = q.eq('educator_id', educatorId)
-  if (programId) q = q.eq('program_id', programId)
-  if (statuses?.length) q = q.in('status', statuses)
-  if (publicOnly) q = q.eq('is_public', true)
-  const { data, error } = await q.order('date').order('start_time')
-  if (error) throw error
-  return (data ?? []).map(toBookingSlot)
+  const rows = await fetchAllPages(() => {
+    let q = supabase.from('booking_slots').select('*')
+    if (from) q = q.gte('date', from)
+    if (to) q = q.lte('date', to)
+    if (educatorId) q = q.eq('educator_id', educatorId)
+    if (programId) q = q.eq('program_id', programId)
+    if (statuses?.length) q = q.in('status', statuses)
+    if (publicOnly) q = q.eq('is_public', true)
+    return q.order('date').order('start_time').order('id')
+  })
+  return rows.map(toBookingSlot)
 }
 
 // 예약 조회 — 슬롯을 내장 조인으로 함께 가져온다 (기간 필터는 슬롯 date 기준)
 export async function fetchReservations({ from, to, studentId, studentIds, educatorId, slotIds } = {}) {
-  let q = supabase.from('booking_reservations').select('*, slot:booking_slots!inner(*)')
-  if (from) q = q.gte('booking_slots.date', from)
-  if (to) q = q.lte('booking_slots.date', to)
-  if (studentId) q = q.eq('student_id', studentId)
-  if (studentIds?.length) q = q.in('student_id', studentIds)
-  if (educatorId) q = q.eq('booking_slots.educator_id', educatorId)
-  if (slotIds?.length) q = q.in('slot_id', slotIds)
-  const { data, error } = await q
-  if (error) throw error
-  return (data ?? []).map(toBookingReservation)
+  const rows = await fetchAllPages(() => {
+    let q = supabase.from('booking_reservations').select('*, slot:booking_slots!inner(*)')
+    if (from) q = q.gte('booking_slots.date', from)
+    if (to) q = q.lte('booking_slots.date', to)
+    if (studentId) q = q.eq('student_id', studentId)
+    if (studentIds?.length) q = q.in('student_id', studentIds)
+    if (educatorId) q = q.eq('booking_slots.educator_id', educatorId)
+    if (slotIds?.length) q = q.in('slot_id', slotIds)
+    return q.order('id')
+  })
+  return rows.map(toBookingReservation)
 }
 
 export async function fetchRecords({ reservationIds, educatorId, from, to } = {}) {
-  let q = supabase.from('booking_records').select('*')
-  if (reservationIds?.length) q = q.in('reservation_id', reservationIds)
-  if (educatorId) q = q.eq('educator_id', educatorId)
-  if (from) q = q.gte('date', from)
-  if (to) q = q.lte('date', to)
-  const { data, error } = await q
-  if (error) throw error
-  return (data ?? []).map(toBookingRecord)
+  const rows = await fetchAllPages(() => {
+    let q = supabase.from('booking_records').select('*')
+    if (reservationIds?.length) q = q.in('reservation_id', reservationIds)
+    if (educatorId) q = q.eq('educator_id', educatorId)
+    if (from) q = q.gte('date', from)
+    if (to) q = q.lte('date', to)
+    return q.order('id')
+  })
+  return rows.map(toBookingRecord)
 }
 
 // 슬롯별 확정 예약 수 — 학생 화면의 잔여 정원 표시용.
 // 타 학생의 예약 내용을 노출하지 않도록 slot_id만 가져와 집계한다 (명세 3.1).
 export async function fetchSlotCounts({ from, to } = {}) {
-  let q = supabase
-    .from('booking_reservations')
-    .select('slot_id, slot:booking_slots!inner(date)')
-    .eq('status', 'confirmed')
-  if (from) q = q.gte('booking_slots.date', from)
-  if (to) q = q.lte('booking_slots.date', to)
-  const { data, error } = await q
-  if (error) throw error
+  const rows = await fetchAllPages(() => {
+    let q = supabase
+      .from('booking_reservations')
+      .select('slot_id, slot:booking_slots!inner(date)')
+      .eq('status', 'confirmed')
+    if (from) q = q.gte('booking_slots.date', from)
+    if (to) q = q.lte('booking_slots.date', to)
+    return q.order('id')
+  })
   const counts = {}
-  for (const row of data ?? []) {
+  for (const row of rows) {
     counts[row.slot_id] = (counts[row.slot_id] ?? 0) + 1
   }
   return counts
