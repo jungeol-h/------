@@ -24,36 +24,50 @@ export default function BookingOpsDashboard() {
   const [changeTarget, setChangeTarget] = useState(null)
   const [cancelTarget, setCancelTarget] = useState(null)
   const [recordTarget, setRecordTarget] = useState(null)
+  // 운영현황 블록 클릭 → 해당 건 상세목록 토글 (2026-08-31 클라이언트 요청)
+  const [openStat, setOpenStat] = useState(null)
 
   const studentName = (id) => userNames[id]?.name ?? id
   const educatorName = (id) => userNames[id]?.name ?? (id ? id : '미지정')
   const programName = (id) => config.programs.find((p) => p.id === id)?.name ?? id
 
   // ─── 당일 운영현황 (명세 15.1) ──────────────────────────────
+  // 블록별 상세목록에도 쓰므로 목록 자체를 컴포넌트 스코프에 둔다 (React Compiler 메모이즈).
+  const todays = reservations
+    .filter((r) => r.slot?.date === today)
+    .sort((a, b) => (a.slot.startTime < b.slot.startTime ? -1 : 1))
+  const todayConfirmed = todays.filter((r) => r.status === 'confirmed')
+  const todayCancelled = todays.filter((r) => r.status === 'cancelled')
+  const todayMoved = todays.filter((r) => r.status === 'moved')
+  const todayAbsent = todayConfirmed.filter((r) => r.attendanceStatus === 'absent')
+  const openSlotsToday = slots
+    .filter((s) => s.date === today && s.status === 'open')
+    .sort((a, b) => (a.startTime < b.startTime ? -1 : 1))
+  const countBySlotToday = {}
+  for (const r of todayConfirmed) {
+    countBySlotToday[r.slotId] = (countBySlotToday[r.slotId] ?? 0) + 1
+  }
+  const fullSlotsToday = openSlotsToday.filter((s) => (countBySlotToday[s.id] ?? 0) >= s.capacity)
+  const remainingSlotsToday = openSlotsToday.filter((s) => (countBySlotToday[s.id] ?? 0) < s.capacity)
+
   const todayStats = (() => {
-    const todays = reservations.filter((r) => r.slot?.date === today)
-    const confirmed = todays.filter((r) => r.status === 'confirmed')
     const perProgram = {}
     const perEducator = {}
-    const countBySlot = {}
-    for (const r of confirmed) {
+    for (const r of todayConfirmed) {
       perProgram[r.programId] = (perProgram[r.programId] ?? 0) + 1
       const eid = r.slot?.educatorId
       if (eid) perEducator[eid] = (perEducator[eid] ?? 0) + 1
-      countBySlot[r.slotId] = (countBySlot[r.slotId] ?? 0) + 1
     }
-    const openSlots = slots.filter((s) => s.date === today && s.status === 'open')
-    const seatTotal = openSlots.reduce((sum, s) => sum + s.capacity, 0)
-    const fullSlots = openSlots.filter((s) => (countBySlot[s.id] ?? 0) >= s.capacity).length
+    const seatTotal = openSlotsToday.reduce((sum, s) => sum + s.capacity, 0)
     return {
-      total: confirmed.length,
+      total: todayConfirmed.length,
       perProgram,
       perEducator,
-      fullSlots,
-      cancelled: todays.filter((r) => r.status === 'cancelled').length,
-      moved: todays.filter((r) => r.status === 'moved').length,
-      absent: confirmed.filter((r) => r.attendanceStatus === 'absent').length,
-      remaining: Math.max(0, seatTotal - confirmed.length),
+      fullSlots: fullSlotsToday.length,
+      cancelled: todayCancelled.length,
+      moved: todayMoved.length,
+      absent: todayAbsent.length,
+      remaining: Math.max(0, seatTotal - todayConfirmed.length),
     }
   })()
 
@@ -75,15 +89,16 @@ export default function BookingOpsDashboard() {
   const recordIssues = (() => {
     const dueSoon = []
     const overdue = []
-    let unwritten = 0 // 상담기록 미작성 전체 건수 (명세 15.1)
+    const unwrittenList = [] // 상담기록 미작성 전체 목록 (명세 15.1 — 블록 상세용)
     for (const r of reservations) {
       if (r.status !== 'confirmed' || r.attendanceStatus !== 'attended' || !r.slot) continue
       const state = recordState(r, records.find((x) => x.reservationId === r.id), r.slot.date)
-      if (state !== 'done' && state !== 'done_overdue' && state !== 'not_required') unwritten += 1
+      if (state !== 'done' && state !== 'done_overdue' && state !== 'not_required') unwrittenList.push(r)
       if (state === 'due_soon' || state === 'draft') dueSoon.push(r)
       else if (state === 'overdue') overdue.push(r)
     }
-    return { dueSoon, overdue, unwritten }
+    unwrittenList.sort((a, b) => (a.slot.date < b.slot.date ? -1 : 1))
+    return { dueSoon, overdue, unwrittenList, unwritten: unwrittenList.length }
   })()
 
   // ─── 일정 이상 (명세 15.2) ──────────────────────────────────
@@ -158,11 +173,18 @@ export default function BookingOpsDashboard() {
     return list
   })()
 
-  const statCard = (label, value, tone = 'text-gray-900') => (
-    <div className="bg-white rounded-xl shadow-sm p-3 text-center">
+  // 블록 클릭 → 상세목록 토글 (같은 블록 재클릭 시 닫힘)
+  const statCard = (key, label, value, tone = 'text-gray-900') => (
+    <button
+      type="button"
+      onClick={() => setOpenStat((cur) => (cur === key ? null : key))}
+      className={`bg-white rounded-xl shadow-sm p-3 text-center ${
+        openStat === key ? 'ring-2 ring-blue-300' : ''
+      }`}
+    >
       <p className={`text-xl font-bold ${tone}`}>{value}</p>
       <p className="text-[11px] text-gray-400 mt-0.5">{label}</p>
-    </div>
+    </button>
   )
 
   const issueList = (title, items, render, tone) => items.length > 0 && (
@@ -191,26 +213,83 @@ export default function BookingOpsDashboard() {
     >
       <span>{r.slot.date} {r.slot.startTime} · {studentName(r.studentId)} · {programName(r.programId)}</span>
       <span className="text-gray-400 flex-shrink-0 flex items-center gap-0.5">
-        {educatorName(r.slot.educatorId)} · {daysSince(r.slot.date)}일 경과
+        {educatorName(r.slot.educatorId)} · {daysSince(r.slot.date) === 0 ? '오늘' : `${daysSince(r.slot.date)}일 경과`}
         <ChevronRight size={14} />
       </span>
     </button>
   )
+
+  // 취소·변경 등 처리 액션이 없는 예약 행 (사유 표시)
+  const resStatic = (r) => (
+    <div key={r.id} className="bg-white rounded-lg shadow-sm px-3 py-2 text-xs text-gray-600 space-y-0.5">
+      <div className="flex items-center justify-between gap-2">
+        <span>{r.slot.startTime} · {studentName(r.studentId)} · {programName(r.programId)}</span>
+        <span className="text-gray-400 flex-shrink-0">{educatorName(r.slot.educatorId)}</span>
+      </div>
+      {r.cancelReason && <p className="text-[11px] text-gray-400">취소사유: {r.cancelReason}</p>}
+    </div>
+  )
+
+  // 슬롯 행 — 잔여/마감 좌석 현황
+  const slotLine = (s) => {
+    const booked = countBySlotToday[s.id] ?? 0
+    return (
+      <div key={s.id} className="bg-white rounded-lg shadow-sm px-3 py-2 text-xs text-gray-600 flex items-center justify-between gap-2">
+        <span>{s.startTime}~{s.endTime} · {programName(s.programId)} · {educatorName(s.educatorId)}</span>
+        <span className={`flex-shrink-0 font-bold ${booked >= s.capacity ? 'text-red-400' : 'text-emerald-500'}`}>
+          {booked >= s.capacity ? `마감 ${booked}/${s.capacity}` : `잔여 ${s.capacity - booked}/${s.capacity}`}
+        </span>
+      </div>
+    )
+  }
+
+  // 블록별 상세목록 정의 — items가 예약이면 클릭 시 출결 처리 모달로 이어진다
+  const STAT_DETAILS = {
+    total: { title: '오늘 확정 예약', items: todayConfirmed, render: resLine },
+    remaining: { title: '오늘 잔여 좌석 슬롯', items: remainingSlotsToday, render: slotLine },
+    fullSlots: { title: '오늘 마감 슬롯', items: fullSlotsToday, render: slotLine },
+    cancelled: { title: '오늘 취소', items: todayCancelled, render: resStatic },
+    moved: { title: '오늘 변경', items: todayMoved, render: resStatic },
+    absent: { title: '오늘 미참석', items: todayAbsent, render: resLine },
+    pending: { title: '출결 미처리 전체', items: pendingAttendance, render: resLine },
+    unwritten: { title: '상담기록 미작성 전체', items: recordIssues.unwrittenList, render: resLine },
+  }
+  const openDetail = openStat ? STAT_DETAILS[openStat] : null
 
   return (
     <div className="space-y-5">
       <section>
         <h4 className="text-xs font-bold text-gray-400 mb-2">오늘 운영현황 ({today})</h4>
         <div className="grid grid-cols-4 gap-2">
-          {statCard('오늘 예약', todayStats.total)}
-          {statCard('잔여 좌석', todayStats.remaining)}
-          {statCard('마감 슬롯', todayStats.fullSlots)}
-          {statCard('취소', todayStats.cancelled, todayStats.cancelled > 0 ? 'text-orange-500' : 'text-gray-900')}
-          {statCard('변경', todayStats.moved)}
-          {statCard('미참석', todayStats.absent, todayStats.absent > 0 ? 'text-red-500' : 'text-gray-900')}
-          {statCard('출결 미처리', pendingAttendance.length, pendingAttendance.length > 0 ? 'text-red-500' : 'text-gray-900')}
-          {statCard('기록 미작성', recordIssues.unwritten, recordIssues.unwritten > 0 ? 'text-orange-500' : 'text-gray-900')}
+          {statCard('total', '오늘 예약', todayStats.total)}
+          {statCard('remaining', '잔여 좌석', todayStats.remaining)}
+          {statCard('fullSlots', '마감 슬롯', todayStats.fullSlots)}
+          {statCard('cancelled', '취소', todayStats.cancelled, todayStats.cancelled > 0 ? 'text-orange-500' : 'text-gray-900')}
+          {statCard('moved', '변경', todayStats.moved)}
+          {statCard('absent', '미참석', todayStats.absent, todayStats.absent > 0 ? 'text-red-500' : 'text-gray-900')}
+          {statCard('pending', '출결 미처리', pendingAttendance.length, pendingAttendance.length > 0 ? 'text-red-500' : 'text-gray-900')}
+          {statCard('unwritten', '기록 미작성', recordIssues.unwritten, recordIssues.unwritten > 0 ? 'text-orange-500' : 'text-gray-900')}
         </div>
+        {openDetail && (
+          <div className="mt-2 rounded-xl bg-gray-50 border border-gray-100 p-2 space-y-1.5">
+            <div className="flex items-center justify-between px-1">
+              <p className="text-[11px] font-bold text-gray-500">{openDetail.title} ({openDetail.items.length}건)</p>
+              <button
+                type="button"
+                onClick={() => setOpenStat(null)}
+                className="text-[11px] font-bold text-gray-400"
+              >
+                닫기
+              </button>
+            </div>
+            <div className="space-y-1.5 max-h-72 overflow-y-auto">
+              {openDetail.items.map(openDetail.render)}
+              {openDetail.items.length === 0 && (
+                <p className="py-4 text-center text-xs text-gray-400">해당 건이 없습니다.</p>
+              )}
+            </div>
+          </div>
+        )}
         {(Object.keys(todayStats.perProgram).length > 0 || Object.keys(todayStats.perEducator).length > 0) && (
           <div className="mt-2 flex gap-2 flex-wrap">
             {Object.entries(todayStats.perProgram).map(([pid, n]) => (

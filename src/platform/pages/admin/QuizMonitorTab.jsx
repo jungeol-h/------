@@ -61,7 +61,7 @@ export default function QuizMonitorTab({ readOnly = false }) {
       scopedSets.filter(
         (s) =>
           (mySubject || activeSubject === '전체' || s.subject === activeSubject) &&
-          (activeGrade === '전체' || s.grade === activeGrade)
+          (activeGrade === '전체' || s.grade === activeGrade || s.grade === '전체')
       ),
     [scopedSets, mySubject, activeSubject, activeGrade]
   )

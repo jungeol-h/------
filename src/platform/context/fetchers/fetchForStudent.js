@@ -54,9 +54,9 @@ export async function fetchForStudent(userId) {
   const userRows = collectRows(userRes, 'users', errors)
   const me = userRows[0]
   const myGrade = me?.grade ?? ''
-  // 학생 본인 학년의 회차만 노출
+  // 학생 본인 학년 + '전체' 학년(전 학년 공통 회차) 노출
   const setsRes = myGrade
-    ? await supabase.from('quiz_sets').select('*').eq('grade', myGrade).eq('is_published', true).order('round')
+    ? await supabase.from('quiz_sets').select('*').in('grade', [myGrade, '전체']).eq('is_published', true).order('round')
     : { data: [] }
   const setRows = collectRows(setsRes, 'quiz_sets', errors)
   const setIds = setRows.map((s) => s.id)
