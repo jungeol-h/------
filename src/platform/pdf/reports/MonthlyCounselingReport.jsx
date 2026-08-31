@@ -9,7 +9,8 @@ import {
 // 서식 골격·페이지 분할 규칙은 components/CounselingFormLayout.jsx 주석 참조.
 // 양식 서식이라 브랜드 헤더(PageWrapper)는 쓰지 않는다. 페이지번호 render 콜백 금지(pdf/README.md).
 // props:
-//   header: { managerName, periodText, duty, schedule, totalUnits, totalMinutes }
+//   header: { managerName, periodText, duty, schedule, totalMinutes }
+//   시수(T) 칸은 두지 않는다 — 총시간(분)만 표기 (2026-08-31 클라 확정).
 //   entries: [{ no, studentName, schoolGrade, dateTimeText, cumulativeText,
 //               topic, diagnosis, advice, followUp, fallbackContent, note }]
 //             — selectors/monthlyCounselingReport.js buildMonthlyCounselingEntries 산출물.
@@ -20,9 +21,7 @@ export default function MonthlyCounselingReport({ header = {}, entries = [], log
       { width: '10%', text: '담당자', label: true },
       { width: '26%', text: header.managerName },
       { width: '10%', text: '작성기간', label: true },
-      { width: '34%', text: header.periodText },
-      { width: '8%', text: '시수', label: true },
-      { width: '12%', text: `${header.totalUnits ?? 0}T` },
+      { width: '54%', text: header.periodText },
     ],
     [
       { width: '10%', text: '담당업무', label: true },

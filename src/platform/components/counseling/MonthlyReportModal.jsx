@@ -108,9 +108,9 @@ export default function MonthlyReportModal({
     setEndDate(range[1])
   }, [datesTouched, loaded, educatorId, startDate, endDate, selectedTypes])
 
-  const { entries, totalCount, totalMinutes, totalUnits } = useMemo(() => {
+  const { entries, totalCount, totalMinutes } = useMemo(() => {
     if (!loaded || !educatorId || !startDate || !endDate) {
-      return { entries: [], totalCount: 0, totalMinutes: 0, totalUnits: 0 }
+      return { entries: [], totalCount: 0, totalMinutes: 0 }
     }
     return buildMonthlyCounselingEntries(loaded.records, loaded.getStudent, {
       educatorId,
@@ -181,7 +181,7 @@ export default function MonthlyReportModal({
       const pdfFilename = buildFilename(reportLabel, filenameIdentifier)
       const filename = pdfFilename.replace(/\.pdf$/, '.xlsx')
       await downloadCounselingReportExcel({
-        header: { managerName, periodText, duty, schedule, totalUnits, totalMinutes },
+        header: { managerName, periodText, duty, schedule, totalMinutes },
         entries,
         filename,
       })
@@ -334,7 +334,7 @@ export default function MonthlyReportModal({
             return {
               element: (
                 <MonthlyCounselingReport
-                  header={{ managerName, periodText, duty, schedule, totalUnits, totalMinutes }}
+                  header={{ managerName, periodText, duty, schedule, totalMinutes }}
                   entries={entries}
                 />
               ),

@@ -67,7 +67,7 @@ function metaText(entry) {
   return [subject, entry.dateTimeText, entry.cumulativeText].filter(Boolean).join('  ·  ')
 }
 
-// header: { managerName, periodText, duty, schedule, totalUnits, totalMinutes }
+// header: { managerName, periodText, duty, schedule, totalMinutes }
 // entries: buildMonthlyCounselingEntries 산출물 배열
 export async function downloadCounselingReportExcel({ header = {}, entries = [], filename }) {
   const ExcelJS = (await import('exceljs')).default
@@ -92,16 +92,18 @@ export async function downloadCounselingReportExcel({ header = {}, entries = [],
   titleRow.getCell(1).font = { bold: true, size: 16 }
   titleRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' }
 
-  // ② 헤더 표 2행 = MonthlyCounselingReport 6칸 구조
-  //   1행: 담당자 | managerName | 작성기간 | periodText | 시수 | {totalUnits}T
+  // ② 헤더 표 2행 = MonthlyCounselingReport 구조 (시수 칸 없음 — 총시간 분만)
+  //   1행: 담당자 | managerName | 작성기간 | periodText(4~6열 병합)
   //   2행: 담당업무 | duty | 업무일정 | schedule | 총시간 | {totalMinutes}분
-  const headerRow1 = ws.addRow(['담당자', header.managerName ?? '', '작성기간', header.periodText ?? '', '시수', `${header.totalUnits ?? 0}T`])
+  const headerRow1 = ws.addRow(['담당자', header.managerName ?? '', '작성기간', header.periodText ?? ''])
+  ws.mergeCells(headerRow1.number, 4, headerRow1.number, COL_COUNT)
   labelCell(headerRow1.getCell(1), '담당자')
   valueCell(headerRow1.getCell(2), header.managerName ?? '')
   labelCell(headerRow1.getCell(3), '작성기간')
   valueCell(headerRow1.getCell(4), header.periodText ?? '')
-  labelCell(headerRow1.getCell(5), '시수')
-  valueCell(headerRow1.getCell(6), `${header.totalUnits ?? 0}T`)
+  // 병합 범위 테두리는 구성 셀에도 직접 지정해야 우측 경계가 그려진다.
+  setBorders(headerRow1.getCell(5))
+  setBorders(headerRow1.getCell(6))
 
   const headerRow2 = ws.addRow(['담당업무', header.duty ?? '', '업무일정', header.schedule ?? '', '총시간', `${(header.totalMinutes ?? 0).toLocaleString('ko-KR')}분`])
   labelCell(headerRow2.getCell(1), '담당업무')

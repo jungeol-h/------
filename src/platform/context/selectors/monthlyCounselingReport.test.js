@@ -4,7 +4,6 @@ import {
   formatAmPm,
   durationMinutes,
   hoursFromMinutes,
-  unitsFromMinutes,
   formatCounselingDateTime,
   formatCompactDateTime,
   currentMonthRange,
@@ -69,26 +68,6 @@ describe('hoursFromMinutes', () => {
   it('음수·비정상 입력은 0분 취급', () => {
     expect(hoursFromMinutes(-10)).toBe(0)
     expect(hoursFromMinutes(undefined)).toBe(0)
-  })
-})
-
-describe('unitsFromMinutes', () => {
-  it('40분=1T, 잔여 20분 이상 올림', () => {
-    expect(unitsFromMinutes(0)).toBe(0)
-    expect(unitsFromMinutes(19)).toBe(0)
-    expect(unitsFromMinutes(20)).toBe(1)
-    expect(unitsFromMinutes(40)).toBe(1)
-    expect(unitsFromMinutes(59)).toBe(1)
-    expect(unitsFromMinutes(60)).toBe(2)
-  })
-
-  it('음수·비정상 입력은 0분 취급', () => {
-    expect(unitsFromMinutes(-10)).toBe(0)
-    expect(unitsFromMinutes(undefined)).toBe(0)
-  })
-
-  it('1,090분 → 27T (실DB 검증 케이스, 2026-08-20)', () => {
-    expect(unitsFromMinutes(1090)).toBe(27)
   })
 })
 
@@ -224,7 +203,7 @@ describe('buildMonthlyCounselingEntries', () => {
     expect(entries[0].cumulativeText).toBe('김학생 2회차 · 이학생 1회차')
   })
 
-  it('총시간 — 세션 단위 월간보고서 집계 규칙(스냅·폴백)으로 분 합산, totalUnits는 40분=1T', () => {
+  it('총시간 — 세션 단위 월간보고서 집계 규칙(스냅·폴백)으로 분 합산', () => {
     const session = { date: '2026-07-11', startTime: '14:00', endTime: '15:10', ...base } // 70분→스냅 60분 (fan-out 1회만 합산)
     const records = [
       { id: 'r1', studentId: 's1', educatorId: 'e1', date: '2026-07-04', startTime: '14:00', endTime: '14:20', ...base }, // 20분(그 외 유형)
@@ -233,10 +212,9 @@ describe('buildMonthlyCounselingEntries', () => {
       // 시간 미기록, type 없음(그 외 유형) → 폴백 20분
       { id: 'r4', studentId: 's2', educatorId: 'e1', date: '2026-07-18', ...base, topic: '시간 미기록' },
     ]
-    const { totalCount, totalMinutes, totalUnits } = buildMonthlyCounselingEntries(records, getStudent, opts)
+    const { totalCount, totalMinutes } = buildMonthlyCounselingEntries(records, getStudent, opts)
     expect(totalCount).toBe(3)
     expect(totalMinutes).toBe(20 + 60 + 20) // 100분
-    expect(totalUnits).toBe(3) // 100분 → 2T(80분)+잔여20분 이상 올림 = 3T
   })
 
   it('진로진학(career_path/career/assessment) 세션은 실측과 무관하게 회당 40분 정액으로 집계', () => {
@@ -245,9 +223,8 @@ describe('buildMonthlyCounselingEntries', () => {
       // 실측 80분이어도 정액 40분 (2026-08-20 클라: 총 상담 시간 = 40 × 상담횟수)
       { id: 'r2', studentId: 's1', educatorId: 'e1', date: '2026-07-05', type: 'career_path', startTime: '16:00', endTime: '17:20', ...base, topic: '주제2' },
     ]
-    const { totalMinutes, totalUnits } = buildMonthlyCounselingEntries(records, getStudent, opts)
+    const { totalMinutes } = buildMonthlyCounselingEntries(records, getStudent, opts)
     expect(totalMinutes).toBe(80)
-    expect(totalUnits).toBe(2)
   })
 
   it('세션 실측 50~70분은 60분으로 스냅되어 집계된다', () => {
@@ -301,7 +278,7 @@ describe('buildMonthlyCounselingEntries', () => {
     expect(entries[0].studentName).toBe('-')
     expect(entries[0].schoolGrade).toBe('')
     expect(buildMonthlyCounselingEntries([], getStudent, opts)).toEqual({
-      entries: [], totalCount: 0, totalMinutes: 0, totalUnits: 0,
+      entries: [], totalCount: 0, totalMinutes: 0,
     })
   })
 })
