@@ -1,6 +1,9 @@
-// 관리자 출결 처리 모달 — 운영현황(BookingOpsDashboard) 미처리 카드·예약현황
+// 출결 처리 모달 — 운영현황(BookingOpsDashboard) 미처리 카드·예약현황
 // (ReservationSearch) [출결] 버튼에서 진입. 리스트에서 바로 출석/결석 처리 +
 // 예약 변경·취소·상담기록 작성으로 이어지는 허브 (2026-08 클라이언트 요청).
+// 강사/매니저 '예약현황' 메뉴도 같은 경로로 진입한다(2026-08-31) — 학생 상세
+// 경로는 actor.role 기준. 같은 슬롯에 확정 예약이 여럿이면(그룹상담) 전원 참석
+// 일괄 처리 버튼을 노출한다 (명세 11.5 — 일괄 후 개별 수정 가능).
 //
 // onChangeReservation·onCancelReservation·onWriteRecord는 부모가 이 모달을 닫고
 // 각각의 모달(AdminChangeModal·AdminCancelModal·RecordFormModal)을 열도록 하는
@@ -24,7 +27,7 @@ const SUB_CHOICES = ATTENDANCE_CHOICES.filter((k) => !MAIN_CHOICES.includes(k))
 export default function AttendanceProcessModal({
   reservation: r, onClose, onChangeReservation, onCancelReservation, onWriteRecord,
 }) {
-  const { config, records, userNames, setAttendance } = useBooking()
+  const { config, records, reservations, userNames, setAttendance, actor } = useBooking()
   const navigate = useNavigate()
 
   // 기존 메모가 있으면 미리 채워 재처리 시에도 유실되지 않게 한다
@@ -51,6 +54,11 @@ export default function AttendanceProcessModal({
   const needsRecord = r.attendanceStatus === 'attended'
     && recState !== 'done' && recState !== 'done_overdue' && recState !== 'not_required'
 
+  // 같은 슬롯의 다른 확정 예약 = 그룹상담 동반 인원
+  const groupPeers = reservations.filter(
+    (x) => x.slotId === r.slotId && x.id !== r.id && x.status === 'confirmed',
+  )
+
   const mark = async (status) => {
     if (busy) return
     setBusy(true)
@@ -65,6 +73,25 @@ export default function AttendanceProcessModal({
       // 그 외 상태는 바로 닫는다 (afterWrite refetch로 미처리 리스트에서 자동 제거).
       if (status === 'attended') setSavedAttended(true)
       else onClose()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  // 그룹 전원 참석 — 실패 시 중단하고 코드 표시 (성공 건은 처리된 상태로 남는다)
+  const markAllAttended = async () => {
+    if (busy) return
+    setBusy(true)
+    setFailCode(null)
+    try {
+      for (const target of [r, ...groupPeers]) {
+        const result = await setAttendance({ reservationId: target.id, status: 'attended', note: note.trim() || null })
+        if (!result?.ok) {
+          setFailCode(result?.code ?? 'ERROR')
+          return
+        }
+      }
+      setSavedAttended(true)
     } finally {
       setBusy(false)
     }
@@ -147,6 +174,16 @@ export default function AttendanceProcessModal({
             <div className="grid grid-cols-2 gap-1.5">
               {MAIN_CHOICES.map((key) => choiceBtn(key, true))}
             </div>
+            {groupPeers.length > 0 && (
+              <button
+                type="button"
+                onClick={markAllAttended}
+                disabled={busy}
+                className="w-full h-9 rounded-lg bg-purple-600 text-white text-[11px] font-bold disabled:opacity-50"
+              >
+                그룹 전원 참석 처리 ({groupPeers.length + 1}명: {[r, ...groupPeers].map((x) => userNames[x.studentId]?.name ?? x.studentId).join(', ')})
+              </button>
+            )}
             <div className="grid grid-cols-4 gap-1.5">
               {SUB_CHOICES.map((key) => choiceBtn(key, false))}
             </div>
@@ -187,7 +224,7 @@ export default function AttendanceProcessModal({
         )}
         <button
           type="button"
-          onClick={() => navigate(`/admin/student/${r.studentId}`)}
+          onClick={() => navigate(`/${actor.role}/student/${r.studentId}`)}
           className="w-full h-8 rounded-lg bg-gray-100 text-gray-600 text-[11px] font-bold"
         >
           학생 상세 보기

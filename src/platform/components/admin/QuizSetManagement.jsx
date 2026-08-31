@@ -16,6 +16,7 @@ const GRADE_BADGE = {
   '중1': 'bg-sky-50 text-sky-700 border-sky-200',
   '중2': 'bg-violet-50 text-violet-700 border-violet-200',
   '중3': 'bg-rose-50 text-rose-700 border-rose-200',
+  '전체': 'bg-purple-50 text-purple-700 border-purple-200',
 }
 
 function formatDateKey(iso) {
