@@ -8,7 +8,8 @@ import {
 // 수업보고 필드(참여학생 복수·교재·과제)만 다르다. DataContext 의존 금지, 순수 props.
 // 페이지번호 render 콜백 금지·세로 flex:1 금지 (pdf/README.md · CounselingFormLayout 주석).
 // props:
-//   header: { managerName, periodText, duty, schedule, totalCount, totalHours }
+//   header: { managerName, periodText, duty, schedule, totalCount, totalMinutes }
+//   시수 칸은 두지 않는다 — 총시간(분)만 표기 (2026-09-09 클라, 컨설팅 보고서와 동일).
 //   entries: [{ no, studentNames, studentCountText, dateTimeText, cumulativeText,
 //               topic, textbook, content, homework, note }]
 //             — selectors/monthlyLessonReport.js buildMonthlyLessonEntries 산출물.
@@ -58,11 +59,11 @@ export default function MonthlyLessonReport({ header = {}, entries = [], logoSrc
       { width: '10%', text: '담당업무', label: true },
       { width: '30%', text: header.duty },
       { width: '10%', text: '업무일정', label: true },
-      { width: '21%', text: header.schedule },
+      { width: '17%', text: header.schedule },
       { width: '6%', text: '횟수', label: true },
       { width: '8%', text: `총 ${header.totalCount}회` },
-      { width: '7%', text: '총시수', label: true },
-      { width: '8%', text: `${header.totalHours ?? 0}시수` },
+      { width: '7%', text: '총시간', label: true },
+      { width: '12%', text: `${(header.totalMinutes ?? 0).toLocaleString('ko-KR')}분` },
     ],
   ]
 
