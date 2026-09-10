@@ -1,4 +1,4 @@
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, RefreshCw } from 'lucide-react'
 import Header from './Header.jsx'
 import TabBar from './TabBar.jsx'
 import NoticePopup from '../common/NoticePopup.jsx'
@@ -6,7 +6,7 @@ import { useData } from '../../context/DataContext.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
 
 export default function PageLayout({ title, badge, tabs, children, wide = false }) {
-  const { data } = useData()
+  const { data, refetch, refreshing } = useData()
   const { currentUser } = useAuth()
   const fetchErrors = data._fetchErrors ?? []
 
@@ -26,8 +26,18 @@ export default function PageLayout({ title, badge, tabs, children, wide = false 
                 일부 데이터를 불러오지 못했습니다 ({fetchErrors.length}개 항목)
               </p>
               <p className="text-[11px] text-red-600 mt-0.5">
-                화면을 새로고침해 주세요. 계속되면 관리자에게 문의하세요.
+                다시 불러오기를 눌러 주세요. 계속되면 관리자에게 문의하세요.
               </p>
+              {/* PWA는 브라우저 새로고침 UI가 없다 — 배너 안에서 직접 복구 수단 제공 */}
+              <button
+                type="button"
+                onClick={refetch}
+                disabled={refreshing}
+                className="mt-1.5 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-600 text-[11px] font-bold text-white active:scale-95 disabled:opacity-60 transition"
+              >
+                <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
+                {refreshing ? '불러오는 중…' : '다시 불러오기'}
+              </button>
             </div>
           </div>
         )}

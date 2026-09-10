@@ -12,6 +12,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { supabase } from '../lib/supabase.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { daysAgoStr, todayStr } from '../utils/dateUtils.js'
+import { useRevalidateOnResume } from '../hooks/useRevalidateOnResume.js'
 import { addDaysStr } from './bookingRules.js'
 import * as api from './bookingApi.js'
 
@@ -33,6 +34,10 @@ export function BookingProvider({ children }) {
   const [notifications, setNotifications] = useState([])
   const [userNames, setUserNames] = useState({})
   const aliveRef = useRef(true)
+  // 복귀 재검증용 — 마지막 성공 fetch 시각과 error 미러(stale 클로저 방지)
+  const lastLoadedAtRef = useRef(0)
+  const errorRef = useRef(null)
+  useEffect(() => { errorRef.current = error }, [error])
 
   const role = currentUser?.role
   const userId = currentUser?.id
@@ -139,6 +144,7 @@ export function BookingProvider({ children }) {
       setNotifications(payload.notif)
       setUserNames(payload.names)
       setError(null)
+      lastLoadedAtRef.current = Date.now()
     } catch (e) {
       if (aliveRef.current) setError(e)
     }
@@ -158,6 +164,15 @@ export function BookingProvider({ children }) {
     load()
     return () => { aliveRef.current = false }
   }, [refetch])
+
+  // 복귀 재검증 — 복귀·재연결 시 refetch. 조회 윈도(from/to)가 호출 시점의
+  // todayStr()로 재계산되므로 자정을 넘겨 열어둔 화면의 하루 밀림도 함께 해소된다.
+  // 에러 화면 상태면 staleness와 무관하게 즉시 재시도.
+  useRevalidateOnResume(refetch, {
+    enabled: Boolean(userId) && !loading,
+    getLastSuccessAt: () => lastLoadedAtRef.current,
+    force: () => errorRef.current != null,
+  })
 
   // 인앱 알림 실시간 수신 (manager/AttendanceTab.jsx의 Realtime 패턴)
   useEffect(() => {

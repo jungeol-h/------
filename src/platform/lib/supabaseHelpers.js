@@ -1,6 +1,7 @@
 // Supabase DB row(snake_case) → DataContext 형식(camelCase) 변환 헬퍼
 
 import { reportError } from './sentry.js'
+import { isTransientFetchMessage } from './supabaseRetry.js'
 
 export const toUser = (row) => ({
   id: row.id,
@@ -390,9 +391,31 @@ export const toNotice = (row) => ({
 // 동시에 Sentry로도 보내 개발자가 운영 중 즉시 인지하게 한다.
 export function collectRows(res, table, errors) {
   if (res?.error) {
-    errors.push({ table, message: res.error.message ?? String(res.error) })
-    reportError(res.error, { where: 'fetch', table })
+    const message = res.error.message ?? String(res.error)
+    const transient = isTransientFetchMessage(message)
+    errors.push({ table, message, code: res.error.code ?? null, transient })
+    // 일시적 네트워크 실패는 여기서 보고하지 않는다 — 상위(DataContext)가 백오프
+    // 재시도를 소진한 뒤 reportFinalFetchFailure로 1건만 보고한다. 재시도로
+    // 복구된 블립까지 시도마다 Sentry에 쌓이던 잡음(NAMEKE-8)의 원인이었다.
+    if (!transient) reportError(res.error, { where: 'fetch', table })
     return []
   }
   return res?.data ?? []
+}
+
+// 재시도 소진 후에도 남은 일시적 fetch 실패들을 1건으로 묶어 보고.
+// where 'fetch' + 첫 에러 code를 유지해 기존 Sentry 이슈
+// (fingerprint [where, code])와 같은 이슈로 이어진다.
+export function reportFinalFetchFailure(fetchErrors, extra) {
+  const transient = (fetchErrors ?? []).filter((e) => e.transient)
+  if (!transient.length) return
+  const captured = Object.assign(new Error(transient[0].message), {
+    name: 'SupabaseError',
+    code: transient[0].code ?? undefined,
+  })
+  reportError(captured, {
+    where: 'fetch',
+    tables: transient.map((e) => e.table),
+    ...(extra ?? {}),
+  })
 }
