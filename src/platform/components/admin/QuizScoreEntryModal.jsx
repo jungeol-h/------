@@ -7,7 +7,7 @@ import { isActiveStudent } from '../../data/studentStatus.js'
 export default function QuizScoreEntryModal({ quizSet, students, attempts, onUpsertScore, onClose }) {
   const targets = useMemo(
     () => students
-      .filter((s) => isActiveStudent(s) && s.grade === quizSet.grade)
+      .filter((s) => isActiveStudent(s) && (quizSet.grade === '전체' || s.grade === quizSet.grade))
       .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '', 'ko')),
     [students, quizSet.grade]
   )

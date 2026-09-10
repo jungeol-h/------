@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { X, Save } from 'lucide-react'
 import { QUIZ_SUBJECTS, DEFAULT_QUIZ_SUBJECT } from '../../utils/quizSubjects.js'
 
-const GRADE_OPTIONS = ['중1', '중2', '중3']
+const GRADE_OPTIONS = ['중1', '중2', '중3', '전체']
 
 // lockSubject: 강사는 자기 과목만 출제 — select를 본인 과목으로 고정
 export default function QuizSetEditModal({

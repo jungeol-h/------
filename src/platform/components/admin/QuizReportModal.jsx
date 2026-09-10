@@ -80,7 +80,7 @@ export default function QuizReportModal({
   const subjectGradeSets = useMemo(
     () =>
       quizSets.filter(
-        (s) => (subject === '전체' || s.subject === subject) && gradeSet.has(s.grade)
+        (s) => (subject === '전체' || s.subject === subject) && (gradeSet.has(s.grade) || s.grade === '전체')
       ),
     [quizSets, subject, gradeSet]
   )

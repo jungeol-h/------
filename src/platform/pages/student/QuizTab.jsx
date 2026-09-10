@@ -68,7 +68,7 @@ export default function QuizTab() {
   // 학생 본인 학년 + 선택 과목 회차만
   const mySets = useMemo(
     () => data.quizSets
-      .filter((s) => s.grade === myGrade && s.isPublished && (s.subject ?? '국어') === activeSubject)
+      .filter((s) => (s.grade === myGrade || s.grade === '전체') && s.isPublished && (s.subject ?? '국어') === activeSubject)
       .sort((a, b) => a.round - b.round),
     [data.quizSets, myGrade, activeSubject]
   )

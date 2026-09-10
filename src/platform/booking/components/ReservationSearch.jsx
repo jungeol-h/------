@@ -1,5 +1,7 @@
-// 관리자 예약현황 — 검색·필터(명세 15.3) + 대리 예약·취소·변경·예외 처리(명세 3.4·16).
+// 예약현황 — 검색·필터(명세 15.3) + 대리 예약·취소·변경·예외 처리(명세 3.4·16).
 // 예외(override) 처리는 반드시 사유를 입력해야 하며, RPC가 감사이력에 남긴다.
+// 관리자 예약 탭 외에 viewer(readOnly)·강사/매니저 '예약현황' 메뉴(canProxy=false,
+// 자기 예약만 스코프 fetch됨)에서도 재사용한다 — 2026-08-31 클라이언트 요청.
 
 import { useMemo, useRef, useState } from 'react'
 import { Plus, FileSpreadsheet, X } from 'lucide-react'
@@ -25,7 +27,12 @@ import RecordFormModal from './RecordFormModal.jsx'
 const FIELD = 'h-10 px-3 rounded-lg border border-gray-200 text-sm'
 
 // readOnly: viewer(감독관) 열람용 — 대리 예약·변경·취소 등 쓰기 액션 숨김 (엑셀 다운로드는 허용)
-export default function ReservationSearch({ readOnly = false }) {
+// canProxy: 학생 대리 예약 버튼 노출 (강사/매니저 재사용 시 false)
+// showEducatorFilter: 강사 필터 노출 (자기 예약만 보는 스코프에선 무의미해 숨김)
+// initialFilters: 초기 필터 덮어쓰기 — key 리마운트와 함께 쓰면 외부에서 필터 프리셋 진입 가능
+export default function ReservationSearch({
+  readOnly = false, canProxy = true, showEducatorFilter = true, initialFilters,
+}) {
   const { data } = useData()
   const booking = useBooking()
   const { config, slots, reservations, records, slotCounts, userNames, cancel, change, actor, refetch } = booking
@@ -42,6 +49,7 @@ export default function ReservationSearch({ readOnly = false }) {
     overrideOnly: false,
     overdueOnly: false,
     includeInactive: false, // 퇴원·취소 학생 예약 포함 여부 (기본 숨김)
+    ...initialFilters,
   })
   const [proxyOpen, setProxyOpen] = useState(false)
   const [cancelTarget, setCancelTarget] = useState(null)
@@ -111,7 +119,7 @@ export default function ReservationSearch({ readOnly = false }) {
   return (
     <div className="space-y-3">
       <div className="flex gap-2">
-        {!readOnly && (
+        {!readOnly && canProxy && (
           <button
             type="button"
             onClick={() => setProxyOpen(true)}
@@ -143,13 +151,15 @@ export default function ReservationSearch({ readOnly = false }) {
           <option value="cancelled">취소</option>
           <option value="moved">변경완료</option>
         </select>
-        <select value={filters.educatorId} onChange={setF('educatorId')} className={FIELD}>
-          <option value="">전체 강사</option>
-          {educatorOptions.map((eid) => (
-            <option key={eid} value={eid}>{userNames[eid]?.name ?? eid}</option>
-          ))}
-        </select>
-        <select value={filters.subjectId} onChange={setF('subjectId')} className={FIELD}>
+        {showEducatorFilter && (
+          <select value={filters.educatorId} onChange={setF('educatorId')} className={FIELD}>
+            <option value="">전체 강사</option>
+            {educatorOptions.map((eid) => (
+              <option key={eid} value={eid}>{userNames[eid]?.name ?? eid}</option>
+            ))}
+          </select>
+        )}
+        <select value={filters.subjectId} onChange={setF('subjectId')} className={showEducatorFilter ? FIELD : `${FIELD} col-span-2`}>
           <option value="">전체 교과</option>
           {config.subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
