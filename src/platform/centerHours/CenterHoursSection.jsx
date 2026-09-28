@@ -292,7 +292,13 @@ export default function CenterHoursSection({
 
       {/* 시간대별 명단 — 종이 출석부처럼 단위=열 */}
       <div className="bg-white rounded-2xl shadow-sm overflow-x-auto">
-        <div className="min-w-[860px] grid" style={{ gridTemplateColumns: `repeat(${CENTER_HOUR_UNITS[day].length}, 1fr)` }}>
+        <div
+          className="grid"
+          style={{
+            minWidth: CENTER_HOUR_UNITS[day].length * 144,
+            gridTemplateColumns: `repeat(${CENTER_HOUR_UNITS[day].length}, 1fr)`,
+          }}
+        >
           {CENTER_HOUR_UNITS[day].map((unit) => {
             const students = roster.get(unitKey(day, unit.start)) ?? []
             const over = students.length >= config.capacity

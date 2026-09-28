@@ -54,6 +54,10 @@ CenterHoursSection.jsx           관리자·매니저 명단·설정 섹션 — 
   `scripts/add-center-operating-days.sql`). 관리자 출결 탭의 운영 요일 토글이 수정하며,
   단위 시각표(`data/centerHours.js`)는 7일 전부 정의돼 있고 어떤 요일을 노출할지만
   설정이 정한다. 코드의 `DEFAULT_OPERATING_DAYS`와 RPC의 fallback은 월·화·금·토·일.
+- **주중 14:00~15:00·15:00~16:00 단위** (2026-09-28 클라이언트 요청)는 상시 운영이
+  아니라 필요할 때만 여는 시간대다. 별도 장치 없이 위 closedUnits 토글로 요일별로
+  열고 닫는다 (주말에는 없음). 단위 추가는 `data/centerHours.js`만 고쳤고 DB 변경은 없다.
+  학생이 이 단위를 등록하면 등원 예정 시각도 14시/15시로 파생되는 점에 유의.
 - **등·하원 시간표(attendance_schedules)는 이용시간의 파생물이다** — 별도 편집
   UI가 없고, `center_save_hours`가 저장 시 그 학생의 "운영 요일 ∪ 등록 요일" 행을
   자동 교체한다 (첫 단위 시작=등원·마지막 끝=하원, 키오스크 지각·결석 판정 기준.
