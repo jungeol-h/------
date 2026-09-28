@@ -22,13 +22,14 @@ describe('buildCenterHoursSheets', () => {
 
     expect(sheets.map((s) => s.name)).toEqual(['월요일', '화요일', '금요일', '토요일', '일요일'])
     const mon = sheets[0]
-    expect(mon.units[0].label).toBe('16:00~17:00')
-    expect(mon.units[0].count).toBe(2)
+    expect(mon.units[0].label).toBe('14:00~15:00')
+    const at16 = mon.units.find((u) => u.label === '16:00~17:00')
+    expect(at16.count).toBe(2)
     // 학년(중1) 우선, 이후 이름 가나다순
-    expect(mon.units[0].entries.map((e) => e.name)).toEqual(['박둘', '김하나'])
-    expect(mon.units[0].entries[0].meta).toBe('길주중 중1')
+    expect(at16.entries.map((e) => e.name)).toEqual(['박둘', '김하나'])
+    expect(at16.entries[0].meta).toBe('길주중 중1')
     // 등록 없는 단위는 빈 명단
-    expect(mon.units[1].entries).toEqual([])
+    expect(mon.units[0].entries).toEqual([])
     const sat = sheets[3]
     expect(sat.units[0].count).toBe(1)
   })
@@ -40,13 +41,14 @@ describe('buildCenterHoursSheets', () => {
     ]
     const sheets = buildCenterHoursSheets({ registrations, students })
     const tue = sheets.find((s) => s.name === '화요일')
-    expect(tue.units[1].entries.map((e) => e.name)).toEqual(['가나다', '김하나'])
+    const at17 = tue.units.find((u) => u.label === '17:00~18:00')
+    expect(at17.entries.map((e) => e.name)).toEqual(['가나다', '김하나'])
   })
 
   it('명단에 없는 학생(탈퇴 등)의 등록은 제외한다', () => {
     const registrations = [{ studentId: 'ghost', dayOfWeek: 1, startTime: '16:00' }]
     const sheets = buildCenterHoursSheets({ registrations, students })
-    expect(sheets[0].units[0].count).toBe(0)
+    expect(sheets[0].units.every((u) => u.count === 0)).toBe(true)
   })
 })
 
@@ -88,11 +90,13 @@ describe('summarizeDays', () => {
 })
 
 describe('CENTER_HOUR_UNITS 정의 자체 점검', () => {
-  it('7일 전부 단위가 정의되고 각 요일 6단위, 단위는 시간 순', () => {
+  it('7일 전부 단위가 정의되고 주중 8단위(14시~)·주말 6단위, 단위는 시간 순', () => {
     expect(CENTER_WEEK_ORDER).toEqual([1, 2, 3, 4, 5, 6, 0])
     for (const day of CENTER_WEEK_ORDER) {
       const units = CENTER_HOUR_UNITS[day]
-      expect(units).toHaveLength(6)
+      const isWeekend = day === 0 || day === 6
+      expect(units).toHaveLength(isWeekend ? 6 : 8)
+      expect(units[0].start).toBe(isWeekend ? '12:30' : '14:00')
       for (let i = 1; i < units.length; i++) {
         expect(units[i].start >= units[i - 1].end).toBe(true)
       }
