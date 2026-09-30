@@ -149,7 +149,7 @@ CREATE TABLE IF NOT EXISTS booking_reservations (
   cancelled_by_role    TEXT,
   cancel_reason        TEXT,
   cancelled_at         TIMESTAMPTZ,
-  -- 출결 — 예약시간이 지나도 자동 참석 처리하지 않는다 (명세 13.3). pending 유지.
+  -- 출결 — 기본 pending. 자동 참석·미참석 판정은 add-booking-auto-attendance.sql (명세 13.3 변경).
   attendance_status    TEXT NOT NULL DEFAULT 'pending'
     CHECK (attendance_status IN ('pending', 'attended', 'absent',
            'student_cancel', 'educator_cancel', 'center_cancel', 'rescheduled')),
@@ -799,7 +799,7 @@ BEGIN
 END $$;
 
 -- ================================================================
--- RPC — 출결 처리 (명세 13). 자동 참석 처리는 어디에도 없다.
+-- RPC — 출결 처리 (명세 13). 자동 처리는 add-booking-auto-attendance.sql (2026-09-30).
 -- ================================================================
 CREATE OR REPLACE FUNCTION booking_set_attendance(
   p_reservation_id TEXT, p_status TEXT, p_actor_id TEXT, p_actor_role TEXT,

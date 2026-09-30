@@ -13,6 +13,7 @@ import { toCounselingRecord } from '../../lib/supabaseHelpers.js'
 import { makeId } from '../dataModel.js'
 import { todayStr } from '../../utils/dateUtils.js'
 import { withWriteRetry } from '../../lib/supabaseRetry.js'
+import { syncBookingAttendance } from './bookingAttendanceSync.js'
 
 export function useCounselingDomain(setData) {
   // fields: { topic, diagnosis, advice, followUp, note, nextAppointment } — 보고서 양식 6단계.
@@ -46,6 +47,8 @@ export function useCounselingDomain(setData) {
         ...prev,
         counselingRecords: [toCounselingRecord(row), ...prev.counselingRecords],
       }))
+      // 같은 날 이 학생의 출결 미처리 예약(작성자 본인 슬롯)을 참석 처리 — 기다리지 않는다
+      void syncBookingAttendance({ studentIds: [studentId], date: row.date, actorId: authorId })
     },
     [setData]
   )
