@@ -134,6 +134,8 @@ export function useStudentDomain(setData) {
       if (patch.phone !== undefined) snake.phone = patch.phone || null
       if (patch.parentPhone !== undefined) snake.parent_phone = patch.parentPhone || null
       if (patch.enrolledAt !== undefined) snake.enrolled_at = patch.enrolledAt || null
+      if (patch.withdrawnAt !== undefined) snake.withdrawn_at = patch.withdrawnAt || null
+      if (patch.cancelledAt !== undefined) snake.cancelled_at = patch.cancelledAt || null
       if (patch.resetPassword) {
         snake.password = await initialPasswordOf(patch.phone)
         snake.password_changed_at = null
@@ -226,15 +228,27 @@ export function useStudentDomain(setData) {
   // 반환: { cancelledBookings } (재원 복귀 시 이용시간은 다시 등록해야 한다).
   const setStudentStatus = useCallback(
     async (studentId, status, { actorId = null } = {}) => {
+      // 퇴원·신청취소로 전환하는 순간의 날짜를 함께 기록한다(수기 입력 없이도
+      // 보고서에 바로 표시). 재원(active) 복구는 날짜를 지우지 않는다 —
+      // 표시는 status와 값이 일치할 때만 나타나므로 재퇴원 시까지 이력으로
+      // 남겨두는 편이 자연스럽고, 재원 전환에서 날짜를 매번 지우면 실수로
+      // 되돌렸다가 다시 처리할 때 원래 일자가 사라진다.
+      const dateUpdate = {}
+      if (status === 'withdrawn') dateUpdate.withdrawn_at = todayStr()
+      if (status === 'cancelled') dateUpdate.cancelled_at = todayStr()
+
       const { error } = await withWriteRetry(
-        () => supabase.from('users').update({ status }).eq('id', studentId),
+        () => supabase.from('users').update({ status, ...dateUpdate }).eq('id', studentId),
         { label: 'setStudentStatus' }
       )
       if (error) throw error
+      const localDateUpdate = {}
+      if (dateUpdate.withdrawn_at) localDateUpdate.withdrawnAt = dateUpdate.withdrawn_at
+      if (dateUpdate.cancelled_at) localDateUpdate.cancelledAt = dateUpdate.cancelled_at
       setData((prev) => ({
         ...prev,
         students: prev.students.map((s) =>
-          s.id === studentId ? { ...s, status } : s
+          s.id === studentId ? { ...s, status, ...localDateUpdate } : s
         ),
       }))
 
