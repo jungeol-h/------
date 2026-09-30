@@ -13,7 +13,7 @@ import { todayStr } from '../../utils/dateUtils.js'
 import { addDaysStr } from '../bookingRules.js'
 import { rpcReserve } from '../bookingApi.js'
 import { bookingMessage } from '../bookingMessages.js'
-import { reservationDisplayStatus, ATTENDANCE_STATUS } from '../bookingStatus.js'
+import { reservationDisplayStatus, isAutoMarked, ATTENDANCE_STATUS } from '../bookingStatus.js'
 import { isActiveStudent } from '../../data/studentStatus.js'
 import { buildReservationSheets, downloadReservationWorkbook } from '../reservationExcel.js'
 // AdminSlotGrid·OverrideFields·취소/변경 모달은 AdminReservationModals.jsx로 추출
@@ -213,7 +213,10 @@ export default function ReservationSearch({
                   <span className="ml-1.5 text-xs font-semibold text-gray-500">{programName(r.programId)}</span>
                   {r.isOverride && <span className="ml-1 text-[10px] font-bold text-purple-500">예외</span>}
                 </p>
-                <span className="text-[11px] font-bold text-gray-500">{display.label}</span>
+                <span className="text-[11px] font-bold text-gray-500 flex-shrink-0">
+                  {display.label}
+                  {isAutoMarked(r) && <span className="ml-1 text-[10px] text-indigo-500">자동</span>}
+                </span>
               </div>
               <p className="text-xs text-gray-500">
                 {r.slot.date} {r.slot.startTime}~{r.slot.endTime}

@@ -15,6 +15,7 @@ const ENTITY_LABELS = {
 const ACTION_LABELS = {
   create: '등록', change: '변경', cancel: '취소', update: '수정', delete: '삭제',
   attendance: '출결 처리', attendance_overdue: '출결 기한초과 처리',
+  auto_attended: '자동 참석 처리', auto_absent: '자동 미참석 처리',
   group_assign: '그룹 배정', slot_edit: '슬롯 편집', status_change: '상태 전환',
 }
 

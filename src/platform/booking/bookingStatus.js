@@ -52,7 +52,8 @@ export function reservationDisplayStatus(reservation, slot, now = new Date()) {
   }
   if (att === 'rescheduled') return { key: 'moved', label: '변경완료' }
   if (att === 'student_cancel') return { key: 'user_cancel', label: '사용자취소' }
-  // pending — 시작 전이면 상담대기, 지났으면 출결미처리 (자동 참석 처리는 없다 — 명세 13.3)
+  // pending — 시작 전이면 상담대기, 지났으면 출결미처리. 미처리는 기록 작성 시 자동 참석,
+  // 익일 새벽 센터 결석·재실 밖이면 자동 미참석 (add-booking-auto-attendance.sql — 명세 13.3 변경)
   if (slot && isSlotPast(slot, now)) return { key: 'attendance_pending', label: '출결미처리' }
   return { key: 'waiting', label: '상담대기' }
 }
@@ -62,6 +63,19 @@ export function isSlotPast(slot, now = new Date()) {
   const start = new Date(`${slot.date}T00:00:00`)
   start.setHours(h, m, 0, 0)
   return start <= now
+}
+
+// 자동 처리분(야간 일괄·기록 저장 연동) — DB가 attendance_marked_by='system'으로 남긴다
+export function isAutoMarked(reservation) {
+  return reservation?.attendanceMarkedBy === 'system'
+}
+
+// 상담기록을 쓸 수 있는 예약 — 참석 처리된 건 + 시작 시각이 지난 출결 미처리 건.
+// 미처리 건은 기록 저장 시 참석 처리된다 (RecordFormModal, 2026-09-30 클라이언트 요청).
+export function canWriteRecord(reservation, slot, now = new Date()) {
+  if (reservation.status !== 'confirmed' || !slot) return false
+  if (reservation.attendanceStatus === 'attended') return true
+  return reservation.attendanceStatus === 'pending' && isSlotPast(slot, now)
 }
 
 // ─── 상담기록 상태 (명세 14.3) — 전부 파생 ────────────────────
@@ -86,6 +100,8 @@ export function recordState(reservation, record, slotDate, today = todayStrKst()
   if (reservation.status !== 'confirmed' || reservation.attendanceStatus !== 'attended') {
     return 'not_required'
   }
+  // 일반 상담보고·수업보고로 자동 참석된 건은 예약 상담기록이 없는 것이 정상 — 독촉하지 않는다
+  if (isAutoMarked(reservation) && !record) return 'not_required'
   const deadline = addDaysStr(slotDate, RECORD_DEADLINE_DAYS)
   if (record?.status === 'done') {
     // completedAt은 UTC ISO — 문자열 절단 금지(dateUtils 규약), 로컬(KST) 날짜로 변환해 비교

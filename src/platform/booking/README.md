@@ -138,6 +138,31 @@ FOR UPDATE(id 정렬 순) → 부분 UNIQUE 인덱스.
 - ProxyReserveModal의 학생 검색을 `StudentCombobox` 재사용으로 교체.
 - SQL reserve/change의 override 가드·공개상태 검증 블록을 `_booking_*` 헬퍼로 추출.
 
+## 출결 자동 처리 (2026-09-30 클라이언트 요청 — 명세 13.3 변경)
+
+종전 "자동 참석 처리 없음"을 폐기했다. 정본은 `scripts/add-booking-auto-attendance.sql`.
+
+- **대상**: 확정 예약 중 `attendance_status='pending'` 이고 `attendance_marked_by IS NULL`
+  인 건만. 사람이 한 번이라도 처리한 건(미처리로 되돌린 건 포함)은 건드리지 않는다.
+- **자동 참석**: ① 예약 상담기록(`booking_records`) 존재 ② 같은 학생·같은 날짜에 슬롯
+  강사 본인이 쓴 상담보고·수업보고 존재(그날 같은 강사 예약이 여러 건이면 기록 시간과
+  겹치는 건만, 기록에 시간이 없으면 전부).
+- **자동 미참석**(상담일 익일 새벽, 참석 근거·같은 강사 기록이 전혀 없을 때): R1 센터
+  결석일 / R2 등·하원 기록이 온전한데 예약 시간(±10분)이 재실 구간 밖. 출결 행 없음·
+  미하원 등 재실 구간을 확정할 수 없으면 건너뛴다.
+- **미채택**: "다른 과목 기록과 시간 중복 → 미참석" — 기록에 과목 필드가 없고 시간이
+  선택 입력이라 오판 위험이 크다.
+- **실행 경로**: 야간 `booking_auto_attendance()`(pg_cron KST 00:02, 다이제스트보다 먼저)
+  + 기록 저장 직후 `booking_sync_attendance_from_records`(참석 전용 —
+  `context/domains/bookingAttendanceSync.js`, best-effort). 판정은 둘 다
+  `booking_auto_attendance_plan`(순수 SELECT, 미리보기 겸용)을 쓴다.
+- **표식**: 자동 처리분은 `attendance_marked_by='system'` + `attendance_note='[자동] …'`.
+  화면에 '자동' 태그(`isAutoMarked`), 출결 모달에서 그대로 정정 가능. 자동 미참석은
+  담당 강사에게 알림(`attendance_auto`).
+- **상담기록 연동**: 지난 출결 미처리 예약에서도 상담기록을 쓸 수 있고(`canWriteRecord`),
+  저장 시 `RecordFormModal`이 참석 처리부터 한다. 자동 참석분은 예약 상담기록이 없어도
+  `recordState`가 `not_required` — 다이제스트도 독촉하지 않는다.
+
 ## 수동 검수 체크리스트 (명세 23장 중 vitest 미커버분)
 
 규칙 검증은 `bookingRules.test.js`가 전수 커버. 아래는 E2E·동시성·알림 수동 확인:
@@ -149,5 +174,6 @@ FOR UPDATE(id 정렬 순) → 부분 UNIQUE 인덱스.
 - [ ] 예약 있는 슬롯 강사 편집 → 사유 필수 + 학생·학부모 알림 발생
 - [ ] 그룹 배정에서 제한 걸린 학생만 실패 사유 표시 (부분 성공)
 - [ ] 출결 미처리로 하루 방치 → cron 후 강사·관리자 알림 (`SELECT booking_daily_digest()` 수동 실행으로 확인 가능)
+- [ ] 출결 자동 처리: 상담보고 저장 → 같은 날 본인 슬롯 미처리 예약이 참석 / 센터 결석일 예약이 익일 미참석+'자동' → 강사 정정 (`SELECT * FROM booking_auto_attendance_plan(...)` 로 미리보기)
 - [ ] 관리자 override 예약 → 이력 메뉴에서 '예외' 필터로 조회 + 사유 표시
 - [ ] 마이그레이션 미적용 DB에서 예약 탭이 오류 화면만 띄우고 기존 탭 정상
