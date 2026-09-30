@@ -6,13 +6,21 @@
 // 규칙을 다시 저장하면 미예약 파생 슬롯이 재생성되기 때문.
 
 import { useMemo, useState } from 'react'
-import { CalendarClock, CalendarPlus, Pencil, Repeat, Trash2 } from 'lucide-react'
+import { CalendarClock, CalendarPlus, ChevronDown, ChevronRight, Pencil, Repeat, Trash2 } from 'lucide-react'
 import ModalShell from '../../components/common/ModalShell.jsx'
 import TimeField from '../../components/common/TimeField.jsx'
+import { todayStr } from '../../utils/dateUtils.js'
 import { useBooking } from '../BookingContext.jsx'
 import { bookingMessage } from '../bookingMessages.js'
-import { generateSlots } from '../slotGeneration.js'
+import { addDaysStr } from '../bookingRules.js'
+import { generateSlots, generateSlotsDetailed } from '../slotGeneration.js'
+import SlotConflictList from './SlotConflictList.jsx'
 import TimetableWizard from './TimetableWizard.jsx'
+
+// 저장 전 미리보기 지평 — 실제 파생은 서버(_booking_generate_rule_slots)가
+// pg_cron으로 매일 연장하는 지평(기본 4주)을 따른다. 여기서는 "대략"의 겹침
+// 규모만 보여준다 — 슬롯 길이·휴식 계산은 클라 미러라 서버와 미세하게 갈릴 수 있다.
+const PREVIEW_HORIZON_DAYS = 28
 
 const FIELD = 'h-10 px-3 rounded-lg border border-gray-200 text-sm'
 const WEEKDAYS = [
@@ -32,7 +40,7 @@ function weeklySlotCount({ weekdays, dayStart, dayEnd, slotMinutes, breakStart, 
 }
 
 function RuleModal({ rule, educatorId, onClose }) {
-  const { config, userNames, saveAvailabilityRule, actor } = useBooking()
+  const { config, userNames, slots, saveAvailabilityRule, actor } = useBooking()
   const isAdmin = actor.role === 'admin'
   const templates = config.templates ?? []
 
@@ -91,6 +99,36 @@ function RuleModal({ rule, educatorId, onClose }) {
     weekdays: form.weekdays, dayStart: form.dayStart, dayEnd: form.dayEnd,
     slotMinutes: program.slotMinutes, breakStart: form.breakStart, breakEnd: form.breakEnd,
   }) : 0
+
+  // 저장 전 겹침 미리보기 — 내일~지평(기본 4주)에서 이 규칙이 만들 슬롯과 기존
+  // 슬롯의 겹침을 대략 계산한다. 이 규칙 자신이 이미 만든 미예약 파생 슬롯(같은
+  // ruleId)은 규칙 저장 시 다시 깔리는 대상이라 blocked에서 제외한다.
+  const [showRulePreviewConflicts, setShowRulePreviewConflicts] = useState(false)
+  const rulePreview = useMemo(() => {
+    if (!program || !form.educatorId) return { skipped: [], conflictSlots: [] }
+    const blocked = slots.filter((s) =>
+      s.educatorId === form.educatorId && s.status !== 'cancelled'
+      && !(rule && s.ruleId === rule.id))
+    const { skipped } = generateSlotsDetailed({
+      from: addDaysStr(todayStr(), 1),
+      to: addDaysStr(todayStr(), PREVIEW_HORIZON_DAYS),
+      weekdays: form.weekdays,
+      dayStart: form.dayStart,
+      dayEnd: form.dayEnd,
+      slotMinutes: program.slotMinutes,
+      breaks: form.breakStart && form.breakEnd
+        ? [{ start: form.breakStart, end: form.breakEnd }]
+        : [],
+      excludeDates,
+      blocked,
+    })
+    const byId = new Map()
+    for (const cand of skipped) {
+      for (const b of cand.blockers) byId.set(b.id, b)
+    }
+    return { skipped, conflictSlots: [...byId.values()] }
+  }, [program, form.educatorId, form.weekdays, form.dayStart, form.dayEnd,
+    form.breakStart, form.breakEnd, excludeDates, slots, rule])
 
   const canSubmit = program && form.educatorId && form.weekdays.length > 0
     && form.dayStart < form.dayEnd
@@ -248,7 +286,25 @@ function RuleModal({ rule, educatorId, onClose }) {
         저장하면 <b>주당 슬롯 {perWeek}개</b>가 내일부터 4주 앞까지 <b>예약공개</b> 상태로
         유지되고, 매일 자동으로 연장됩니다. 규칙을 수정하면 예약이 없는 파생 슬롯은
         새 규칙대로 다시 깔립니다 (예약된 시간은 보존).
+        {rulePreview.conflictSlots.length > 0 && (
+          <span className="block mt-1 text-orange-500">
+            기존 슬롯과 겹쳐 대략 {rulePreview.skipped.length}개는 만들어지지 않을 수 있습니다.
+            {' '}
+            <button
+              type="button"
+              onClick={() => setShowRulePreviewConflicts((v) => !v)}
+              className="inline-flex items-center underline font-bold"
+            >
+              겹치는 슬롯 보기 ({rulePreview.conflictSlots.length}개)
+              {showRulePreviewConflicts ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+            </button>
+          </span>
+        )}
       </div>
+
+      {showRulePreviewConflicts && rulePreview.conflictSlots.length > 0 && (
+        <SlotConflictList blockers={rulePreview.conflictSlots} />
+      )}
 
       {failCode && (
         <p className="text-xs text-red-500 bg-red-50 rounded-lg p-2">{bookingMessage(failCode)}</p>

@@ -70,6 +70,16 @@ FOR UPDATE(id 정렬 순) → 부분 UNIQUE 인덱스.
 - **타임테이블 충돌 차단**: 지정 슬롯도 강사의 슬롯이므로 ① 가용시간 규칙 파생
   (SQL)은 원래 겹치는 시간을 건너뛰고 ② TimetableWizard는 `generateSlots`의
   `blocked` 파라미터로 같은 강사의 기존 슬롯과 겹치는 슬롯을 만들지 않는다.
+- **겹침 눈에 보이게 하기 + 그 자리에서 해소** (2026-09, 실DB 진단 — 클라이언트가
+  "슬롯 0개 생성"에서 막다른 길에 몰린 사고): `generateSlotsDetailed`
+  (`slotGeneration.js`)가 `{ slots, skipped }`를 반환해 무엇과 겹쳐 제외됐는지
+  보존한다. `SlotConflictList`(공용 컴포넌트)가 겹침 슬롯을 상태 칩·자동/강사지정/
+  비공개 배지·예약 수와 함께 보여주고, TimetableWizard는 "겹치는 슬롯 보기" 토글 +
+  예약 없는 겹침 슬롯 일괄 삭제(SlotEditorModal.remove()와 같은 관용구)로 그
+  자리에서 해소할 수 있게 한다. 생성 0개가 겹침 때문이면 목록이 자동으로
+  펼쳐진다. RuleModal(매주 반복)도 저장 전 지평(기본 4주) 겹침을 "대략" 미리
+  보여주고, DesignatedReserveModal은 충돌 회차가 무엇과 겹치는지(프로그램·시간·
+  상태·예약 수) 표시만 한다(해소 기능 없음).
 - **부분 실패**: 강사 본인 슬롯과 겹치는 회차는 미리보기에서 건너뛰고, 학생 쪽
   겹침·횟수 제한은 booking_reserve RPC가 최종 거절 — 그 회차의 슬롯은 되물린다
   (booking_update_slot p_delete — 예약 이력 없는 슬롯이라 물리 삭제된다).

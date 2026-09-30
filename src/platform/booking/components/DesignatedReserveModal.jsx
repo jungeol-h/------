@@ -22,6 +22,7 @@ import { todayStr } from '../../utils/dateUtils.js'
 import { addDaysStr, minutesToTime, overlaps, timeToMinutes } from '../bookingRules.js'
 import { createSlot, rpcReserve, rpcUpdateSlot } from '../bookingApi.js'
 import { bookingMessage } from '../bookingMessages.js'
+import { SLOT_STATUS } from '../bookingStatus.js'
 import { isActiveStudent } from '../../data/studentStatus.js'
 
 const FIELD = 'h-10 px-3 rounded-lg border border-gray-200 text-sm'
@@ -31,7 +32,7 @@ const MAX_MINUTES = 100 // 회차당 최대 시간
 
 export default function DesignatedReserveModal({ educatorId, programs, onClose }) {
   const { data } = useData()
-  const { config, slots, actor, refetch } = useBooking()
+  const { config, slots, reservations, actor, refetch } = useBooking()
 
   const students = useMemo(
     () => (data.students ?? []).filter(isActiveStudent),
@@ -85,14 +86,18 @@ export default function DesignatedReserveModal({ educatorId, programs, onClose }
     }
     return dates.map((d) => ({
       date: d,
-      // 강사 본인의 기존 슬롯(취소 제외)과 겹치면 생성하지 않는다
-      conflict: slots.some((s) =>
+      // 강사 본인의 기존 슬롯(취소 제외)과 겹치면 생성하지 않는다 — 무엇과
+      // 겹치는지 안내에 쓰기 위해 겹친 슬롯 자체를 보존한다 (2026-09)
+      conflictSlot: slots.find((s) =>
         s.educatorId === educatorId && s.date === d && s.status !== 'cancelled' &&
-        overlaps(startTime, endTime, s.startTime, s.endTime)),
+        overlaps(startTime, endTime, s.startTime, s.endTime)) ?? null,
     }))
   }, [date, startTime, endTime, durationValid, repeat, repeatUntil, slots, educatorId])
 
-  const creatable = occurrences.filter((o) => !o.conflict)
+  const creatable = occurrences.filter((o) => !o.conflictSlot)
+  const conflicting = occurrences.filter((o) => o.conflictSlot)
+  const programName = (id) => config.programs.find((p) => p.id === id)?.name ?? id
+  const confirmedCountOf = (slotId) => reservations.filter((r) => r.slotId === slotId && r.status === 'confirmed').length
 
   const submit = async () => {
     if (busy) return
@@ -236,19 +241,34 @@ export default function DesignatedReserveModal({ educatorId, programs, onClose }
             <b>{creatable.length}회</b>
             {studentIds.length > 1 && <> × <b>{studentIds.length}명</b></>}
             {' '}예약됩니다 ({startTime}~{endTime})
-            {occurrences.some((o) => o.conflict) && ' — 겹치는 회차는 건너뜁니다'}
+            {conflicting.length > 0 && ' — 겹치는 회차는 건너뜁니다'}
           </p>
           <div className="flex flex-wrap gap-1">
             {occurrences.map((o) => (
               <span
                 key={o.date}
-                className={`px-1.5 py-0.5 rounded ${o.conflict ? 'bg-red-50 text-red-400 line-through' : 'bg-white text-gray-600'}`}
-                title={o.conflict ? '내 기존 슬롯과 겹쳐 건너뜁니다' : undefined}
+                className={`px-1.5 py-0.5 rounded ${o.conflictSlot ? 'bg-red-50 text-red-400 line-through' : 'bg-white text-gray-600'}`}
+                title={o.conflictSlot ? '내 기존 슬롯과 겹쳐 건너뜁니다' : undefined}
               >
                 {o.date.slice(5)}
               </span>
             ))}
           </div>
+          {conflicting.length > 0 && (
+            <div className="pt-1 space-y-1">
+              {conflicting.map((o) => {
+                const s = o.conflictSlot
+                const status = SLOT_STATUS[s.status]
+                return (
+                  <p key={o.date} className="text-[11px] text-red-500">
+                    {o.date} — 기존 <b>{programName(s.programId)}</b> {s.startTime}~{s.endTime}
+                    {' '}<span className={`px-1.5 py-0.5 rounded-full font-bold ${status?.color}`}>{status?.label}</span>
+                    {' '}({confirmedCountOf(s.id)}/{s.capacity}명)과(와) 겹칩니다.
+                  </p>
+                )
+              })}
+            </div>
+          )}
         </div>
       )}
 

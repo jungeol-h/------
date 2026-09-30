@@ -7,15 +7,19 @@
 // 타임블럭 템플릿(요일·시간창 프리셋)을 공유하고, 슬롯 단위는 프로그램 소관.
 // lockEducatorId: 강사 모드 — 본인 고정, 배정된 프로그램만.
 
-import { useMemo, useState } from 'react'
-import { X } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { ChevronDown, ChevronRight, X } from 'lucide-react'
 import ModalShell from '../../components/common/ModalShell.jsx'
 import TimeField from '../../components/common/TimeField.jsx'
 import { todayStr } from '../../utils/dateUtils.js'
 import { makeId } from '../../context/dataModel.js'
 import { addDaysStr } from '../bookingRules.js'
-import { generateSlots } from '../slotGeneration.js'
+import { generateSlotsDetailed } from '../slotGeneration.js'
 import { useBooking } from '../BookingContext.jsx'
+import { rpcUpdateSlot } from '../bookingApi.js'
+import { bookingMessage } from '../bookingMessages.js'
+import SlotConflictList from './SlotConflictList.jsx'
+import SlotEditorModal from './SlotEditorModal.jsx'
 
 const FIELD = 'h-10 px-3 rounded-lg border border-gray-200 text-sm'
 const WEEKDAYS = [
@@ -27,7 +31,9 @@ const WEEKDAYS = [
 export default function TimetableWizard({
   onClose, lockEducatorId = null, intent = 'dated', lockProgramId = null,
 }) {
-  const { config, userNames, slots, createSlotBatch, saveTimetableTemplates, actor } = useBooking()
+  const {
+    config, userNames, slots, reservations, createSlotBatch, saveTimetableTemplates, actor, refetch,
+  } = useBooking()
   const isAdmin = actor.role === 'admin'
   const templates = config.templates ?? []
   const isPrebook = intent === 'prebook'
@@ -155,9 +161,11 @@ export default function TimetableWizard({
     [slots, form.educatorId],
   )
 
-  const preview = useMemo(() => {
-    if (!program) return []
-    return generateSlots({
+  // 미리보기 + 겹침으로 제외된 후보(skipped)를 한 번에 계산 (2026-09 — 겹침을
+  // 눈에 보이게 하고 그 자리에서 해소하기 위해 skipped를 별도로 보존한다)
+  const detailed = useMemo(() => {
+    if (!program) return { slots: [], skipped: [] }
+    return generateSlotsDetailed({
       from: form.from,
       to: form.to,
       weekdays: effectiveWeekdays,
@@ -175,25 +183,62 @@ export default function TimetableWizard({
     })
   }, [program, form, excludeDates, effectiveWeekdays, blocked])
 
+  const preview = detailed.slots
   const previewDays = useMemo(() => new Set(preview.map((s) => s.date)).size, [preview])
+  const blockedCount = detailed.skipped.length
 
-  // 겹침으로 제외된 슬롯 수 — 미리보기에 안내
-  const blockedCount = useMemo(() => {
-    if (!program || blocked.length === 0) return 0
-    const without = generateSlots({
-      from: form.from,
-      to: form.to,
-      weekdays: effectiveWeekdays,
-      dayStart: form.dayStart,
-      dayEnd: form.dayEnd,
-      slotMinutes: program.slotMinutes,
-      breaks: form.breakStart && form.breakEnd
-        ? [{ start: form.breakStart, end: form.breakEnd }]
-        : [],
-      excludeDates,
-    })
-    return without.length - preview.length
-  }, [program, form, excludeDates, effectiveWeekdays, blocked, preview])
+  // 겹침 원인이 된 기존 슬롯 — 고유 슬롯만 (여러 후보가 같은 슬롯 하나에 걸릴 수 있다)
+  const conflictSlots = useMemo(() => {
+    const byId = new Map()
+    for (const cand of detailed.skipped) {
+      for (const b of cand.blockers) byId.set(b.id, b)
+    }
+    return [...byId.values()]
+  }, [detailed.skipped])
+
+  const conflictWithReservation = useMemo(
+    () => conflictSlots.filter((s) => reservations.some((r) => r.slotId === s.id && r.status === 'confirmed')),
+    [conflictSlots, reservations],
+  )
+  const conflictWithoutReservation = useMemo(
+    () => conflictSlots.filter((s) => !conflictWithReservation.includes(s)),
+    [conflictSlots, conflictWithReservation],
+  )
+
+  const [showConflicts, setShowConflicts] = useState(false)
+  const [resolving, setResolving] = useState(false)
+  const [resolveError, setResolveError] = useState(null)
+  const [confirmingBulkDelete, setConfirmingBulkDelete] = useState(false)
+  const [editingConflict, setEditingConflict] = useState(null)
+
+  // 생성될 슬롯이 없고 겹침이 원인이면 막다른 길이 되지 않게 자동으로 펼친다
+  const deadEnd = preview.length === 0 && blockedCount > 0
+  useEffect(() => {
+    if (deadEnd) setShowConflicts(true)
+  }, [deadEnd])
+
+  // 확정 예약이 없는 겹침 슬롯을 일괄 삭제 — SlotEditorModal.remove()와 같은
+  // 관용구(rpcUpdateSlot({ del: true }) 반복 → 실패 코드 수집 → refetch 1회)
+  const resolveConflicts = async () => {
+    if (resolving || conflictWithoutReservation.length === 0) return
+    setResolving(true)
+    setResolveError(null)
+    try {
+      let fail = null
+      for (const s of conflictWithoutReservation) {
+        const result = await rpcUpdateSlot({
+          slotId: s.id, del: true, reason: '겹침 해소(위저드 일괄 삭제)',
+          actorId: actor.id, actorRole: actor.role,
+        })
+        if (!result?.ok && !fail) fail = result?.code ?? 'ERROR'
+      }
+      await refetch()
+      if (fail) setResolveError(bookingMessage(fail))
+    } finally {
+      setResolving(false)
+      setConfirmingBulkDelete(false)
+    }
+  }
 
   const submit = async () => {
     if (!program || busy) return
@@ -442,9 +487,26 @@ export default function TimetableWizard({
         미리보기: <b>{previewDays}일 × 슬롯 {preview.length}개</b>가{' '}
         <b>{form.publishNow ? '예약공개' : '작성중'}</b> 상태로 생성됩니다.
         {blockedCount > 0 && (
-          <span className="block mt-1 text-orange-500">
-            강사의 기존 슬롯·지정 예약과 겹치는 {blockedCount}개는 만들지 않습니다.
-          </span>
+          <>
+            <span className="block mt-1 text-orange-500">
+              강사의 기존 슬롯·지정 예약과 겹치는 {blockedCount}개는 만들지 않습니다.
+              {' '}
+              <button
+                type="button"
+                onClick={() => setShowConflicts((v) => !v)}
+                className="inline-flex items-center underline font-bold"
+              >
+                겹치는 슬롯 보기 ({conflictSlots.length}개)
+                {showConflicts ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+              </button>
+            </span>
+            {deadEnd && (
+              <p className="mt-1.5 rounded-lg bg-orange-50 text-orange-600 p-2 font-bold">
+                이 시간에 이미 슬롯이 있어 만들 수 없습니다. 아래 기존 슬롯을 삭제하거나
+                시간을 바꿔 주세요.
+              </p>
+            )}
+          </>
         )}
         {preview.length > 0 && (
           <span className="block mt-1 text-gray-400">
@@ -452,6 +514,60 @@ export default function TimetableWizard({
           </span>
         )}
       </div>
+
+      {showConflicts && blockedCount > 0 && (
+        <div className="space-y-2">
+          <SlotConflictList blockers={conflictSlots} onEdit={setEditingConflict} />
+
+          {conflictWithoutReservation.length > 0 && (
+            <div className="rounded-xl bg-white border border-gray-200 p-3 space-y-2">
+              {!confirmingBulkDelete ? (
+                <button
+                  type="button"
+                  onClick={() => setConfirmingBulkDelete(true)}
+                  disabled={resolving}
+                  className="w-full h-10 rounded-lg bg-red-50 text-red-600 text-xs font-bold disabled:opacity-50"
+                >
+                  예약 없는 겹침 슬롯 {conflictWithoutReservation.length}개 삭제
+                </button>
+              ) : (
+                <div className="space-y-1.5">
+                  <p className="text-xs text-gray-600">
+                    예약 없는 겹침 슬롯 {conflictWithoutReservation.length}개를 삭제할까요?
+                    삭제 후 미리보기가 다시 계산됩니다.
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setConfirmingBulkDelete(false)}
+                      disabled={resolving}
+                      className="flex-1 h-9 rounded-lg bg-gray-100 text-gray-600 text-xs font-bold disabled:opacity-50"
+                    >
+                      취소
+                    </button>
+                    <button
+                      type="button"
+                      onClick={resolveConflicts}
+                      disabled={resolving}
+                      className="flex-1 h-9 rounded-lg bg-red-500 text-white text-xs font-bold disabled:opacity-50"
+                    >
+                      {resolving ? '삭제 중...' : '삭제 확정'}
+                    </button>
+                  </div>
+                </div>
+              )}
+              {resolveError && <p className="text-xs text-red-500">{resolveError}</p>}
+            </div>
+          )}
+
+          {conflictWithReservation.length > 0 && (
+            <p className="text-[11px] text-gray-500">
+              예약이 있는 {conflictWithReservation.length}개는 개별 편집에서 처리해 주세요
+              (위 목록의 [편집] 버튼).
+            </p>
+          )}
+        </div>
+      )}
 
       {!form.educatorId && (
         <p className="text-[11px] text-orange-500">
@@ -468,6 +584,15 @@ export default function TimetableWizard({
       >
         {busy ? '생성 중...' : `슬롯 ${preview.length}개 생성`}
       </button>
+
+      {editingConflict && (
+        <SlotEditorModal
+          slot={editingConflict}
+          program={config.programs.find((p) => p.id === editingConflict.programId)}
+          isAdmin={isAdmin}
+          onClose={() => setEditingConflict(null)}
+        />
+      )}
     </ModalShell>
   )
 }
