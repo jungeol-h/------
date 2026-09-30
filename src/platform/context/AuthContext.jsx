@@ -1,12 +1,31 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { toUser } from '../lib/supabaseHelpers'
 import { reportError, setSentryUser } from '../lib/sentry.js'
 import { hashPassword, verifyOrPlaintext } from '../lib/passwords.js'
+import { applyRoleView, educatorViewOf } from '../data/roleViews.js'
+
+const VIEW_MODE_KEY = 'platform_view_mode'
+
+// 보기 모드(관리자 계정의 강사 화면 전환)는 탭 단위 sessionStorage에만 둔다.
+function readViewMode() {
+  try {
+    return sessionStorage.getItem(VIEW_MODE_KEY) === 'educator' ? 'educator' : 'account'
+  } catch {
+    return 'account'
+  }
+}
+
+function clearViewModeStorage() {
+  try {
+    sessionStorage.removeItem(VIEW_MODE_KEY)
+  } catch { /* 저장소 차단 환경 — 무시 */ }
+}
 
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
+  // currentUser state = 저장된 실제 계정(DB role 그대로). 화면에 내보내는 값은 아래 effectiveUser.
   const [currentUser, setCurrentUser] = useState(() => {
     try {
       const saved = localStorage.getItem('platform_user')
@@ -15,11 +34,19 @@ export function AuthProvider({ children }) {
       return null
     }
   })
+  const [viewMode, setViewMode] = useState(readViewMode)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   // 강제 재설정 판정을 localStorage 스냅샷만으로 내리지 않기 위한 게이트.
   // 확인 전에는 모달을 띄우지 않는다 (기기마다 재설정을 또 시키는 사고 방지).
   const [resetFlagVerified, setResetFlagVerified] = useState(false)
+
+  useEffect(() => {
+    try {
+      if (viewMode === 'educator') sessionStorage.setItem(VIEW_MODE_KEY, viewMode)
+      else sessionStorage.removeItem(VIEW_MODE_KEY)
+    } catch { /* 저장소 차단 환경 — 무시 */ }
+  }, [viewMode])
 
   useEffect(() => {
     if (currentUser) {
@@ -93,6 +120,8 @@ export function AuthProvider({ children }) {
       }
 
       const user = toUser(data)
+      setViewMode('account')
+      clearViewModeStorage()
       setCurrentUser(user)
       setSentryUser(user)
       // 로그인 기록 — 실패해도 로그인 흐름을 막지 않는다 (fire-and-forget)
@@ -110,6 +139,8 @@ export function AuthProvider({ children }) {
   }
 
   const logout = () => {
+    setViewMode('account')
+    clearViewModeStorage()
     setCurrentUser(null)
     localStorage.removeItem('platform_user')
     localStorage.removeItem('platform_data')
@@ -190,10 +221,19 @@ export function AuthProvider({ children }) {
   const mustChangePassword =
     !!currentUser && currentUser.passwordChangedAt == null && resetFlagVerified
 
+  // 화면·라우팅이 보는 사용자 — 보기 모드면 role이 덮어써진다(원본 role은 accountRole).
+  // 위 내부 함수·mustChangePassword는 모두 원본(currentUser state)을 쓴다.
+  const canSwitchView = !!educatorViewOf(currentUser)
+  const effectiveUser = useMemo(() => applyRoleView(currentUser, viewMode), [currentUser, viewMode])
+  const switchView = (mode) => {
+    if (!canSwitchView) return
+    setViewMode(mode === 'educator' ? 'educator' : 'account')
+  }
+
   return (
     <AuthContext.Provider
       value={{
-        currentUser, login, logout, loading, error,
+        currentUser: effectiveUser, canSwitchView, viewMode, switchView, login, logout, loading, error,
         changePassword, completeForcedReset, mustChangePassword, syncPasswordChangedAt,
         updateMyProfile,
       }}

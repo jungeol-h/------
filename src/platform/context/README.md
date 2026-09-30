@@ -5,6 +5,7 @@
 
 ```
 AuthContext.jsx   로그인(users 테이블 평문 비교)·localStorage 세션 — lib/README.md 보안 부채 참고
+                  `currentUser`는 보기 모드 반영 유효 user(role 덮어씀, DB role=`accountRole`) — 전환 대상 계정은 data/roleViews.js, 상세는 pages/README.md
 DataContext.jsx   Provider 조립만. 역할별 fetch 라우팅 + 도메인 훅 병합 → useData()
 ├── fetchers/     역할별 초기 fetch (student/manager/admin/parent — instructor·consultant·viewer는 admin 공용)
 ├── domains/      [Write] 도메인별 CRUD 훅 — supabase 쓰기 + setData 로컬 동기화

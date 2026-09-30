@@ -6,6 +6,7 @@ import { fetchPrograms, fetchProgramDetail, fetchRecordsByCounselor } from './ex
 import ExternalStudentList from './ExternalStudentList.jsx'
 import ExternalStudentDetail from './ExternalStudentDetail.jsx'
 import { ProgramFormModal, StudentImportModal } from './ExternalAdminModals.jsx'
+import { hasMultipleDuties } from '../../../data/educatorDuties.js'
 import MonthlyReportModal from '../../../components/counseling/MonthlyReportModal.jsx'
 
 // 외생 상담 프로그램 진입점.
@@ -17,6 +18,11 @@ export default function ExternalCounselingTab() {
   const isAdmin = currentUser?.role === 'admin'
   // 감독관(viewer)은 보고서 범위를 관리자와 동일하게(전체 강사 선택) — 쓰기(프로그램 추가·학생 등록)는 admin만
   const isViewer = currentUser?.role === 'viewer'
+  // 월간 보고서 — 스테일 localStorage 세션에는 subject/workSchedule이 없을 수 있어 fetch본 우선
+  const isReportPicker = isAdmin || isViewer
+  const selfEducator = data.educators.find((e) => e.id === currentUser?.id) ?? currentUser
+  // 복수 담당업무 본인(강사 보기 모드의 황광희)은 담당업무 분리 셀렉트를 쓰도록 목록 경로로 넘긴다
+  const splitSelf = !isReportPicker && hasMultipleDuties(currentUser?.id)
 
   const [programs, setPrograms] = useState([])
   const [programsLoading, setProgramsLoading] = useState(true)
@@ -173,18 +179,13 @@ export default function ExternalCounselingTab() {
         {showMonthlyReport && (
           <MonthlyReportModal
             educators={
-              isAdmin || isViewer
+              isReportPicker
                 ? data.educators.filter((e) =>
                     ['admin', 'manager', 'instructor', 'consultant'].includes(e.role),
                   )
-                : null
+                : splitSelf ? [selfEducator] : null
             }
-            fixedEducator={
-              // 스테일 localStorage 세션에는 subject/workSchedule이 없을 수 있어 fetch본 우선
-              isAdmin || isViewer
-                ? null
-                : data.educators.find((e) => e.id === currentUser?.id) ?? currentUser
-            }
+            fixedEducator={isReportPicker || splitSelf ? null : selfEducator}
             loadRecords={loadMonthlyRecords}
             reportLabel="외부컨설팅보고서"
             onClose={() => setShowMonthlyReport(false)}

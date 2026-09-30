@@ -1,5 +1,6 @@
 // 교과강사(instructor)·컨설턴트(consultant) 공용 라우트 셸 (/instructor/*, /consultant/*).
-// 공통 탭: 학생·업무기록·과제 + instructor 전용 확인평가(wide) + consultant 전용 외부상담.
+// 공통 탭: 학생·업무기록·과제 + instructor 전용 확인평가(wide) + 외부상담(consultant 또는
+// 보기 모드 계정의 educatorExtraTabs — data/roleViews.js).
 // 학생 상세는 /{role}/student/:studentId. 타이틀·경로는 currentUser.role로 분기.
 
 import { Routes, Route, Navigate } from 'react-router-dom'
@@ -33,9 +34,9 @@ export default function EducatorDashboard() {
   const basePath = `/${role}`
   const title = ROLE_TITLES[role] || '교육자'
   const isInstructor = role === 'instructor'
-  const isConsultant = role === 'consultant'
+  const showExternal = role === 'consultant' || !!currentUser?.educatorExtraTabs?.includes('external')
 
-  // 공통 탭 + instructor 전용 확인평가 탭 + consultant 전용 외부상담 탭.
+  // 공통 탭 + instructor 전용 확인평가 탭 + 외부상담 탭(showExternal).
   const tabs = [
     { path: `${basePath}/students`, label: '학생', icon: Users },
     { path: `${basePath}/counseling`, label: '업무기록', icon: MessageSquare },
@@ -44,7 +45,7 @@ export default function EducatorDashboard() {
     ...(isInstructor
       ? [{ path: `${basePath}/quiz`, label: '확인평가', icon: ClipboardCheck }]
       : []),
-    ...(isConsultant
+    ...(showExternal
       ? [{ path: `${basePath}/external`, label: '외부상담', icon: Globe }]
       : []),
   ]
@@ -82,7 +83,7 @@ export default function EducatorDashboard() {
             <Route path="counseling" element={<WorkRecordsTab />} />
             <Route path="booking" element={<EducatorBookingTab />} />
             <Route path="tasks" element={<EducatorTaskTab />} />
-            {isConsultant && (
+            {showExternal && (
               <Route path="external" element={<ExternalCounselingTab />} />
             )}
           </Routes>

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bell, LogOut, ChevronLeft, KeyRound, UserCog } from 'lucide-react'
+import { Bell, LogOut, ChevronLeft, KeyRound, UserCog, ArrowLeftRight } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import FeedbackButton from '../FeedbackButton.jsx'
 import InstallButton from '../InstallButton.jsx'
@@ -31,7 +31,7 @@ const ROLE_COLORS = {
 }
 
 export default function Header({ title, badge, back }) {
-  const { currentUser, logout } = useAuth()
+  const { currentUser, logout, canSwitchView, viewMode, switchView } = useAuth()
   const navigate = useNavigate()
   const [showPwModal, setShowPwModal] = useState(false)
   const [showProfileModal, setShowProfileModal] = useState(false)
@@ -42,6 +42,15 @@ export default function Header({ title, badge, back }) {
     navigate('/')
   }
 
+  // 관리자 ↔ 강사 화면 전환 (data/roleViews.js 대상 계정만)
+  const handleSwitchView = () => {
+    const next = viewMode === 'educator' ? 'account' : 'educator'
+    switchView(next)
+    navigate(next === 'educator' ? '/instructor' : '/admin')
+  }
+  const switchLabel = viewMode === 'educator' ? '관리자 화면으로 전환' : '강사 화면으로 전환'
+  const badgeClass = `text-xs text-white font-bold px-2 py-1 rounded-full flex-shrink-0 ${ROLE_COLORS[currentUser?.role] || 'bg-gray-400'}`
+
   return (
     <header className="fixed top-0 left-0 right-0 z-40 bg-white border-b border-gray-100 shadow-sm print:hidden">
       <div className="max-w-lg mx-auto flex items-center px-4 h-14 gap-3">
@@ -49,8 +58,18 @@ export default function Header({ title, badge, back }) {
           <button onClick={() => navigate(back)} className="flex-shrink-0 -ml-1 p-1 text-gray-500 hover:text-gray-700">
             <ChevronLeft size={22} />
           </button>
+        ) : canSwitchView ? (
+          <button
+            onClick={handleSwitchView}
+            className={`${badgeClass} flex items-center gap-1`}
+            title={switchLabel}
+            aria-label={switchLabel}
+          >
+            {ROLE_LABELS[currentUser?.role] || ''}
+            <ArrowLeftRight size={11} />
+          </button>
         ) : (
-          <span className={`text-xs text-white font-bold px-2 py-1 rounded-full flex-shrink-0 ${ROLE_COLORS[currentUser?.role] || 'bg-gray-400'}`}>
+          <span className={badgeClass}>
             {ROLE_LABELS[currentUser?.role] || ''}
           </span>
         )}
