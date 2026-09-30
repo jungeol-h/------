@@ -49,6 +49,8 @@ export function bookingMessage(code, ctx = {}) {
       return '이미 취소되었거나 변경된 예약입니다. 최신 예약정보를 다시 확인해 주세요.'
     case 'HAS_RESERVATIONS':
       return '예약된 학생이 있는 시간은 삭제할 수 없습니다. 운영취소로 전환해 주세요.'
+    case 'PAST_HAS_RESERVATIONS':
+      return '이미 진행된 예약이 있는 슬롯은 지난 상담 이력 보호를 위해 삭제하지 않았습니다.'
     case 'CAPACITY_BELOW_BOOKED':
       return '현재 예약된 인원보다 정원을 작게 설정할 수 없습니다.'
     case 'FORBIDDEN':

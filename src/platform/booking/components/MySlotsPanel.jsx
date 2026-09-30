@@ -4,7 +4,7 @@
 // 관리자 스코프 fetch는 전 강사 슬롯이므로 여기서 educatorId로 본인분만 거른다).
 
 import { useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight, Plus, FileSpreadsheet } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, FileSpreadsheet, Trash2 } from 'lucide-react'
 import { useBooking } from '../BookingContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
 import { addDaysStr } from '../bookingRules.js'
@@ -14,6 +14,7 @@ import { buildReservationSheets, downloadReservationWorkbook } from '../reservat
 import AvailabilityRulesSection from './AvailabilityRulesSection.jsx'
 import SlotEditorModal from './SlotEditorModal.jsx'
 import DesignatedReserveModal from './DesignatedReserveModal.jsx'
+import BulkSlotDeleteModal from './BulkSlotDeleteModal.jsx'
 
 const WEEKDAY = ['일', '월', '화', '수', '목', '금', '토']
 
@@ -34,6 +35,7 @@ export default function MySlotsPanel({ educatorId, programs, isAdmin = false }) 
   })
   const [editSlot, setEditSlot] = useState(null)
   const [designatedOpen, setDesignatedOpen] = useState(false)
+  const [bulkDeleteSlots, setBulkDeleteSlots] = useState(null) // 날짜 단위 일괄 삭제 대상
   const [view, setView] = useState('slots') // 'slots' | 'reservations'
   const [exportRange, setExportRange] = useState(null) // null이면 표시 주 사용, 열면 { from, to }
   const [exporting, setExporting] = useState(false)
@@ -176,7 +178,17 @@ export default function MySlotsPanel({ educatorId, programs, isAdmin = false }) 
             if (daySlots.length === 0) return null
             return (
               <div key={d} className="space-y-1.5">
-                <h4 className="text-xs font-bold text-gray-400">{d} ({dowOf(d)})</h4>
+                <h4 className="text-xs font-bold text-gray-400 flex items-center gap-1.5">
+                  {d} ({dowOf(d)})
+                  <button
+                    type="button"
+                    onClick={() => setBulkDeleteSlots(daySlots)}
+                    className="text-gray-300 hover:text-red-500"
+                    aria-label={`${d} 슬롯 삭제`}
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </h4>
                 {daySlots.map((s) => {
                   const booked = confirmedOf(s.id)
                   const status = SLOT_STATUS[s.status]
@@ -255,6 +267,12 @@ export default function MySlotsPanel({ educatorId, programs, isAdmin = false }) 
           educatorId={educatorId}
           programs={programs}
           onClose={() => setDesignatedOpen(false)}
+        />
+      )}
+      {bulkDeleteSlots && (
+        <BulkSlotDeleteModal
+          slots={bulkDeleteSlots}
+          onClose={() => setBulkDeleteSlots(null)}
         />
       )}
     </div>
