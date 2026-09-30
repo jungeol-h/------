@@ -69,6 +69,8 @@ DB 스키마 변경은 **Supabase Studio SQL Editor에서 수동 실행**한다 
 | `add-booking-record-times.sql` | 예약 상담기록(지도보고서) 실제 상담 시간(2026-08-20): booking_records에 start_time/end_time TEXT 컬럼 추가(널 허용). 월간·컨설팅 보고서 집계가 예약 슬롯 시간 대신 작성된 실제 시간을 쓰고, 미기록은 슬롯 폴백. ⚠️ 신코드 배포 전 적용 필수 — 미적용 상태에서 지도보고서 저장 시 upsert 실패. 소비처: RecordFormModal.jsx, bookingApi.saveRecord, supabaseHelpers.toBookingCounselingRecord | 적용 (2026-08-20) |
 | `add-booking-auto-attendance.sql` | 예약 출결 자동 처리(2026-09-30 클라이언트: 출결 미처리 누적): 함수만 추가 — booking_auto_attendance_plan(판정, 순수 SELECT·미리보기 겸용) / booking_auto_attendance(야간 일괄) / booking_sync_attendance_from_records(기록 저장 직후 참석 반영 RPC) + booking_daily_digest 재정의(자동 참석분은 상담기록 독촉 제외). 자동 참석 = 예약 상담기록 또는 슬롯 강사 본인의 상담보고·수업보고, 자동 미참석 = 센터 결석일·재실 구간 밖. pending + 미수기 건만 대상, attendance_marked_by='system'. 적용만으로는 데이터 무변경(구 프런트 호환). ⚠️ add-booking-system.sql 재실행 시 digest 재정의가 되돌아가므로 이 파일을 다시 적용. 소비처: bookingAttendanceSync.js, bookingStatus.js(isAutoMarked) | 미적용 (Studio 적용 필요 — 신코드 배포 전) |
 | `add-booking-auto-attendance-cron.sql` | 위 야간 일괄의 pg_cron 등록(KST 00:02, 다이제스트 00:05보다 먼저). ⚠️ 신 프런트 배포 **후** 적용 — 먼저 돌리면 구 화면이 자동 참석분에 "상담기록 미작성"을 띄운다. 과거 누적분 소급 절차는 파일 헤더 참조 | 미적용 (신코드 배포 후) |
+| `add-student-status-dates.sql` | 학생 목록 보고서(PDF) 입학일·퇴원일·신청취소일 표시(2026-09-30 클라이언트): users.withdrawn_at/cancelled_at DATE 추가(널 허용). 퇴원·신청취소 처리(setStudentStatus) 시 그날 날짜를 자동 기록하고, 도입 이전 처리 건은 NULL — 학생 수정 모달에서 수기 입력. 재원 복구 시 값은 유지(표시는 상태 일치 시만). ⚠️ 신코드 배포 전 적용 필수 — 미적용 상태에서 퇴원·신청취소 처리와 해당 학생 정보 수정이 컬럼 없음으로 실패. 소비처: studentDomain.setStudentStatus/updateStudent, StudentFormModal.jsx, UserListReport.jsx | 미적용 (Studio 적용 필요) |
+
 
 ## 시드·일회성 유틸 (재실행 금지 또는 불필요)
 

@@ -29,12 +29,17 @@ export default function StudentFormModal({
   const [resetPassword, setResetPassword] = useState(false) // edit 모드: 저장 시 비밀번호를 연락처로 초기화
   const [managerId, setManagerId] = useState(initialManagerId ?? '')
   const [enrolledAt, setEnrolledAt] = useState(initial?.enrolledAt ?? '')
+  const [withdrawnAt, setWithdrawnAt] = useState(initial?.withdrawnAt ?? '')
+  const [cancelledAt, setCancelledAt] = useState(initial?.cancelledAt ?? '')
   const [saving, setSaving] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
   const [dupMatches, setDupMatches] = useState(null)
   const [dupConfirmed, setDupConfirmed] = useState(false)
 
   const isEdit = mode === 'edit'
+  // 구 값 'inactive'도 퇴원으로 취급(add-user-gender-and-status 이전 상태값)
+  const isWithdrawn = isEdit && (initial?.status === 'withdrawn' || initial?.status === 'inactive')
+  const isCancelled = isEdit && initial?.status === 'cancelled'
 
   // 입력 핸들러: 전화번호는 입력 즉시 정규화(다듬어진 값만 state에 저장)
   const handleNameChange = (e) => {
@@ -125,6 +130,8 @@ export default function StudentFormModal({
         resetPassword: isEdit ? resetPassword : undefined,
         managerId: managerId || null,
         enrolledAt: enrolledAt || null,
+        ...(isWithdrawn ? { withdrawnAt: withdrawnAt || null } : {}),
+        ...(isCancelled ? { cancelledAt: cancelledAt || null } : {}),
       })
       onClose()
     } catch (err) {
@@ -248,6 +255,23 @@ export default function StudentFormModal({
               <p className="mt-1 text-[10px] text-gray-400">인원 현황 '신입학' 집계 기준</p>
             </div>
           </div>
+
+          {(isWithdrawn || isCancelled) && (
+            <div>
+              <label className="block text-[11px] font-bold text-gray-500 mb-1">
+                {isWithdrawn ? '퇴원일' : '신청취소일'}
+              </label>
+              <input
+                type="date"
+                value={isWithdrawn ? withdrawnAt : cancelledAt}
+                onChange={(e) =>
+                  isWithdrawn ? setWithdrawnAt(e.target.value) : setCancelledAt(e.target.value)
+                }
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
+              />
+              <p className="mt-1 text-[10px] text-gray-400">학생 목록 보고서 표시용</p>
+            </div>
+          )}
 
           <div>
             <label className="block text-[11px] font-bold text-gray-500 mb-1">login_id (로그인 ID) *</label>
