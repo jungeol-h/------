@@ -9,12 +9,14 @@ import { useBooking } from '../BookingContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
 import { addDaysStr } from '../bookingRules.js'
 import { todayStr } from '../../utils/dateUtils.js'
-import { SLOT_STATUS, reservationDisplayStatus } from '../bookingStatus.js'
+import { SLOT_STATUS, isAutoMarked, reservationDisplayStatus } from '../bookingStatus.js'
 import { buildReservationSheets, downloadReservationWorkbook } from '../reservationExcel.js'
 import AvailabilityRulesSection from './AvailabilityRulesSection.jsx'
 import SlotEditorModal from './SlotEditorModal.jsx'
 import DesignatedReserveModal from './DesignatedReserveModal.jsx'
 import BulkSlotDeleteModal from './BulkSlotDeleteModal.jsx'
+import AttendanceProcessModal from './AttendanceProcessModal.jsx'
+import RecordFormModal from './RecordFormModal.jsx'
 
 const WEEKDAY = ['일', '월', '화', '수', '목', '금', '토']
 
@@ -24,7 +26,7 @@ function dowOf(dateStr) {
 }
 
 export default function MySlotsPanel({ educatorId, programs, isAdmin = false }) {
-  const { config, slots, reservations, userNames } = useBooking()
+  const { config, slots, reservations, records, userNames } = useBooking()
   const { data } = useData()
 
   const [weekStart, setWeekStart] = useState(() => {
@@ -36,6 +38,8 @@ export default function MySlotsPanel({ educatorId, programs, isAdmin = false }) 
   const [editSlot, setEditSlot] = useState(null)
   const [designatedOpen, setDesignatedOpen] = useState(false)
   const [bulkDeleteSlots, setBulkDeleteSlots] = useState(null) // 날짜 단위 일괄 삭제 대상
+  const [attendanceTarget, setAttendanceTarget] = useState(null) // 예약 목록 [출결] (2026-09-30)
+  const [recordTarget, setRecordTarget] = useState(null)
   const [view, setView] = useState('slots') // 'slots' | 'reservations'
   const [exportRange, setExportRange] = useState(null) // null이면 표시 주 사용, 열면 { from, to }
   const [exporting, setExporting] = useState(false)
@@ -242,9 +246,21 @@ export default function MySlotsPanel({ educatorId, programs, isAdmin = false }) 
                   <p className="text-xs text-gray-500 mt-0.5 truncate">{studentName(r.studentId)}</p>
                   {r.cancelReason && <p className="text-[11px] text-gray-400 mt-0.5">취소사유: {r.cancelReason}</p>}
                 </div>
-                <span className="text-[10px] font-bold px-2 py-1 rounded-full flex-shrink-0 bg-gray-100 text-gray-600">
-                  {display.label}
-                </span>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-gray-100 text-gray-600">
+                    {display.label}
+                    {isAutoMarked(r) && <span className="ml-1 text-indigo-500">자동</span>}
+                  </span>
+                  {r.status === 'confirmed' && r.slot.date <= todayStr() && (
+                    <button
+                      type="button"
+                      onClick={() => setAttendanceTarget(r)}
+                      className="h-8 px-3 rounded-lg bg-emerald-50 text-emerald-600 text-[11px] font-bold"
+                    >
+                      출결
+                    </button>
+                  )}
+                </div>
               </div>
             )
           })}
@@ -260,6 +276,30 @@ export default function MySlotsPanel({ educatorId, programs, isAdmin = false }) 
           program={programOf(editSlot.programId)}
           isAdmin={isAdmin}
           onClose={() => setEditSlot(null)}
+        />
+      )}
+      {attendanceTarget && (
+        <AttendanceProcessModal
+          reservation={attendanceTarget}
+          onClose={() => setAttendanceTarget(null)}
+          onWriteRecord={(r) => { setAttendanceTarget(null); setRecordTarget(r) }}
+        />
+      )}
+      {recordTarget && (
+        <RecordFormModal
+          reservation={recordTarget}
+          record={records.find((x) => x.reservationId === recordTarget.id)}
+          studentName={studentName(recordTarget.studentId)}
+          programName={programOf(recordTarget.programId)?.name ?? ''}
+          groupMembers={myReservations
+            .filter((x) => x.slotId === recordTarget.slotId && x.id !== recordTarget.id
+              && x.status === 'confirmed' && x.attendanceStatus === 'attended')
+            .map((x) => ({
+              reservation: x,
+              record: records.find((rr) => rr.reservationId === x.id),
+              name: studentName(x.studentId),
+            }))}
+          onClose={() => setRecordTarget(null)}
         />
       )}
       {designatedOpen && (

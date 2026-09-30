@@ -5,7 +5,11 @@
 // 경로는 actor.role 기준. 같은 슬롯에 확정 예약이 여럿이면(그룹상담) 전원 참석
 // 일괄 처리 버튼을 노출한다 (명세 11.5 — 일괄 후 개별 수정 가능).
 //
-// onChangeReservation·onCancelReservation·onWriteRecord는 부모가 이 모달을 닫고
+// 자동 처리분(attendance_marked_by='system')은 '자동' 표시와 사유를 보여 주고 그대로
+// 정정할 수 있다. 지난 출결 미처리 건은 상담기록 작성으로 바로 넘어갈 수 있다 —
+// 저장 시 참석 처리 (2026-09-30).
+//
+// onChangeReservation·onCancelReservation(선택 — 없으면 버튼 숨김)·onWriteRecord는 부모가 이 모달을 닫고
 // 각각의 모달(AdminChangeModal·AdminCancelModal·RecordFormModal)을 열도록 하는
 // 콜백 — reservation을 인자로 넘긴다. 호출처 둘 다 BookingProvider 하위라
 // setAttendance 등은 useBooking()으로 직접 취득한다.
@@ -16,7 +20,9 @@ import ModalShell from '../../components/common/ModalShell.jsx'
 import { useBooking } from '../BookingContext.jsx'
 import { todayStr } from '../../utils/dateUtils.js'
 import { bookingMessage } from '../bookingMessages.js'
-import { ATTENDANCE_STATUS, ATTENDANCE_CHOICES, recordState } from '../bookingStatus.js'
+import {
+  ATTENDANCE_STATUS, ATTENDANCE_CHOICES, isAutoMarked, isSlotPast, recordState,
+} from '../bookingStatus.js'
 
 const FIELD = 'h-10 px-3 rounded-lg border border-gray-200 text-sm'
 
@@ -30,8 +36,11 @@ export default function AttendanceProcessModal({
   const { config, records, reservations, userNames, setAttendance, actor } = useBooking()
   const navigate = useNavigate()
 
-  // 기존 메모가 있으면 미리 채워 재처리 시에도 유실되지 않게 한다
-  const [note, setNote] = useState(r.attendanceNote ?? '')
+  // 기존 메모가 있으면 미리 채워 재처리 시에도 유실되지 않게 한다.
+  // 자동 처리 사유('[자동] …')는 정정 후에 남으면 오해를 부르므로 승계하지 않는다.
+  const auto = isAutoMarked(r)
+  const [note, setNote] = useState(auto ? '' : (r.attendanceNote ?? ''))
+  const noteToSend = () => note.trim() || (auto ? '자동 처리 정정' : null)
   const [busy, setBusy] = useState(false)
   const [failCode, setFailCode] = useState(null)
   const [savedAttended, setSavedAttended] = useState(false) // 참석 처리 성공 → 기록 안내 화면
@@ -53,6 +62,9 @@ export default function AttendanceProcessModal({
   const recState = recordState(r, records.find((x) => x.reservationId === r.id), r.slot?.date)
   const needsRecord = r.attendanceStatus === 'attended'
     && recState !== 'done' && recState !== 'done_overdue' && recState !== 'not_required'
+  // 지난 출결 미처리 — 기록을 쓰면 참석 처리되므로 출결을 따로 누를 필요가 없다
+  const canRecordPending = r.status === 'confirmed' && r.attendanceStatus === 'pending'
+    && r.slot && isSlotPast(r.slot)
 
   // 같은 슬롯의 다른 확정 예약 = 그룹상담 동반 인원
   const groupPeers = reservations.filter(
@@ -64,7 +76,7 @@ export default function AttendanceProcessModal({
     setBusy(true)
     setFailCode(null)
     try {
-      const result = await setAttendance({ reservationId: r.id, status, note: note.trim() || null })
+      const result = await setAttendance({ reservationId: r.id, status, note: noteToSend() })
       if (!result?.ok) {
         setFailCode(result?.code ?? 'ERROR')
         return
@@ -85,7 +97,7 @@ export default function AttendanceProcessModal({
     setFailCode(null)
     try {
       for (const target of [r, ...groupPeers]) {
-        const result = await setAttendance({ reservationId: target.id, status: 'attended', note: note.trim() || null })
+        const result = await setAttendance({ reservationId: target.id, status: 'attended', note: noteToSend() })
         if (!result?.ok) {
           setFailCode(result?.code ?? 'ERROR')
           return
@@ -132,8 +144,14 @@ export default function AttendanceProcessModal({
         </p>
         <p className="text-xs text-gray-500">
           현재 출결: <span className="font-bold">{ATTENDANCE_STATUS[r.attendanceStatus]?.label ?? r.attendanceStatus}</span>
+          {auto && <span className="ml-1 text-[10px] font-bold text-indigo-500">자동</span>}
           {r.attendanceOverdue ? ' · 기한초과' : ''}
         </p>
+        {auto && r.attendanceNote && (
+          <p className="text-[11px] text-indigo-500">
+            {r.attendanceNote} — 사실과 다르면 아래에서 정정해 주세요.
+          </p>
+        )}
         {r.cancelReason && <p className="text-[11px] text-gray-400">취소사유: {r.cancelReason}</p>}
       </div>
 
@@ -170,6 +188,15 @@ export default function AttendanceProcessModal({
               상담기록 작성 (참석 처리 완료)
             </button>
           )}
+          {canRecordPending && (
+            <button
+              type="button"
+              onClick={() => onWriteRecord(r)}
+              className="w-full h-12 rounded-xl bg-blue-500 text-white text-sm font-bold"
+            >
+              상담기록 작성 (저장 시 참석 처리)
+            </button>
+          )}
           <div className="space-y-1.5">
             <div className="grid grid-cols-2 gap-1.5">
               {MAIN_CHOICES.map((key) => choiceBtn(key, true))}
@@ -204,22 +231,26 @@ export default function AttendanceProcessModal({
 
       {/* 보조 액션 — 기존 카드 클릭의 학생 상세 이동 기능 보존 */}
       <div className="space-y-2 pt-1 border-t border-gray-100">
-        {!savedAttended && r.status === 'confirmed' && (
+        {!savedAttended && r.status === 'confirmed' && (onChangeReservation || onCancelReservation) && (
           <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => onChangeReservation(r)}
-              className="flex-1 h-8 rounded-lg bg-blue-50 text-blue-600 text-[11px] font-bold"
-            >
-              예약 변경
-            </button>
-            <button
-              type="button"
-              onClick={() => onCancelReservation(r)}
-              className="flex-1 h-8 rounded-lg bg-red-50 text-red-500 text-[11px] font-bold"
-            >
-              예약 취소
-            </button>
+            {onChangeReservation && (
+              <button
+                type="button"
+                onClick={() => onChangeReservation(r)}
+                className="flex-1 h-8 rounded-lg bg-blue-50 text-blue-600 text-[11px] font-bold"
+              >
+                예약 변경
+              </button>
+            )}
+            {onCancelReservation && (
+              <button
+                type="button"
+                onClick={() => onCancelReservation(r)}
+                className="flex-1 h-8 rounded-lg bg-red-50 text-red-500 text-[11px] font-bold"
+              >
+                예약 취소
+              </button>
+            )}
           </div>
         )}
         <button

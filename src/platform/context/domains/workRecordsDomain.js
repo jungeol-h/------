@@ -8,6 +8,7 @@ import {
   toManagementReport, toFinanceRecord, toLessonReport,
 } from '../../lib/supabaseHelpers.js'
 import { makeAdder, makeUpdater, makeDeleter } from './crudKit.js'
+import { syncBookingAttendance } from './bookingAttendanceSync.js'
 
 // ── 관리보고 (업무유형 6종: workRecordTypes.js WORK_TYPES) ──────
 const MANAGEMENT = {
@@ -60,43 +61,8 @@ const LESSON = {
 }
 
 export function useWorkRecordsDomain(setData) {
-  return useMemo(() => ({
-    addManagementReport: makeAdder(setData, {
-      ...MANAGEMENT, prefix: 'mr', toLocal: toManagementReport, label: 'addManagementReport',
-      toRow: ({ authorId, date, workType = 'etc', startTime = '', endTime = '', content = '', note = '', groupName = null }) => ({
-        author_id: authorId,
-        date,
-        work_type: workType,
-        start_time: startTime,
-        end_time: endTime,
-        content,
-        note,
-        group_name: groupName || null,
-      }),
-    }),
-    updateManagementReport: makeUpdater(setData, { ...MANAGEMENT, label: 'updateManagementReport' }),
-    deleteManagementReport: makeDeleter(setData, { ...MANAGEMENT, label: 'deleteManagementReport' }),
-
-    addFinanceRecord: makeAdder(setData, {
-      ...FINANCE, prefix: 'fin', toLocal: toFinanceRecord, label: 'addFinanceRecord',
-      toRow: ({ authorId, date, category = 'etc', itemName = '', unitPrice = 0, quantity = 1, amount = 0, vendor = '', paymentMethod = 'personal_card', attachments = [], groupName = null }) => ({
-        author_id: authorId,
-        date,
-        category,
-        item_name: itemName,
-        unit_price: unitPrice,
-        quantity,
-        amount,
-        vendor,
-        payment_method: paymentMethod,
-        attachments,
-        group_name: groupName || null,
-      }),
-    }),
-    updateFinanceRecord: makeUpdater(setData, { ...FINANCE, label: 'updateFinanceRecord' }),
-    deleteFinanceRecord: makeDeleter(setData, { ...FINANCE, label: 'deleteFinanceRecord' }),
-
-    addLessonReport: makeAdder(setData, {
+  return useMemo(() => {
+    const addLessonReport = makeAdder(setData, {
       ...LESSON, prefix: 'lr', toLocal: toLessonReport, label: 'addLessonReport',
       toRow: ({ authorId, date, studentIds = [], startTime = '', endTime = '', topic = '', textbook = '', content = '', homework = '', note = '' }) => ({
         author_id: authorId,
@@ -110,8 +76,52 @@ export function useWorkRecordsDomain(setData) {
         homework,
         note,
       }),
-    }),
-    updateLessonReport: makeUpdater(setData, { ...LESSON, label: 'updateLessonReport' }),
-    deleteLessonReport: makeDeleter(setData, { ...LESSON, label: 'deleteLessonReport' }),
-  }), [setData])
+    })
+
+    return {
+      addManagementReport: makeAdder(setData, {
+        ...MANAGEMENT, prefix: 'mr', toLocal: toManagementReport, label: 'addManagementReport',
+        toRow: ({ authorId, date, workType = 'etc', startTime = '', endTime = '', content = '', note = '', groupName = null }) => ({
+          author_id: authorId,
+          date,
+          work_type: workType,
+          start_time: startTime,
+          end_time: endTime,
+          content,
+          note,
+          group_name: groupName || null,
+        }),
+      }),
+      updateManagementReport: makeUpdater(setData, { ...MANAGEMENT, label: 'updateManagementReport' }),
+      deleteManagementReport: makeDeleter(setData, { ...MANAGEMENT, label: 'deleteManagementReport' }),
+
+      addFinanceRecord: makeAdder(setData, {
+        ...FINANCE, prefix: 'fin', toLocal: toFinanceRecord, label: 'addFinanceRecord',
+        toRow: ({ authorId, date, category = 'etc', itemName = '', unitPrice = 0, quantity = 1, amount = 0, vendor = '', paymentMethod = 'personal_card', attachments = [], groupName = null }) => ({
+          author_id: authorId,
+          date,
+          category,
+          item_name: itemName,
+          unit_price: unitPrice,
+          quantity,
+          amount,
+          vendor,
+          payment_method: paymentMethod,
+          attachments,
+          group_name: groupName || null,
+        }),
+      }),
+      updateFinanceRecord: makeUpdater(setData, { ...FINANCE, label: 'updateFinanceRecord' }),
+      deleteFinanceRecord: makeDeleter(setData, { ...FINANCE, label: 'deleteFinanceRecord' }),
+
+      // 저장 후 수강 학생들의 같은 날 출결 미처리 예약(작성자 본인 슬롯)을 참석 처리 —
+      // 기다리지 않는다 (bookingAttendanceSync.js)
+      addLessonReport: async (input) => {
+        await addLessonReport(input)
+        void syncBookingAttendance({ studentIds: input.studentIds, date: input.date, actorId: input.authorId })
+      },
+      updateLessonReport: makeUpdater(setData, { ...LESSON, label: 'updateLessonReport' }),
+      deleteLessonReport: makeDeleter(setData, { ...LESSON, label: 'deleteLessonReport' }),
+    }
+  }, [setData])
 }

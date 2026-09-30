@@ -12,7 +12,7 @@ import { useAuth } from '../../context/AuthContext.jsx'
 import { useBooking } from '../BookingContext.jsx'
 import { addDaysStr, todayStrKst } from '../bookingRules.js'
 import { todayStr } from '../../utils/dateUtils.js'
-import { recordState, RECORD_STATE } from '../bookingStatus.js'
+import { canWriteRecord, recordState, RECORD_STATE } from '../bookingStatus.js'
 import BookingNotificationsBell from '../components/BookingNotificationsBell.jsx'
 import SlotEditorModal from '../components/SlotEditorModal.jsx'
 import MySlotsPanel from '../components/MySlotsPanel.jsx'
@@ -67,9 +67,10 @@ export default function EducatorBookingView({ isAdmin = false }) {
       r.status === 'confirmed' && r.attendanceStatus === 'pending' && r.slot && r.slot.date < today),
     [reservations, today],
   )
+  // 참석 처리된 상담 + 지난 출결 미처리 상담(기록 저장 시 참석 처리 — RecordFormModal)
   const recordTargets = useMemo(
     () => reservations
-      .filter((r) => r.status === 'confirmed' && r.attendanceStatus === 'attended' && r.slot)
+      .filter((r) => canWriteRecord(r, r.slot))
       .sort((a, b) => (a.slot.date < b.slot.date ? 1 : -1)),
     [reservations],
   )
@@ -120,7 +121,9 @@ export default function EducatorBookingView({ isAdmin = false }) {
       {recordTargets.map((r) => {
         const rec = records.find((x) => x.reservationId === r.id)
         const state = recordState(r, rec, r.slot.date)
-        const stateInfo = RECORD_STATE[state]
+        const stateInfo = r.attendanceStatus === 'pending'
+          ? { label: '출결 미처리 · 저장 시 참석', color: 'bg-emerald-50 text-emerald-600' }
+          : RECORD_STATE[state]
         return (
           <button
             key={r.id}
@@ -142,7 +145,7 @@ export default function EducatorBookingView({ isAdmin = false }) {
       })}
       {recordTargets.length === 0 && (
         <p className="py-10 text-center text-sm text-gray-400 bg-white rounded-2xl shadow-sm">
-          참석 처리된 상담이 없습니다. 출결을 먼저 처리해 주세요.
+          기록할 상담이 없습니다. 지난 예약이 생기면 여기서 바로 기록할 수 있어요.
         </p>
       )}
     </div>
@@ -253,7 +256,8 @@ export default function EducatorBookingView({ isAdmin = false }) {
           studentName={studentName(recordTarget.studentId)}
           programName={programOf(recordTarget.programId)?.name ?? ''}
           groupMembers={recordTargets
-            .filter((x) => x.slotId === recordTarget.slotId && x.id !== recordTarget.id)
+            .filter((x) => x.slotId === recordTarget.slotId && x.id !== recordTarget.id
+              && x.attendanceStatus === 'attended')
             .map((x) => ({
               reservation: x,
               record: records.find((rr) => rr.reservationId === x.id),

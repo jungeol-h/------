@@ -1,17 +1,21 @@
 // 상담기록 작성 모달 — 기존 상담보고 6단계 공용 양식(CounselingContentFields) 재사용.
 // 임시저장(draft)/작성완료(done) 분리. 기한 초과 작성은 저장을 막지 않고 표시만 한다 (명세 14.2).
+// 출결 미처리 예약에서 열리면 저장 전에 참석 처리부터 한다 — 기록을 썼다는 것이 곧
+// 참석이므로 출결을 따로 누르지 않아도 된다 (2026-09-30 클라이언트 요청).
 
 import { useState } from 'react'
 import ModalShell from '../../components/common/ModalShell.jsx'
 import CounselingContentFields from '../../components/counseling/CounselingContentFields.jsx'
 import { useBooking } from '../BookingContext.jsx'
 import { addDaysStr, todayStrKst } from '../bookingRules.js'
+import { bookingMessage } from '../bookingMessages.js'
 import { RECORD_DEADLINE_DAYS } from '../bookingStatus.js'
 
 const FIELD = 'h-10 px-3 rounded-lg border border-gray-200 text-sm'
 
 export default function RecordFormModal({ reservation, record, studentName, programName, groupMembers = [], onClose }) {
-  const { saveRecord } = useBooking()
+  const { saveRecord, setAttendance } = useBooking()
+  const needsAttend = reservation.attendanceStatus === 'pending'
   const slotDate = reservation.slot?.date ?? reservation.createdAt?.slice(0, 10)
   const deadline = addDaysStr(slotDate, RECORD_DEADLINE_DAYS)
   const overdue = todayStrKst() > deadline
@@ -51,6 +55,15 @@ export default function RecordFormModal({ reservation, record, studentName, prog
     setBusy(true)
     setError(null)
     try {
+      if (needsAttend) {
+        const result = await setAttendance({
+          reservationId: reservation.id, status: 'attended', note: '상담기록 작성으로 참석 처리',
+        })
+        if (!result?.ok) {
+          setError(bookingMessage(result?.code ?? 'ERROR'))
+          return
+        }
+      }
       await saveOne(reservation, record, status)
       if (copyToGroup) {
         for (const m of groupMembers) {
@@ -58,8 +71,8 @@ export default function RecordFormModal({ reservation, record, studentName, prog
         }
       }
       onClose()
-    } catch (e) {
-      setError(e)
+    } catch {
+      setError('저장에 실패했습니다. 다시 시도해 주세요.')
     } finally {
       setBusy(false)
     }
@@ -72,6 +85,9 @@ export default function RecordFormModal({ reservation, record, studentName, prog
         <p className={overdue ? 'text-red-500 font-bold' : ''}>
           작성기한: {deadline} 23:59{overdue ? ' — 기한 초과 작성으로 기록됩니다' : ''}
         </p>
+        {needsAttend && (
+          <p className="text-emerald-600 font-bold">출결 미처리 예약입니다 — 저장하면 참석으로 처리됩니다.</p>
+        )}
       </div>
 
       <div>
@@ -115,7 +131,7 @@ export default function RecordFormModal({ reservation, record, studentName, prog
       )}
 
       {error && (
-        <p className="text-xs text-red-500 bg-red-50 rounded-lg p-2">저장에 실패했습니다. 다시 시도해 주세요.</p>
+        <p className="text-xs text-red-500 bg-red-50 rounded-lg p-2">{error}</p>
       )}
 
       <div className="flex gap-2">
