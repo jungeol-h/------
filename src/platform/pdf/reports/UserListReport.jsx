@@ -24,6 +24,12 @@ const SORT_LABELS = {
   selfIndex: '자기주도지수',
 }
 
+// 'YYYY-MM-DD' → 'YY.MM.DD' (Date 객체·toISOString 미사용 — dateUtils.js 문자열 규약 그대로 표기만 축약)
+function shortDate(dateStr) {
+  if (!dateStr) return ''
+  return dateStr.slice(2).replace(/-/g, '.')
+}
+
 const filterStyles = StyleSheet.create({
   grid: {
     flexDirection: 'row',
@@ -104,23 +110,37 @@ export default function UserListReport({
   // '전체 그룹' 출력에서는 행만 봐서 소속을 알 수 없으므로 그룹 컬럼을 추가한다
   // (특정 그룹 출력이면 전 행이 같은 값이라 넣지 않고 학교 칸을 넓게 쓴다).
   const showGroupColumn = !group || group === 'all'
+  const dateCellStyle = { fontSize: fontSize.xs }
   const columns = [
-    { key: 'idx', header: '순번', width: '6%', align: 'center' },
-    { key: 'name', header: '이름', width: '12%' },
-    { key: 'gender', header: '성별', width: '6%', align: 'center' },
-    ...(showGroupColumn ? [{ key: 'group', header: '소속 그룹', width: '13%' }] : []),
-    { key: 'school', header: '학교', width: showGroupColumn ? '14%' : '20%' },
-    { key: 'grade', header: '학년', width: showGroupColumn ? '7%' : '8%', align: 'center' },
-    { key: 'className', header: '반', width: showGroupColumn ? '7%' : '8%', align: 'center' },
-    { key: 'manager', header: '담당 매니저', width: showGroupColumn ? '11%' : '12%', align: 'center' },
-    { key: 'risk', header: '위험도', width: showGroupColumn ? '9%' : '10%', align: 'center' },
-    { key: 'selfIndex', header: '자기주도지수', width: showGroupColumn ? '13%' : '10%', align: 'right' },
+    { key: 'idx', header: '순번', width: '5%', align: 'center' },
+    { key: 'name', header: '이름', width: showGroupColumn ? '9%' : '10%' },
+    { key: 'gender', header: '성별', width: '5%', align: 'center' },
+    ...(showGroupColumn ? [{ key: 'group', header: '소속 그룹', width: '10%' }] : []),
+    { key: 'school', header: '학교', width: showGroupColumn ? '11%' : '15%' },
+    { key: 'grade', header: '학년', width: showGroupColumn ? '5%' : '6%', align: 'center' },
+    { key: 'className', header: '반', width: showGroupColumn ? '5%' : '6%', align: 'center' },
+    { key: 'manager', header: '매니저', width: showGroupColumn ? '8%' : '9%', align: 'center' },
+    { key: 'risk', header: '위험도', width: showGroupColumn ? '7%' : '8%', align: 'center' },
+    { key: 'selfIndex', header: '지수', width: showGroupColumn ? '7%' : '8%', align: 'right' },
+    {
+      key: 'enrolledAt', header: '입학일', width: '10%', align: 'center', cellStyle: dateCellStyle,
+    },
+    {
+      key: 'statusDate', header: '퇴원·취소일', width: '10%', align: 'center', cellStyle: dateCellStyle,
+    },
     { key: 'status', header: '상태', width: '8%', align: 'center' },
   ]
 
   const rows = students.map((s, idx) => {
     const risk = RISK_LABELS[s.riskLevel] || RISK_LABELS.normal
     const status = STATUS_LABELS[s.status || 'active'] || STATUS_LABELS.active
+    // 퇴원·취소일은 현재 상태와 일치하는 날짜만 표시 — 재원 복구 후에도 남아있는
+    // 옛 날짜(setStudentStatus 정책상 지우지 않음)가 재원생에게 뜨는 걸 막는다.
+    const statusDate = s.status === 'withdrawn' || s.status === 'inactive'
+      ? s.withdrawnAt
+      : s.status === 'cancelled'
+        ? s.cancelledAt
+        : null
     return {
       key: s.id,
       idx: idx + 1,
@@ -133,6 +153,8 @@ export default function UserListReport({
       manager: managerNameOf(s.id) || '미배정',
       risk: <Badge label={risk.label} color={risk.color} bg={risk.bg} />,
       selfIndex: `${s.selfIndex ?? '-'}점`,
+      enrolledAt: shortDate(s.enrolledAt),
+      statusDate: shortDate(statusDate),
       status: <Badge label={status.label} color={status.color} bg={status.bg} />,
     }
   })

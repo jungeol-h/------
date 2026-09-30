@@ -20,6 +20,8 @@ export const toUser = (row) => ({
   riskLevel: row.risk_level ?? 'normal',
   status: row.status ?? 'active',
   enrolledAt: row.enrolled_at ?? null,
+  withdrawnAt: row.withdrawn_at ?? null, // 퇴원 처리일 (학생 목록 보고서 표시용)
+  cancelledAt: row.cancelled_at ?? null, // 신청취소 처리일 (학생 목록 보고서 표시용)
   subject: row.subject ?? '',
   workSchedule: row.work_schedule ?? '', // 교직원 업무일정 — 보고서 헤더 기본값
   groups: row.group_names ?? [], // 소속 그룹 (빈 배열 = 무소속: 직원이면 전체 열람, 학생이면 공용)
