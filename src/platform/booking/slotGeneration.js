@@ -14,25 +14,32 @@ import { addDaysStr, minutesToTime, overlaps, timeToMinutes } from './bookingRul
 //   educatorId, subjectId, isPublic, note  슬롯 공통 속성 (선택)
 //   breaks          [{ start: 'HH:MM', end: 'HH:MM' }] 휴식·예약 불가시간 (선택)
 //   excludeDates    ['YYYY-MM-DD'] 휴무일 (선택)
-//   blocked         [{ date, startTime, endTime }] 이미 점유된 시간대 (선택) —
+//   blocked         [{ date, startTime, endTime, ... }] 이미 점유된 시간대 (선택) —
 //                   같은 강사의 기존 슬롯(강사지정예약 포함)과 겹치는 슬롯은 만들지
 //                   않는다. SQL의 _booking_generate_rule_slots와 같은 의미론.
-// 반환: [{ date, startTime, endTime, capacity, educatorId, subjectId, isPublic, note }]
-export function generateSlots(params) {
+//                   date/startTime/endTime 외 필드는 그대로 보존되므로 슬롯 객체
+//                   전체를 넘기면 겹침 안내(SlotConflictList)에 재사용할 수 있다.
+// 반환(generateSlots): [{ date, startTime, endTime, capacity, educatorId, subjectId, isPublic, note }]
+// 반환(generateSlotsDetailed): { slots, skipped }
+//   skipped: blocked 때문에 제외된 후보 [{ date, startTime, endTime, blockers }]
+//            (breaks·excludeDates로 빠진 후보는 skipped에 넣지 않는다 — 사용자가
+//            해소할 수 있는 '겹침'만 눈에 보이게 하려는 의도)
+export function generateSlotsDetailed(params) {
   const {
     from, to, weekdays = [], dayStart, dayEnd, slotMinutes, capacity = 1,
     educatorId = null, subjectId = null, isPublic = true, note = '',
     breaks = [], excludeDates = [], blocked = [],
   } = params
 
-  if (!from || !to || from > to) return []
-  if (!slotMinutes || slotMinutes <= 0) return []
+  if (!from || !to || from > to) return { slots: [], skipped: [] }
+  if (!slotMinutes || slotMinutes <= 0) return { slots: [], skipped: [] }
 
   const startMin = timeToMinutes(dayStart)
   const endMin = timeToMinutes(dayEnd)
-  if (!(endMin > startMin)) return []
+  if (!(endMin > startMin)) return { slots: [], skipped: [] }
 
   const slots = []
+  const skipped = []
   for (let date = from; date <= to; date = addDaysStr(date, 1)) {
     const [y, m, d] = date.split('-').map(Number)
     const dow = new Date(y, m - 1, d).getDay()
@@ -44,12 +51,19 @@ export function generateSlots(params) {
       const endTime = minutesToTime(t + slotMinutes)
       const hitsBreak = breaks.some((b) => overlaps(startTime, endTime, b.start, b.end))
       if (hitsBreak) continue
-      const hitsBlocked = blocked.some(
+      const blockers = blocked.filter(
         (b) => b.date === date && overlaps(startTime, endTime, b.startTime, b.endTime),
       )
-      if (hitsBlocked) continue
+      if (blockers.length > 0) {
+        skipped.push({ date, startTime, endTime, blockers })
+        continue
+      }
       slots.push({ date, startTime, endTime, capacity, educatorId, subjectId, isPublic, note })
     }
   }
-  return slots
+  return { slots, skipped }
+}
+
+export function generateSlots(params) {
+  return generateSlotsDetailed(params).slots
 }
