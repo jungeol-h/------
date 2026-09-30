@@ -210,6 +210,7 @@ export function BookingProvider({ children }) {
       setAttendance: (p) => api.rpcSetAttendance({ ...p, actorId: userId, actorRole: role }).then(afterWrite),
       updateSlot: (p) => api.rpcUpdateSlot({ ...p, actorId: userId, actorRole: role }).then(afterWrite),
       setSlotStatus: (p) => api.rpcSetSlotStatus({ ...p, actorId: userId, actorRole: role }).then(afterWrite),
+      deleteSlots: (p) => api.rpcDeleteSlots({ ...p, actorId: userId, actorRole: role }).then(afterWrite),
       saveAvailabilityRule: (p) => api.rpcSaveAvailabilityRule({ ...p, actorId: userId, actorRole: role }).then(afterWrite),
 
       saveRecord: (input) => api.saveRecord(input, actor).then((r) => refetch().then(() => r)),

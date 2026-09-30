@@ -89,6 +89,15 @@ FOR UPDATE(id 정렬 순) → 부분 UNIQUE 인덱스.
   후 슬롯을 운영취소로 전환한다(예약 이력 FK 때문에 물리 삭제는 이력 없는
   슬롯만). SlotEditorModal은 지정 슬롯의 **이후 반복 회차 일괄 삭제** 체크박스
   제공(같은 강사·프로그램·요일·시간의 note '강사지정' 슬롯을 회차별 RPC 호출).
+- **일괄 삭제** (2026-09-30, `add-booking-bulk-delete.sql`): 슬롯 생성이 같은
+  강사의 기존 슬롯과 겹치면 막히는데 기존 삭제는 1개씩뿐이던 문제 해소.
+  `booking_delete_slots(slot_ids[])` RPC가 슬롯별 처리는 기존 booking_update_slot
+  (p_delete)로 재사용하고, ① 이미 시작한 슬롯에 확정 예약이 있으면 건너뛴다
+  (지난 상담 이력을 센터 사유 취소로 뒤엎지 않게) ② 그 규칙의 그 날짜 슬롯이
+  하나도 안 남으면 매주 반복 규칙의 exclude_dates(휴무일)로 등록한다. 프런트는
+  `BulkSlotDeleteModal`(슬롯 단위 체크박스 선택 + 날짜 헤더 지름길, AdminBookingView
+  타임테이블 메뉴·MySlotsPanel 공용) — 위저드의 겹침 해소 일괄 삭제도 이 RPC로
+  교체됨.
 
 ### 진입점은 사용자 의도 기준 (도구 어휘 금지)
 

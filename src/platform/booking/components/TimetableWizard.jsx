@@ -16,7 +16,6 @@ import { makeId } from '../../context/dataModel.js'
 import { addDaysStr } from '../bookingRules.js'
 import { generateSlotsDetailed } from '../slotGeneration.js'
 import { useBooking } from '../BookingContext.jsx'
-import { rpcUpdateSlot } from '../bookingApi.js'
 import { bookingMessage } from '../bookingMessages.js'
 import SlotConflictList from './SlotConflictList.jsx'
 import SlotEditorModal from './SlotEditorModal.jsx'
@@ -32,7 +31,7 @@ export default function TimetableWizard({
   onClose, lockEducatorId = null, intent = 'dated', lockProgramId = null,
 }) {
   const {
-    config, userNames, slots, reservations, createSlotBatch, saveTimetableTemplates, actor, refetch,
+    config, userNames, slots, reservations, createSlotBatch, saveTimetableTemplates, actor, deleteSlots,
   } = useBooking()
   const isAdmin = actor.role === 'admin'
   const templates = config.templates ?? []
@@ -217,23 +216,22 @@ export default function TimetableWizard({
     if (deadEnd) setShowConflicts(true)
   }, [deadEnd])
 
-  // 확정 예약이 없는 겹침 슬롯을 일괄 삭제 — SlotEditorModal.remove()와 같은
-  // 관용구(rpcUpdateSlot({ del: true }) 반복 → 실패 코드 수집 → refetch 1회)
+  // 확정 예약이 없는 겹침 슬롯을 일괄 삭제 — booking_delete_slots RPC 한 번 호출
+  // (add-booking-bulk-delete.sql). afterWrite가 refetch를 하므로 별도 refetch 불필요.
   const resolveConflicts = async () => {
     if (resolving || conflictWithoutReservation.length === 0) return
     setResolving(true)
     setResolveError(null)
     try {
-      let fail = null
-      for (const s of conflictWithoutReservation) {
-        const result = await rpcUpdateSlot({
-          slotId: s.id, del: true, reason: '겹침 해소(위저드 일괄 삭제)',
-          actorId: actor.id, actorRole: actor.role,
-        })
-        if (!result?.ok && !fail) fail = result?.code ?? 'ERROR'
+      const result = await deleteSlots({
+        slotIds: conflictWithoutReservation.map((s) => s.id),
+        reason: '겹침 해소(위저드 일괄 삭제)',
+      })
+      if (!result?.ok) {
+        setResolveError(bookingMessage(result?.code ?? 'ERROR'))
+      } else if ((result.skipped ?? []).length > 0) {
+        setResolveError(`${result.skipped.length}개는 삭제되지 않았습니다.`)
       }
-      await refetch()
-      if (fail) setResolveError(bookingMessage(fail))
     } finally {
       setResolving(false)
       setConfirmingBulkDelete(false)

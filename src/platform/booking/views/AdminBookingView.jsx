@@ -23,6 +23,7 @@ import AvailabilityRulesSection from '../components/AvailabilityRulesSection.jsx
 import OpenPeriodEditor from '../components/OpenPeriodEditor.jsx'
 import SlotEditorModal from '../components/SlotEditorModal.jsx'
 import MySlotsPanel from '../components/MySlotsPanel.jsx'
+import BulkSlotDeleteModal from '../components/BulkSlotDeleteModal.jsx'
 
 const MENUS = [
   { key: 'ops', label: '운영현황' },
@@ -108,6 +109,7 @@ function TimetableMenu() {
   const [expanded, setExpanded] = useState(() => new Set()) // 펼친 날짜들 (기본 접힘)
   const [editSlot, setEditSlot] = useState(null)
   const [busy, setBusy] = useState(false)
+  const [bulkDeleteSlots, setBulkDeleteSlots] = useState(null) // 일괄 삭제 대상 (열려 있으면 모달 표시)
 
   const setF = (key) => (e) => setFilters((f) => ({ ...f, [key]: e.target.value }))
   const programName = (id) => config.programs.find((p) => p.id === id)?.name ?? id
@@ -243,6 +245,14 @@ function TimetableMenu() {
             {SLOT_STATUS[status].label}(으)로
           </button>
         ))}
+        <button
+          type="button"
+          disabled={selected.size === 0 || busy}
+          onClick={() => setBulkDeleteSlots(filtered.filter((s) => selected.has(s.id)))}
+          className="px-2.5 h-8 rounded-lg bg-red-50 text-red-500 text-[11px] font-bold disabled:opacity-40"
+        >
+          삭제
+        </button>
       </div>
 
       <div className="space-y-1.5">
@@ -259,6 +269,14 @@ function TimetableMenu() {
                   onChange={() => toggleDay(group)}
                   aria-label={`${group.date} 전체 선택`}
                 />
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setBulkDeleteSlots(group.slots) }}
+                  className="flex-shrink-0 text-gray-300 hover:text-red-500 p-0.5"
+                  aria-label={`${group.date} 삭제`}
+                >
+                  <Trash2 size={13} />
+                </button>
                 <button
                   type="button"
                   onClick={() => toggleExpand(group.date)}
@@ -336,6 +354,13 @@ function TimetableMenu() {
           program={config.programs.find((p) => p.id === editSlot.programId)}
           isAdmin
           onClose={() => setEditSlot(null)}
+        />
+      )}
+      {bulkDeleteSlots && (
+        <BulkSlotDeleteModal
+          slots={bulkDeleteSlots}
+          onClose={() => setBulkDeleteSlots(null)}
+          onDone={() => setSelected(new Set())}
         />
       )}
     </div>

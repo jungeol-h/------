@@ -443,6 +443,16 @@ export function rpcSetSlotStatus({ slotIds, status, actorId, actorRole }) {
   }, 'bookingSetSlotStatus')
 }
 
+// 슬롯 일괄 삭제 (2026-09-30, add-booking-bulk-delete.sql) — 슬롯별 처리는
+// booking_update_slot(p_delete)을 그대로 재사용하고, 과거 예약 이력 보호·규칙
+// 휴무일 등록 판단은 RPC가 원자 처리한다.
+export function rpcDeleteSlots({ slotIds, actorId, actorRole, reason = null }) {
+  return callRpc('booking_delete_slots', {
+    p_slot_ids: slotIds, p_actor_id: actorId, p_actor_role: actorRole,
+    p_reason: reason,
+  }, 'bookingDeleteSlots')
+}
+
 // 가용시간 규칙 저장·삭제 — 정리·재파생·감사까지 RPC가 원자 처리.
 // rule은 camel 입력을 받아 여기서 snake로 변환한다 (id 없으면 생성).
 export function rpcSaveAvailabilityRule({ rule, del = false, actorId, actorRole }) {
