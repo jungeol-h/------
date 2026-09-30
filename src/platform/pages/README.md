@@ -20,6 +20,18 @@
 알림(notification)은 학생·학부모 홈 알림 칸(`NoticeFeedCard`, 대상 전체/학생/학부모)
 누적 표시.
 
+## 관리자 ↔ 강사 화면 전환 ("보기 모드", 2026-09-30)
+
+`data/roleViews.js`의 `EDUCATOR_VIEWS`에 등록된 계정(`a-hwang` 황광희, 검증용 `test-admin`)은
+Header 좌측 역할 배지를 눌러 관리자 ↔ 강사 화면을 오갈 수 있다 (계정 이중화·DB 변경 없음).
+`useAuth().currentUser.role`은 **화면이 보는 유효 role**이라 보기 모드에서는 `instructor`가 되고,
+DB role(`admin`)은 `currentUser.accountRole`에 남는다 (저장된 세션 `localStorage.platform_user`는
+원본 그대로). 모드는 탭 단위 `sessionStorage.platform_view_mode`(`'educator'`일 때만 저장,
+로그아웃·로그인 시 초기화). 강사 모드에서는 외부상담 탭이 `educatorExtraTabs`로 추가되고
+(`EducatorDashboard` `showExternal`), 월간 컨설팅 보고서는 복수 담당업무(`hasMultipleDuties`)
+본인이면 `educators=[본인]` 경로로 넘겨 국어/진로진학 분리 셀렉트를 유지한다.
+전환 가능 계정을 늘리려면 `EDUCATOR_VIEWS`에 id를 추가.
+
 ## 새 역할 추가 체크리스트 (과거 실수 기반 — 하나라도 빼먹으면 로그인 후 무한 튕김)
 
 1. `LoginPage.jsx`의 `ROLE_PATHS`에 경로 추가 (**누락 시 로그인 직후 무한 리다이렉트**)

@@ -89,6 +89,10 @@ export default function CounselingTabContent({ students, records, showAuthor = f
   // 월간 보고서 — 누적횟수(N회차)가 화면 필터와 무관하게 전체 이력 기준이어야
   // 하므로 props의 records가 아니라 data.counselingRecords 전량을 넘긴다.
   const isReportPicker = currentUser?.role === 'admin' || currentUser?.role === 'viewer'
+  // 스테일 localStorage 세션에는 subject/workSchedule이 없을 수 있어 fetch본 우선
+  const selfEducator = data.educators.find((e) => e.id === currentUser?.id) ?? currentUser
+  // 복수 담당업무 본인(강사 보기 모드의 황광희)은 담당업무 분리 셀렉트를 쓰도록 목록 경로로 넘긴다
+  const splitSelf = !isReportPicker && hasMultipleDuties(currentUser?.id)
   const loadMonthlyRecords = useCallback(async () => {
     const studentById = new Map(data.students.map((s) => [s.id, s]))
     return {
@@ -423,12 +427,9 @@ export default function CounselingTabContent({ students, records, showAuthor = f
               ? data.educators.filter((e) =>
                   ['admin', 'manager', 'instructor', 'consultant'].includes(e.role),
                 )
-              : null
+              : splitSelf ? [selfEducator] : null
           }
-          fixedEducator={
-            // 스테일 localStorage 세션에는 subject/workSchedule이 없을 수 있어 fetch본 우선
-            isReportPicker ? null : data.educators.find((e) => e.id === currentUser?.id) ?? currentUser
-          }
+          fixedEducator={isReportPicker || splitSelf ? null : selfEducator}
           loadRecords={loadMonthlyRecords}
           reportLabel="컨설팅보고서"
           onClose={() => setShowMonthlyReport(false)}
