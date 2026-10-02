@@ -3,7 +3,7 @@
 // 지표는 getStudentIndicatorMap으로 1-pass 계산. viewer의 /viewer/students에서 readOnly로 재사용.
 
 import { useState, useMemo, useCallback } from 'react'
-import { User, AlertCircle, Plus, Upload, MoreVertical, Pencil, UserX, UserCheck, Search, ArrowUp, ArrowDown, Trash2, ClipboardList, Paperclip, MessageSquare } from 'lucide-react'
+import { User, AlertCircle, Plus, Upload, MoreVertical, Pencil, UserX, UserCheck, Search, ArrowUp, ArrowDown, Trash2, ClipboardList, Paperclip, MessageSquare, FileSpreadsheet, Loader } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
 import { getMindStatus } from '../../context/selectors/riskDetection.js'
 import { getStudentIndicatorMap } from '../../context/selectors/studentIndicators.js'
@@ -26,6 +26,7 @@ import { STUDENT_STATUS_OPTIONS, STUDENT_STATUS_LABELS, isActiveStudent } from '
 import DownloadPdfButton from '../../pdf/components/DownloadPdfButton.jsx'
 import { buildFilename, nowDateTime } from '../../pdf/utils/formatters.js'
 import { authorOf } from '../../pdf/config/meta.js'
+import { buildStudentListRows, downloadStudentListWorkbook } from '../../utils/studentListExcel.js'
 
 const ROLE_LABELS = { student: '학생', manager: '학습매니저', admin: '관리자', instructor: '교과강사', consultant: '컨설턴트', viewer: '열람자' }
 const GENDER_LABELS = { M: '남', F: '여' }
@@ -64,6 +65,7 @@ export default function UserManagementTab({ readOnly = false }) {
   const [educatorDeleteTarget, setEducatorDeleteTarget] = useState(null) // 완전 삭제 확인 대상
   const [sortKey, setSortKey] = useState('name') // 'name' | 'grade' | 'manager' | 'risk' | 'selfIndex'
   const [sortDir, setSortDir] = useState('asc')  // 'asc' | 'desc'
+  const [exportingExcel, setExportingExcel] = useState(false)
 
   // 열람 전용(viewer) 경로에서는 학생 상세도 viewer 경로로 이동한다.
   const detailBase = currentUser?.role === 'viewer' ? '/viewer/student' : '/admin/student'
@@ -174,6 +176,36 @@ export default function UserManagementTab({ readOnly = false }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visibleStudents, showInactive, query, sortKey, sortDir, filterGroup, currentUser])
 
+  // 학생 목록 보고서 엑셀 — PDF와 같은 필터·정렬 결과, 퇴원일·신청취소일 별도 열
+  const handleExportExcel = async () => {
+    setExportingExcel(true)
+    try {
+      const groupLabel = filterGroup === 'all' ? '전체그룹' : filterGroup
+      const identifier = `${groupLabel}_${showInactive ? '전체' : '활성'}_${sortKey}${sortDir === 'desc' ? '내림' : '오름'}`
+      const nonActiveCount = visibleStudents.filter((s) => !isActiveStudent(s)).length
+      await downloadStudentListWorkbook({
+        rows: buildStudentListRows(visibleStudents, managerNameOf),
+        sheetName: filterGroup === 'all' ? '학생 목록' : filterGroup,
+        conditions: [
+          ['보고서', '학생 목록 보고서'],
+          ['조회일시', nowDateTime()],
+          ['작성자', authorOf(currentUser)],
+          ['소속 그룹', filterGroup === 'all' ? '전체 그룹' : filterGroup],
+          ['표시 범위', showInactive ? '전체 (재원 + 퇴원·취소)' : '재원 학생만'],
+          ['검색어', query ? `"${query}"` : '(없음)'],
+          ['정렬', `${({ name: '이름', grade: '학년', manager: '담당 매니저', risk: '위험도', selfIndex: '자기주도지수' })[sortKey] ?? sortKey} · ${sortDir === 'desc' ? '내림차순' : '오름차순'}`],
+          ['총 건수', `${visibleStudents.length}명`],
+          ['재원 외 인원', `${nonActiveCount}명`],
+        ],
+        filename: buildFilename('학생목록', identifier).replace(/\.pdf$/, '.xlsx'),
+      })
+    } catch {
+      alert('엑셀 생성 중 오류가 발생했습니다.')
+    } finally {
+      setExportingExcel(false)
+    }
+  }
+
   // ── 교육자 CRUD 핸들러 ──
   const activeEducators = data.educators.filter((e) => e.status !== 'inactive')
   const inactiveEducators = data.educators.filter((e) => e.status === 'inactive')
@@ -235,6 +267,15 @@ export default function UserManagementTab({ readOnly = false }) {
             label="학생 목록 보고서"
             disabled={visibleStudents.length === 0}
           />
+          <button
+            type="button"
+            onClick={handleExportExcel}
+            disabled={exportingExcel || visibleStudents.length === 0}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed transition"
+          >
+            {exportingExcel ? <Loader size={14} className="animate-spin" /> : <FileSpreadsheet size={14} />}
+            {exportingExcel ? '생성 중…' : '학생 목록 엑셀'}
+          </button>
         </div>
       </div>
 
