@@ -18,6 +18,11 @@ describe('statusDatesOf', () => {
       .toEqual({ withdrawnAt: '', cancelledAt: '' })
   })
 
+  it('처리일이 없는 퇴원·신청취소생은 미기록으로 표시한다', () => {
+    expect(statusDatesOf({ status: 'withdrawn' })).toEqual({ withdrawnAt: '미기록', cancelledAt: '' })
+    expect(statusDatesOf({ status: 'cancelled', cancelledAt: null })).toEqual({ withdrawnAt: '', cancelledAt: '미기록' })
+  })
+
   it('구 상태 inactive는 퇴원일 열에 표시한다', () => {
     expect(statusDatesOf({ status: 'inactive', withdrawnAt: '2026-07-01' }).withdrawnAt).toBe('2026-07-01')
   })
@@ -25,7 +30,7 @@ describe('statusDatesOf', () => {
 
 describe('buildStudentListRows', () => {
   const students = [
-    { id: 's1', name: '김재원', gender: 'M', groups: ['NAVI 4기'], school: 'A고', grade: '2', status: 'active', enrolledAt: '2026-03-02', riskLevel: 'warning', selfIndex: 70 },
+    { id: 's1', name: '김재원', gender: 'M', groups: ['NAVI 4기'], school: 'A고', grade: '2', phone: '01011112222', parentPhone: '01033334444', status: 'active', enrolledAt: '2026-03-02', riskLevel: 'warning', selfIndex: 70 },
     { id: 's2', name: '이퇴원', gender: 'F', groups: [], status: 'withdrawn', enrolledAt: '2026-03-02', withdrawnAt: '2026-09-15' },
     { id: 's3', name: '박취소', status: 'cancelled', cancelledAt: '2026-09-20' },
   ]
@@ -48,6 +53,12 @@ describe('buildStudentListRows', () => {
     expect(rows[1][col('신청취소일')]).toBe('')
     expect(rows[2][col('상태')]).toBe('신청취소')
     expect(rows[2][col('신청취소일')]).toBe('2026-09-20')
+  })
+
+  it('학생·학부모 연락처를 표시한다 (없으면 빈칸)', () => {
+    expect(rows[0][col('학생 연락처')]).toBe('010-1111-2222')
+    expect(rows[0][col('학부모 연락처')]).toBe('010-3333-4444')
+    expect(rows[1][col('학생 연락처')]).toBe('')
   })
 
   it('매니저 미배정·무소속·위험도 기본값을 채운다', () => {
