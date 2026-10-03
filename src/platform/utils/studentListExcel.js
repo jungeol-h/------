@@ -4,24 +4,28 @@
 // (2026-10-01 클라이언트: 퇴원·신청취소 처리 일자가 표시되는 엑셀 양식 요청).
 
 import { STUDENT_STATUS_LABELS } from '../data/studentStatus.js'
+import { formatPhone } from './formatPhone.js'
 
 export const STUDENT_LIST_COLUMNS = [
-  '순번', '이름', '성별', '소속 그룹', '학교', '학년', '반', '담당 매니저',
+  '순번', '이름', '성별', '소속 그룹', '학교', '학년', '반', '학생 연락처', '학부모 연락처', '담당 매니저',
   '위험도', '자기주도지수', '상태', '입학일', '퇴원일', '신청취소일',
 ]
-const COLUMN_WIDTHS = [6, 10, 6, 14, 16, 6, 6, 12, 8, 12, 9, 12, 12, 12]
+const COLUMN_WIDTHS = [6, 10, 6, 14, 16, 6, 6, 15, 15, 12, 8, 12, 9, 12, 12, 12]
 
 const RISK_LABELS = { normal: '정상', warning: '주의', danger: '위험' }
 const GENDER_LABELS = { M: '남', F: '여' }
 
 // 퇴원·취소일은 현재 상태와 일치하는 날짜만 표시 — 재원 복구 후에도 남아있는 옛 날짜
 // (setStudentStatus 정책상 지우지 않음)가 재원생에게 뜨는 걸 막는다 (UserListReport와 동일 규칙).
-// 구 상태 'inactive'는 퇴원 계열로 본다.
+// 구 상태 'inactive'는 퇴원 계열로 본다. 처리일 자동 기록(2026-09-30) 이전에 처리돼
+// 날짜가 없는 학생은 '미기록' — 빈칸이면 출력 오류로 오해된다(2026-10-03 클라이언트).
+// 학생 수정 모달에서 수기 입력하면 채워진다.
+export const DATE_UNRECORDED = '미기록'
 export function statusDatesOf(s) {
   const status = s.status ?? 'active'
   return {
-    withdrawnAt: status === 'withdrawn' || status === 'inactive' ? (s.withdrawnAt || '') : '',
-    cancelledAt: status === 'cancelled' ? (s.cancelledAt || '') : '',
+    withdrawnAt: status === 'withdrawn' || status === 'inactive' ? (s.withdrawnAt || DATE_UNRECORDED) : '',
+    cancelledAt: status === 'cancelled' ? (s.cancelledAt || DATE_UNRECORDED) : '',
   }
 }
 
@@ -38,6 +42,8 @@ export function buildStudentListRows(students = [], managerNameOf = () => '') {
       s.school || '',
       s.grade || '',
       s.className || '',
+      formatPhone(s.phone),
+      formatPhone(s.parentPhone),
       managerNameOf(s.id) || '미배정',
       RISK_LABELS[s.riskLevel] ?? RISK_LABELS.normal,
       s.selfIndex ?? '',
