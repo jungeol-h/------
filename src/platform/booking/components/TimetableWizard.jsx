@@ -5,6 +5,8 @@
 //  - intent='prebook' 접수제(사전예약형) 프로그램의 슬롯 준비 — 작성중 생성 후
 //                     검토·일괄 공개, 오픈기간과 세트 (관리자 전용 진입)
 // 타임블럭 템플릿(요일·시간창 프리셋)을 공유하고, 슬롯 단위는 프로그램 소관.
+// 운영 시간대는 여러 개 가능 (2026-10 — 예: 주말 12:00~12:40 + 17:00~17:40을 한 번에.
+// 전엔 시간대마다 날짜·요일·강사를 다시 입력해 따로 생성해야 했다).
 // lockEducatorId: 강사 모드 — 본인 고정, 배정된 프로그램만.
 
 import { useEffect, useMemo, useState } from 'react'
@@ -26,6 +28,11 @@ const WEEKDAYS = [
   { value: 4, label: '목' }, { value: 5, label: '금' }, { value: 6, label: '토' },
   { value: 0, label: '일' },
 ]
+
+// 템플릿의 운영 시간대 — 시간대 여러 개가 도입되기 전(2026-10) 템플릿은 dayStart/dayEnd 하나
+function templateRanges(t) {
+  return t.ranges?.length ? t.ranges.map((r) => ({ ...r })) : [{ start: t.dayStart, end: t.dayEnd }]
+}
 
 export default function TimetableWizard({
   onClose, lockEducatorId = null, intent = 'dated', lockProgramId = null,
@@ -60,8 +67,7 @@ export default function TimetableWizard({
     // dated: 하루가 기본 (기간으로 늘릴 수 있음) / prebook: 4주 배치가 기본
     to: isPrebook ? addDaysStr(todayStr(), 27) : todayStr(),
     weekdays: isPrebook ? [1, 2, 3, 4, 5] : [0, 1, 2, 3, 4, 5, 6],
-    dayStart: '16:00',
-    dayEnd: '21:00',
+    ranges: [{ start: '16:00', end: '21:00' }], // 일별 운영 시간대 (1개 이상)
     capacity: null,
     breakStart: '',
     breakEnd: '',
@@ -80,6 +86,18 @@ export default function TimetableWizard({
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
   const setTime = (key) => (v) => setForm((f) => ({ ...f, [key]: v }))
+  const setRange = (i, key) => (v) => {
+    setAppliedTemplateId(null)
+    setForm((f) => ({ ...f, ranges: f.ranges.map((r, j) => (j === i ? { ...r, [key]: v } : r)) }))
+  }
+  const addRange = () => {
+    setAppliedTemplateId(null)
+    setForm((f) => ({ ...f, ranges: [...f.ranges, { start: '', end: '' }] }))
+  }
+  const removeRange = (i) => {
+    setAppliedTemplateId(null)
+    setForm((f) => ({ ...f, ranges: f.ranges.filter((_, j) => j !== i) }))
+  }
   const toggleDay = (d) => {
     setAppliedTemplateId(null)
     setForm((f) => ({
@@ -93,8 +111,7 @@ export default function TimetableWizard({
     setForm((f) => ({
       ...f,
       weekdays: [...t.weekdays],
-      dayStart: t.dayStart,
-      dayEnd: t.dayEnd,
+      ranges: templateRanges(t),
       breakStart: t.breakStart ?? '',
       breakEnd: t.breakEnd ?? '',
     }))
@@ -110,8 +127,11 @@ export default function TimetableWizard({
         id: makeId('tpl'),
         name,
         weekdays: [...form.weekdays],
-        dayStart: form.dayStart,
-        dayEnd: form.dayEnd,
+        // dayStart/dayEnd = 첫 시간대 — 가용시간 규칙(AvailabilityRulesSection)은
+        // 시간대 하나만 쓰므로 하위 호환용으로 유지한다
+        dayStart: form.ranges[0].start,
+        dayEnd: form.ranges[0].end,
+        ranges: form.ranges.map((r) => ({ ...r })),
         breakStart: form.breakStart,
         breakEnd: form.breakEnd,
       }]
@@ -168,8 +188,7 @@ export default function TimetableWizard({
       from: form.from,
       to: form.to,
       weekdays: effectiveWeekdays,
-      dayStart: form.dayStart,
-      dayEnd: form.dayEnd,
+      ranges: form.ranges,
       slotMinutes: program.slotMinutes,
       capacity: Number(form.capacity) || program.defaultCapacity,
       educatorId: form.educatorId || null,
@@ -251,7 +270,8 @@ export default function TimetableWizard({
         status: form.publishNow ? 'open' : 'draft',
         params: {
           from: form.from, to: form.to, weekdays: effectiveWeekdays,
-          day_start: form.dayStart, day_end: form.dayEnd,
+          day_start: form.ranges[0].start, day_end: form.ranges[0].end,
+          ranges: form.ranges,
           slot_minutes: program.slotMinutes,
           educator_id: form.educatorId || null,
           subject_id: form.subjectId || null,
@@ -307,7 +327,7 @@ export default function TimetableWizard({
                 type="button"
                 onClick={() => applyTemplate(t)}
                 className="px-2.5 h-7"
-                title={`${t.dayStart}~${t.dayEnd}`}
+                title={templateRanges(t).map((r) => `${r.start}~${r.end}`).join(', ')}
               >
                 {t.name}
               </button>
@@ -406,22 +426,33 @@ export default function TimetableWizard({
           날짜 (종료 — 하루면 시작과 동일)
           <input type="date" value={form.to} onChange={set('to')} className={`${FIELD} w-full mt-1`} />
         </label>
-        <label className="text-xs text-gray-500">
-          운영 시작
-          <TimeField
-            value={form.dayStart}
-            onChange={(v) => { setAppliedTemplateId(null); setTime('dayStart')(v) }}
-            className={`${FIELD} w-full mt-1`}
-          />
-        </label>
-        <label className="text-xs text-gray-500">
-          운영 종료
-          <TimeField
-            value={form.dayEnd}
-            onChange={(v) => { setAppliedTemplateId(null); setTime('dayEnd')(v) }}
-            className={`${FIELD} w-full mt-1`}
-          />
-        </label>
+        <div className="text-xs text-gray-500 col-span-2">
+          운영 시간 (시작 ~ 종료)
+          {form.ranges.map((r, i) => (
+            <div key={i} className="flex items-center gap-1.5 mt-1">
+              <TimeField value={r.start} onChange={setRange(i, 'start')} className={`${FIELD} flex-1 min-w-0`} />
+              <span className="text-gray-400">~</span>
+              <TimeField value={r.end} onChange={setRange(i, 'end')} className={`${FIELD} flex-1 min-w-0`} />
+              {form.ranges.length > 1 ? (
+                <button
+                  type="button"
+                  onClick={() => removeRange(i)}
+                  className="w-8 h-10 shrink-0 flex items-center justify-center text-gray-300 hover:text-red-500"
+                  aria-label={`운영 시간대 ${i + 1} 삭제`}
+                >
+                  <X size={16} />
+                </button>
+              ) : null}
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={addRange}
+            className="mt-1.5 w-full h-9 rounded-lg border border-dashed border-blue-300 text-blue-600 text-xs font-bold"
+          >
+            + 운영 시간대 추가 (같은 날짜·요일·강사로 다른 시간에도 생성)
+          </button>
+        </div>
         <label className="text-xs text-gray-500">
           휴식 시작 (선택)
           <TimeField value={form.breakStart} onChange={setTime('breakStart')} className={`${FIELD} w-full mt-1`} />

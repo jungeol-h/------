@@ -118,6 +118,9 @@ FOR UPDATE(id 정렬 순) → 부분 UNIQUE 인덱스.
   12:30~19시 기본, 관리자가 추가·삭제)을 `admin_config('booking_timetable_templates')`
   한 행에 저장 — TimetableWizard·가용시간 모달이 공용으로 불러온다. 슬롯 단위
   (40분/20분)는 여전히 프로그램(slotMinutes) 소관.
+- 위저드는 **운영 시간대 여러 개**를 한 번에 생성한다 (2026-10, `generateSlots`의
+  `ranges`). 템플릿엔 `ranges`를 함께 저장하되 `dayStart/dayEnd`(=첫 시간대)도
+  유지 — 가용시간 규칙은 DB 컬럼상 시간대 하나라 첫 시간대만 쓴다.
 - 위저드의 status('draft'|'open') 생성은 강사의 단일 슬롯 open 생성과 같은 권한
   모델이라 RPC 확장 없이 성립. 템플릿 저장·삭제는 관리자 전용(UI 게이트).
 

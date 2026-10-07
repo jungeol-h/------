@@ -9,6 +9,10 @@ import { addDaysStr, minutesToTime, overlaps, timeToMinutes } from './bookingRul
 //   from, to        'YYYY-MM-DD' 운영기간 (양끝 포함)
 //   weekdays        [0-6] 운영요일 (0=일, JS getDay 규약)
 //   dayStart/dayEnd 'HH:MM' 일별 운영 시작·종료
+//   ranges          [{ start: 'HH:MM', end: 'HH:MM' }] 일별 운영 시간대 여러 개 (선택) —
+//                   주면 dayStart/dayEnd 대신 쓴다. 예: 12:00~12:40 + 17:00~17:40을
+//                   한 번에 생성 (2026-10). 시간대끼리 겹치면 먼저(이른) 시간대의
+//                   슬롯이 우선이고, 그와 겹치는 후보는 조용히 버린다.
 //   slotMinutes     슬롯 시간 단위 (분)
 //   capacity        슬롯별 정원
 //   educatorId, subjectId, isPublic, note  슬롯 공통 속성 (선택)
@@ -26,7 +30,7 @@ import { addDaysStr, minutesToTime, overlaps, timeToMinutes } from './bookingRul
 //            해소할 수 있는 '겹침'만 눈에 보이게 하려는 의도)
 export function generateSlotsDetailed(params) {
   const {
-    from, to, weekdays = [], dayStart, dayEnd, slotMinutes, capacity = 1,
+    from, to, weekdays = [], dayStart, dayEnd, ranges, slotMinutes, capacity = 1,
     educatorId = null, subjectId = null, isPublic = true, note = '',
     breaks = [], excludeDates = [], blocked = [],
   } = params
@@ -34,9 +38,11 @@ export function generateSlotsDetailed(params) {
   if (!from || !to || from > to) return { slots: [], skipped: [] }
   if (!slotMinutes || slotMinutes <= 0) return { slots: [], skipped: [] }
 
-  const startMin = timeToMinutes(dayStart)
-  const endMin = timeToMinutes(dayEnd)
-  if (!(endMin > startMin)) return { slots: [], skipped: [] }
+  const windows = (ranges?.length ? ranges : [{ start: dayStart, end: dayEnd }])
+    .map((r) => ({ startMin: timeToMinutes(r.start), endMin: timeToMinutes(r.end) }))
+    .filter((w) => w.endMin > w.startMin)
+    .sort((a, b) => a.startMin - b.startMin)
+  if (windows.length === 0) return { slots: [], skipped: [] }
 
   const slots = []
   const skipped = []
@@ -46,19 +52,24 @@ export function generateSlotsDetailed(params) {
     if (weekdays.length > 0 && !weekdays.includes(dow)) continue
     if (excludeDates.includes(date)) continue
 
-    for (let t = startMin; t + slotMinutes <= endMin; t += slotMinutes) {
-      const startTime = minutesToTime(t)
-      const endTime = minutesToTime(t + slotMinutes)
-      const hitsBreak = breaks.some((b) => overlaps(startTime, endTime, b.start, b.end))
-      if (hitsBreak) continue
-      const blockers = blocked.filter(
-        (b) => b.date === date && overlaps(startTime, endTime, b.startTime, b.endTime),
-      )
-      if (blockers.length > 0) {
-        skipped.push({ date, startTime, endTime, blockers })
-        continue
+    const taken = [] // 이날 앞선 시간대가 이미 만든 후보 (시간대 간 겹침 방지)
+    for (const { startMin, endMin } of windows) {
+      for (let t = startMin; t + slotMinutes <= endMin; t += slotMinutes) {
+        const startTime = minutesToTime(t)
+        const endTime = minutesToTime(t + slotMinutes)
+        if (taken.some((c) => overlaps(startTime, endTime, c.startTime, c.endTime))) continue
+        taken.push({ startTime, endTime })
+        const hitsBreak = breaks.some((b) => overlaps(startTime, endTime, b.start, b.end))
+        if (hitsBreak) continue
+        const blockers = blocked.filter(
+          (b) => b.date === date && overlaps(startTime, endTime, b.startTime, b.endTime),
+        )
+        if (blockers.length > 0) {
+          skipped.push({ date, startTime, endTime, blockers })
+          continue
+        }
+        slots.push({ date, startTime, endTime, capacity, educatorId, subjectId, isPublic, note })
       }
-      slots.push({ date, startTime, endTime, capacity, educatorId, subjectId, isPublic, note })
     }
   }
   return { slots, skipped }
