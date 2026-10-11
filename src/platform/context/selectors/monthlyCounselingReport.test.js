@@ -227,6 +227,32 @@ describe('buildMonthlyCounselingEntries', () => {
     expect(totalMinutes).toBe(80)
   })
 
+  it('동일 시간대에 내용이 다른 보고서가 여러 건이면 총시간은 1회만 집계 (항목은 유지)', () => {
+    const slot = { date: '2026-07-04', startTime: '14:00', endTime: '14:40' } // 40분
+    const records = [
+      { id: 'r1', studentId: 's1', educatorId: 'e1', ...slot, ...base, topic: '국어 학습' },
+      { id: 'r2', studentId: 's2', educatorId: 'e1', ...slot, ...base, topic: '진로 탐색' },
+      // 같은 날 다른 시간대는 별도 집계
+      { id: 'r3', studentId: 's1', educatorId: 'e1', date: '2026-07-04', startTime: '15:00', endTime: '15:20', ...base },
+      // 시간 미기록은 겹침을 알 수 없어 각각 집계(20분 폴백 ×2)
+      { id: 'r4', studentId: 's1', educatorId: 'e1', date: '2026-07-05', ...base, topic: 'A' },
+      { id: 'r5', studentId: 's2', educatorId: 'e1', date: '2026-07-05', ...base, topic: 'B' },
+    ]
+    const { totalCount, totalMinutes } = buildMonthlyCounselingEntries(records, getStudent, opts)
+    expect(totalCount).toBe(5)
+    expect(totalMinutes).toBe(40 + 20 + 20 + 20)
+  })
+
+  it('동일 시간대 집계 분은 세션들 중 최댓값 (진로진학 정액 40분 vs 실측 20분)', () => {
+    const slot = { date: '2026-07-04', startTime: '14:00', endTime: '14:20' }
+    const records = [
+      { id: 'r1', studentId: 's1', educatorId: 'e1', ...slot, ...base, topic: '일반' },
+      { id: 'r2', studentId: 's2', educatorId: 'e1', ...slot, ...base, type: 'career_path', topic: '진로' },
+    ]
+    const { totalMinutes } = buildMonthlyCounselingEntries(records, getStudent, opts)
+    expect(totalMinutes).toBe(40)
+  })
+
   it('세션 실측 50~70분은 60분으로 스냅되어 집계된다', () => {
     const records = [
       { id: 'r1', studentId: 's1', educatorId: 'e1', date: '2026-07-04', startTime: '14:00', endTime: '15:05', ...base }, // 65분

@@ -141,7 +141,8 @@ export function sessionKey(r) {
 //        null/빈 배열이면 전체. 누적 회차도 필터된 유형 안에서만 센다(업무별 회차).
 // 반환: { entries, totalCount, totalMinutes } — entries는 MonthlyCounselingReport
 //        props 형태. totalMinutes는 기간 내 세션별 집계 분 합산(월간보고서와 동일 규칙 —
-//        50~70분 스냅, 시간 미기록은 진로진학 40분·그 외 20분 폴백).
+//        50~70분 스냅, 시간 미기록은 진로진학 40분·그 외 20분 폴백). 동일 시간대
+//        (date·시작·종료 일치) 세션은 1회만 집계.
 //        시수(T=분÷40) 칸은 2026-08-31 클라 요청으로 폐기 — 총 분만 표기.
 export function buildMonthlyCounselingEntries(records, getStudent, { educatorId, startDate, endDate, types = null }) {
   const typeSet = types?.length ? new Set(types) : null
@@ -180,10 +181,24 @@ export function buildMonthlyCounselingEntries(records, getStudent, { educatorId,
 
   // 총시간 — 세션(병합) 단위로 월간보고서 집계 규칙(counselingSessionMinutes)과 동일:
   // 진로진학(검사 포함)은 회당 40분 정액, 그 외는 실측(50~70분→60 스냅) + 미입력 20분 폴백.
-  const totalMinutes = sessions.reduce(
-    (sum, group) => sum + counselingSessionMinutes(group[0]),
-    0,
-  )
+  // 같은 날 같은 시간대(시작~종료 동일)에 내용이 다른 보고서가 여러 건이면 강사가
+  // 그 시간을 한 번 쓴 것이므로 1회만 집계한다 (2026-10-11 클라 요청 — 누적 합산 버그).
+  // 그 시간대의 분은 세션들 중 최댓값. 시간 미기록 세션은 겹침을 알 수 없어 각각 집계.
+  // 항목(entries)·totalCount는 그대로 — 보고서 칸은 내용별로 유지하고 시간만 단일 집계.
+  const minutesBySlot = new Map()
+  let untimedMinutes = 0
+  for (const group of sessions) {
+    const r = group[0]
+    const mins = counselingSessionMinutes(r)
+    if (!r.startTime || !r.endTime) {
+      untimedMinutes += mins
+      continue
+    }
+    const slot = `${r.date}|${r.startTime}|${r.endTime}`
+    minutesBySlot.set(slot, Math.max(minutesBySlot.get(slot) ?? 0, mins))
+  }
+  let totalMinutes = untimedMinutes
+  for (const mins of minutesBySlot.values()) totalMinutes += mins
 
   const entries = sessions.map((group, i) => {
     const r = group[0]
