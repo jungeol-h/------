@@ -3,15 +3,17 @@ import { useMemo, useState } from 'react'
 import ModalShell from '../../components/common/ModalShell.jsx'
 import { todayStr } from '../../utils/dateUtils.js'
 import { useBooking } from '../BookingContext.jsx'
+import { useData } from '../../context/DataContext.jsx'
 import { deadlineOk, changeDeadlineLabel } from '../bookingRules.js'
 import { bookingMessage } from '../bookingMessages.js'
-import { reservationDisplayStatus, recordState, RECORD_STATE } from '../bookingStatus.js'
+import { reservationDisplayStatus, recordState, RECORD_STATE, findCoveringCounseling } from '../bookingStatus.js'
 
 // 취소사유 선택지 (명세 9.3)
 const CANCEL_REASONS = ['개인 일정', '학교·학원 일정', '건강 문제', '예약 착오', '기타']
 
 export default function MyReservationList({ reservations, programs, subjects, userNames, onStartChange }) {
   const { records, cancel } = useBooking()
+  const { data } = useData()
   const [cancelling, setCancelling] = useState(null)
   const [reason, setReason] = useState(CANCEL_REASONS[0])
   const [etcReason, setEtcReason] = useState('')
@@ -57,7 +59,9 @@ export default function MyReservationList({ reservations, programs, subjects, us
     const display = reservationDisplayStatus(r, r.slot)
     const canOnline = program && r.slot && deadlineOk(program, r.slot)
     const rec = records.find((x) => x.reservationId === r.id)
-    const recState = r.slot ? recordState(r, rec, r.slot.date) : 'not_required'
+    const recState = r.slot ? recordState(r, rec, r.slot.date, undefined, {
+      counseled: !!findCoveringCounseling(r, data.counselingRecords),
+    }) : 'not_required'
     return (
       <div key={r.id} className="bg-white rounded-2xl shadow-sm p-4 space-y-2">
         <div className="flex items-start justify-between gap-2">

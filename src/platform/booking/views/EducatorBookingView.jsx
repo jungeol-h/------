@@ -10,9 +10,10 @@ import { useSearchParams } from 'react-router-dom'
 import { Plus } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useBooking } from '../BookingContext.jsx'
+import { useData } from '../../context/DataContext.jsx'
 import { addDaysStr, todayStrKst } from '../bookingRules.js'
 import { todayStr } from '../../utils/dateUtils.js'
-import { canWriteRecord, recordState, RECORD_STATE } from '../bookingStatus.js'
+import { canWriteRecord, recordState, RECORD_STATE, isRecordSettled, findCoveringCounseling } from '../bookingStatus.js'
 import BookingNotificationsBell from '../components/BookingNotificationsBell.jsx'
 import SlotEditorModal from '../components/SlotEditorModal.jsx'
 import MySlotsPanel from '../components/MySlotsPanel.jsx'
@@ -30,6 +31,7 @@ const MENUS = [
 export default function EducatorBookingView({ isAdmin = false }) {
   const { currentUser } = useAuth()
   const booking = useBooking()
+  const { data } = useData()
   const { config, slots, reservations, records, userNames } = booking
   const [searchParams, setSearchParams] = useSearchParams()
 
@@ -74,9 +76,13 @@ export default function EducatorBookingView({ isAdmin = false }) {
       .sort((a, b) => (a.slot.date < b.slot.date ? 1 : -1)),
     [reservations],
   )
+  // 상담보고로 쓴 건은 작성된 것으로 본다 (findCoveringCounseling)
+  const recordStateOf = (r, rec) => recordState(r, rec, r.slot.date, undefined, {
+    counseled: !!findCoveringCounseling(r, data.counselingRecords),
+  })
   const unwrittenRecords = recordTargets.filter((r) => {
-    const state = recordState(r, records.find((x) => x.reservationId === r.id), r.slot.date)
-    return state !== 'done' && state !== 'done_overdue' && state !== 'not_required'
+    const state = recordStateOf(r, records.find((x) => x.reservationId === r.id))
+    return !isRecordSettled(state)
   })
 
   const badge = (n, danger = false) => n > 0 && (
@@ -120,7 +126,7 @@ export default function EducatorBookingView({ isAdmin = false }) {
     <div className="space-y-2">
       {recordTargets.map((r) => {
         const rec = records.find((x) => x.reservationId === r.id)
-        const state = recordState(r, rec, r.slot.date)
+        const state = recordStateOf(r, rec)
         const stateInfo = r.attendanceStatus === 'pending'
           ? { label: '출결 미처리 · 저장 시 참석', color: 'bg-emerald-50 text-emerald-600' }
           : RECORD_STATE[state]

@@ -4,17 +4,23 @@
 // 참석이므로 출결을 따로 누르지 않아도 된다 (2026-09-30 클라이언트 요청).
 
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import ModalShell from '../../components/common/ModalShell.jsx'
 import CounselingContentFields from '../../components/counseling/CounselingContentFields.jsx'
 import { useBooking } from '../BookingContext.jsx'
+import { useData } from '../../context/DataContext.jsx'
 import { addDaysStr, todayStrKst } from '../bookingRules.js'
 import { bookingMessage } from '../bookingMessages.js'
-import { RECORD_DEADLINE_DAYS } from '../bookingStatus.js'
+import { RECORD_DEADLINE_DAYS, findCoveringCounseling } from '../bookingStatus.js'
 
 const FIELD = 'h-10 px-3 rounded-lg border border-gray-200 text-sm'
 
 export default function RecordFormModal({ reservation, record, studentName, programName, groupMembers = [], onClose }) {
-  const { saveRecord, setAttendance } = useBooking()
+  const { saveRecord, setAttendance, actor } = useBooking()
+  const { data } = useData()
+  const navigate = useNavigate()
+  // 예약 상담기록이 없는데 상담보고로 이미 쓴 건이면 양식 대신 안내만 — 중복 작성 방지
+  const covering = record ? null : findCoveringCounseling(reservation, data.counselingRecords)
   const needsAttend = reservation.attendanceStatus === 'pending'
   const slotDate = reservation.slot?.date ?? reservation.createdAt?.slice(0, 10)
   const deadline = addDaysStr(slotDate, RECORD_DEADLINE_DAYS)
@@ -76,6 +82,72 @@ export default function RecordFormModal({ reservation, record, studentName, prog
     } finally {
       setBusy(false)
     }
+  }
+
+  const markAttended = async () => {
+    if (busy) return
+    setBusy(true)
+    setError(null)
+    try {
+      const result = await setAttendance({
+        reservationId: reservation.id, status: 'attended', note: '상담보고 작성으로 참석 처리',
+      })
+      if (!result?.ok) {
+        setError(bookingMessage(result?.code ?? 'ERROR'))
+        return
+      }
+      onClose()
+    } catch {
+      setError('처리에 실패했습니다. 다시 시도해 주세요.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (covering) {
+    return (
+      <ModalShell title={`상담기록 — ${studentName}`} onClose={onClose} maxWidth="max-w-xl">
+        <div className="rounded-xl bg-green-50 p-3 text-sm text-green-800 space-y-1">
+          <p className="font-bold">이 상담은 이미 상담보고에 작성되어 있습니다.</p>
+          <p className="text-xs">
+            {covering.date}
+            {covering.startTime && ` ${covering.startTime}${covering.endTime ? `~${covering.endTime}` : ''}`}
+            {covering.topic && ` · ${covering.topic}`}
+          </p>
+          <p className="text-xs text-green-700">같은 상담이면 다시 쓰지 않아도 됩니다.</p>
+        </div>
+        {needsAttend && (
+          <p className="text-xs text-orange-600">출결이 아직 미처리입니다 — 아래에서 참석으로 처리할 수 있습니다.</p>
+        )}
+        {error && <p className="text-xs text-red-500 bg-red-50 rounded-lg p-2">{error}</p>}
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => navigate(`/${actor.role}/student/${reservation.studentId}`)}
+            className="flex-1 h-11 rounded-xl bg-blue-600 text-white text-sm font-bold"
+          >
+            학생 상세에서 보기
+          </button>
+          {needsAttend && (
+            <button
+              type="button"
+              onClick={markAttended}
+              disabled={busy}
+              className="flex-1 h-11 rounded-xl bg-emerald-600 text-white text-sm font-bold disabled:opacity-50"
+            >
+              참석으로 처리
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 h-11 rounded-xl bg-gray-100 text-gray-600 text-sm font-bold"
+          >
+            닫기
+          </button>
+        </div>
+      </ModalShell>
+    )
   }
 
   return (
