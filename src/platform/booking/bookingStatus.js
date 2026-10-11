@@ -90,11 +90,30 @@ export const RECORD_STATE = {
   overdue: { label: '기한 초과', color: 'bg-red-100 text-red-600' },
   done: { label: '작성 완료', color: 'bg-green-100 text-green-700' },
   done_overdue: { label: '기한 초과 작성', color: 'bg-blue-100 text-blue-700' },
+  done_counseling: { label: '상담보고로 작성됨', color: 'bg-green-100 text-green-700' },
+}
+
+// 더 쓸 필요가 없는 상태 — 미작성 집계·독촉에서 제외한다
+export const isRecordSettled = (state) =>
+  state === 'done' || state === 'done_overdue' || state === 'not_required' || state === 'done_counseling'
+
+// 상담보고(counseling_records)로 이미 작성된 예약인지 찾는다. 예약 상담기록(booking_records)과
+// 상담보고는 저장 테이블이 달라, 수동 참석 후 상담보고 탭에만 쓴 건이 미작성으로 보였다.
+// 매칭은 학생+강사+날짜 — 시간은 보지 않는다(상담보고의 시간이 비어 있거나 슬롯과 어긋나는 일이
+// 많다). 대가로 같은 날 같은 강사와 두 번 상담한 학생은 한 건만 써도 둘 다 작성된 것으로 본다.
+// source가 있는 행은 예약 유래라 제외한다.
+export function findCoveringCounseling(reservation, counselingRecords) {
+  const slot = reservation?.slot
+  if (!slot?.educatorId || !slot.date) return null
+  return (counselingRecords ?? []).find((c) =>
+    !c.source && c.studentId === reservation.studentId
+    && c.educatorId === slot.educatorId && c.date === slot.date) ?? null
 }
 
 // reservation의 출결 + record 존재 여부 + 오늘 날짜로 기록 상태를 판정한다.
 // slotDate: 'YYYY-MM-DD' (상담일). 작성기한 = 상담일 + 7일 23:59:59.
-export function recordState(reservation, record, slotDate, today = todayStrKst()) {
+// options.counseled: 상담보고로 이미 작성됨(findCoveringCounseling) — 예약 상담기록이 아예 없을 때만 반영.
+export function recordState(reservation, record, slotDate, today = todayStrKst(), { counseled = false } = {}) {
   // 참석 처리된 상담만 작성 대상 — 미참석·사전취소·강사/센터 취소·일정변경·
   // 출결 미처리 상담은 작성 대상이 아니다 (명세 14.1·14.3)
   if (reservation.status !== 'confirmed' || reservation.attendanceStatus !== 'attended') {
@@ -102,6 +121,7 @@ export function recordState(reservation, record, slotDate, today = todayStrKst()
   }
   // 일반 상담보고·수업보고로 자동 참석된 건은 예약 상담기록이 없는 것이 정상 — 독촉하지 않는다
   if (isAutoMarked(reservation) && !record) return 'not_required'
+  if (!record && counseled) return 'done_counseling'
   const deadline = addDaysStr(slotDate, RECORD_DEADLINE_DAYS)
   if (record?.status === 'done') {
     // completedAt은 UTC ISO — 문자열 절단 금지(dateUtils 규약), 로컬(KST) 날짜로 변환해 비교

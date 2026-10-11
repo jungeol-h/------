@@ -15,6 +15,7 @@ import { uploadCounselingPdfs, removeCounselingFiles, filterUnreferencedPaths } 
 import MultiStudentSelect from '../common/MultiStudentSelect.jsx'
 import TimeField from '../common/TimeField.jsx'
 import { todayStr } from '../../utils/dateUtils.js'
+import { findBookingDuplicates, confirmBookingDuplicate } from '../../utils/counselingDup.js'
 
 // 상담 작성 모달 — 매니저/관리자/학생상세에서 재사용. 코칭 모달(ManagerHomeTab) 패턴 차용.
 // fixedStudent가 있으면 해당 학생 고정, 없으면 students 목록에서 다중 선택(최대 6명) —
@@ -52,6 +53,11 @@ export default function CounselingFormModal({ students = [], fixedStudent, recor
   const fieldClass = 'w-full border border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300'
 
   const handleSave = async () => {
+    // 신규 작성만: 예약현황에서 이미 쓴 같은 날 상담이면 확인 — 취소하면 저장하지 않는다
+    if (!isEdit) {
+      const dupIds = findBookingDuplicates(data.counselingRecords, studentIds, authorId, date)
+      if (!confirmBookingDuplicate(dupIds, (id) => data.students.find((s) => s.id === id)?.name, date)) return
+    }
     setSaving(true)
     try {
       const content = composeCounselingContent(fields)

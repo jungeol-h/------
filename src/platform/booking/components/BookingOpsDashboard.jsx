@@ -9,7 +9,7 @@ import { todayStr } from '../../utils/dateUtils.js'
 import { useBooking } from '../BookingContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
 import { overlaps, todayStrKst } from '../bookingRules.js'
-import { recordState } from '../bookingStatus.js'
+import { recordState, isRecordSettled, findCoveringCounseling } from '../bookingStatus.js'
 import AttendanceProcessModal from './AttendanceProcessModal.jsx'
 import { AdminCancelModal, AdminChangeModal } from './AdminReservationModals.jsx'
 import RecordFormModal from './RecordFormModal.jsx'
@@ -92,8 +92,10 @@ export default function BookingOpsDashboard() {
     const unwrittenList = [] // 상담기록 미작성 전체 목록 (명세 15.1 — 블록 상세용)
     for (const r of reservations) {
       if (r.status !== 'confirmed' || r.attendanceStatus !== 'attended' || !r.slot) continue
-      const state = recordState(r, records.find((x) => x.reservationId === r.id), r.slot.date)
-      if (state !== 'done' && state !== 'done_overdue' && state !== 'not_required') unwrittenList.push(r)
+      const state = recordState(r, records.find((x) => x.reservationId === r.id), r.slot.date, undefined, {
+        counseled: !!findCoveringCounseling(r, counselingRecords),
+      })
+      if (!isRecordSettled(state)) unwrittenList.push(r)
       if (state === 'due_soon' || state === 'draft') dueSoon.push(r)
       else if (state === 'overdue') overdue.push(r)
     }

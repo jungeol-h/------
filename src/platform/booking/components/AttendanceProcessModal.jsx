@@ -18,10 +18,12 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ModalShell from '../../components/common/ModalShell.jsx'
 import { useBooking } from '../BookingContext.jsx'
+import { useData } from '../../context/DataContext.jsx'
 import { todayStr } from '../../utils/dateUtils.js'
 import { bookingMessage } from '../bookingMessages.js'
 import {
   ATTENDANCE_STATUS, ATTENDANCE_CHOICES, isAutoMarked, isSlotPast, recordState,
+  isRecordSettled, findCoveringCounseling,
 } from '../bookingStatus.js'
 
 const FIELD = 'h-10 px-3 rounded-lg border border-gray-200 text-sm'
@@ -34,6 +36,7 @@ export default function AttendanceProcessModal({
   reservation: r, onClose, onChangeReservation, onCancelReservation, onWriteRecord,
 }) {
   const { config, records, reservations, userNames, setAttendance, actor } = useBooking()
+  const { data } = useData()
   const navigate = useNavigate()
 
   // 기존 메모가 있으면 미리 채워 재처리 시에도 유실되지 않게 한다.
@@ -59,9 +62,10 @@ export default function AttendanceProcessModal({
 
   // 이미 참석 처리됐는데 기록이 남은 예약(상담기록 임박·초과 리스트 진입)이면
   // 상담기록 작성 버튼을 처음부터 크게 노출한다
-  const recState = recordState(r, records.find((x) => x.reservationId === r.id), r.slot?.date)
-  const needsRecord = r.attendanceStatus === 'attended'
-    && recState !== 'done' && recState !== 'done_overdue' && recState !== 'not_required'
+  const recState = recordState(r, records.find((x) => x.reservationId === r.id), r.slot?.date, undefined, {
+    counseled: !!findCoveringCounseling(r, data.counselingRecords),
+  })
+  const needsRecord = r.attendanceStatus === 'attended' && !isRecordSettled(recState)
   // 지난 출결 미처리 — 기록을 쓰면 참석 처리되므로 출결을 따로 누를 필요가 없다
   const canRecordPending = r.status === 'confirmed' && r.attendanceStatus === 'pending'
     && r.slot && isSlotPast(r.slot)

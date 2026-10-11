@@ -184,6 +184,15 @@ FOR UPDATE(id 정렬 순) → 부분 UNIQUE 인덱스.
 - **상담기록 연동**: 지난 출결 미처리 예약에서도 상담기록을 쓸 수 있고(`canWriteRecord`),
   저장 시 `RecordFormModal`이 참석 처리부터 한다. 자동 참석분은 예약 상담기록이 없어도
   `recordState`가 `not_required` — 다이제스트도 독촉하지 않는다.
+- **상담보고 연동**: 상담보고 탭(`counseling_records`)에 쓴 건도 작성된 것으로 본다 —
+  `findCoveringCounseling`(학생+강사+날짜, 시간 미비교: 같은 날 같은 강사 2회 상담이면 1건으로 둘 다
+  덮임)이 찾으면 `recordState`가 `done_counseling`(`counseled` 옵션)을 돌려주고 `isRecordSettled`로
+  미작성 집계에서 빠진다(`useData().data.counselingRecords` 읽기 전용). 예약 상담기록이 이미 있으면
+  기존 판정 유지. `RecordFormModal`은 예약 상담기록이 없고 덮는 상담보고가 있으면 양식 대신 안내
+  (+출결 미처리면 '참석으로 처리')를 보여 이중 작성을 막고, 반대로 상담보고는 같은 날 예약 유래
+  기록이 있으면 저장 전 확인한다(`utils/counselingDup.js`).
+  **후속**: 서버 `booking_digest`(`scripts/add-booking-auto-attendance.sql`)는 아직 `booking_records`만
+  봐서 이런 건에 미작성 알림이 갈 수 있다 — SQL 미변경.
 
 ## 수동 검수 체크리스트 (명세 23장 중 vitest 미커버분)
 

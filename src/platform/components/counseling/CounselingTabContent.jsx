@@ -21,6 +21,7 @@ import MonthlyReportModal from './MonthlyReportModal.jsx'
 import { AttachmentField, AttachmentChips } from './AttachmentField.jsx'
 import { uploadCounselingPdfs, removeCounselingFiles, filterUnreferencedPaths } from '../../lib/counselingFiles.js'
 import { todayStr } from '../../utils/dateUtils.js'
+import { findBookingDuplicates, confirmBookingDuplicate } from '../../utils/counselingDup.js'
 
 const EMPTY_FIELDS = { topic: '', diagnosis: '', advice: '', followUp: '', note: '', nextAppointment: '' }
 
@@ -130,6 +131,9 @@ export default function CounselingTabContent({ students, records, showAuthor = f
 
   const handleSave = async () => {
     if (!canSave) return
+    // 예약현황에서 이미 쓴 같은 날 상담이면 확인 — 취소하면 저장하지 않는다
+    const dupIds = findBookingDuplicates(data.counselingRecords, studentIds, authorId, date)
+    if (!confirmBookingDuplicate(dupIds, (id) => data.students.find((s) => s.id === id)?.name, date)) return
     setSaving(true)
     try {
       const content = composeCounselingContent(fields)
