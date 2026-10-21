@@ -13,7 +13,7 @@
 | `/parent/*` | parent | `parent/ParentDashboard` | 홈·학습·예약·코멘트 (예약만 쓰기 가능, 나머지 자녀 읽기 전용) |
 
 `shared/`는 여러 역할이 같이 쓰는 화면: `StudentDetailPage`(학생 상세 — 역할별 진입),
-`WorkRecordsTab`(업무기록 통합 탭 6메뉴: 업무계획·관리보고·재정·상담보고·수업보고·공지알림,
+`WorkRecordsTab`(업무기록 통합 탭 7메뉴: 업무계획·관리보고·재정·상담보고·수업보고·공지알림·내신백서(`components/workRecords/ExamWhitepaperSection` — 시험지 분석·우수사례 탭, 시험지 분석은 학교·학년·과목·시험당 1건 공동 편집),
 `?menu=` 딥링크, 역할별 편집/잠금/열람 분기). 공지·알림(2026-07-31 클라이언트 요청)은
 `notices` 테이블 — 공지(announcement)는 전 역할 홈 로그인 팝업(`NoticePopup`, PageLayout
 마운트, 읽음 기록은 서버 notice_reads 정본 + localStorage 보조 — 다기기 1회 노출),
@@ -42,6 +42,9 @@ DB role(`admin`)은 `currentUser.accountRole`에 남는다 (저장된 세션 `lo
 6. DB: users.role 값 추가 시 시드/마이그레이션 (`scripts/README.md`)
 
 ## 알아둘 것
+
+- **내신 피드백 보고서**: 학생 `student/ExamFeedbackTab.jsx`(LearningTab '내신' 서브탭)와 `shared/StudentDetailPage.jsx`의
+  '내신' 탭(강사 대리 작성, viewer는 읽기전용)이 `components/examReports/ExamFeedbackForm.jsx`를 공용한다.
 
 - **[임시] 타이머 버그 보정 코드**: `student/tempBetaNotice.js` + StudentDashboard·LearningTab의
   `[임시]` 주석 블록. 타이머 상태 저장/복구 안정화가 확인되면 함께 철거할 것.

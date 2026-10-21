@@ -18,16 +18,17 @@ import {
   toQuizAttempt, toParentChild, toAttendanceRecord, toAttendanceSchedule,
   toAttendanceNotification, toWorkPlan,
   toUrgentReport, toManagementReport, toFinanceRecord, toLessonReport, toNotice,
-  toCenterClosure, toStudentFeedback,
+  toCenterClosure, toStudentFeedback, toExamFeedback, toExamAnalysis, toExamBestCase,
   collectRows,
 } from '../../lib/supabaseHelpers.js'
 import { EMPTY } from '../dataModel.js'
+import { fetchAllRows } from '../../lib/fetchAllPages.js'
 
 export async function fetchForAdmin(scope = null) {
   const errors = []
   const meta = {}
 
-  const [usersRes, assnRes, alertsRes, counselingRes, bookingCounselingRes, statsRes, setsRes, parentChildrenRes, workPlansRes, urgentReportsRes, managementReportsRes, financeRecordsRes, lessonReportsRes, noticesRes, closuresRes, feedbacksRes] = await Promise.all([
+  const [usersRes, assnRes, alertsRes, counselingRes, bookingCounselingRes, statsRes, setsRes, parentChildrenRes, workPlansRes, urgentReportsRes, managementReportsRes, financeRecordsRes, lessonReportsRes, noticesRes, closuresRes, feedbacksRes, examFeedbacksRes, examAnalysesRes, examBestCasesRes] = await Promise.all([
     supabase.from('users').select('*').order('grade').order('login_id'),
     supabase.from('assignments').select('*'),
     supabase.from('alerts').select('*').order('created_at', { ascending: false }),
@@ -49,6 +50,10 @@ export async function fetchForAdmin(scope = null) {
     supabase.from('center_closures').select('*').order('start_date', { ascending: false }),
     // 학생 피드백(수시 코멘트) — 학생 명단·상세·종합성장리포트 소비
     supabase.from('student_feedbacks').select('*').order('date', { ascending: false }).limit(2000),
+    // 내신백서 — 1000행 초과 가능 → 페이지 이어붙이기 (조용한 잘림 방지). 학생 스코프는 아래 byStudentId
+    fetchAllRows(() => supabase.from('exam_feedbacks').select('*').order('id')),
+    fetchAllRows(() => supabase.from('exam_analyses').select('*').order('id')),
+    fetchAllRows(() => supabase.from('exam_best_cases').select('*').order('id')),
   ])
 
   const allUsers = collectRows(usersRes, 'users', errors)
@@ -153,6 +158,9 @@ export async function fetchForAdmin(scope = null) {
     notices: collectRows(noticesRes, 'notices', errors).map(toNotice),
     centerClosures: collectRows(closuresRes, 'center_closures', errors).map(toCenterClosure),
     studentFeedbacks: collectRows(feedbacksRes, 'student_feedbacks', errors).filter(byStudentId).map(toStudentFeedback),
+    examFeedbacks: collectRows(examFeedbacksRes, 'exam_feedbacks', errors).filter(byStudentId).map(toExamFeedback),
+    examAnalyses: collectRows(examAnalysesRes, 'exam_analyses', errors).map(toExamAnalysis), // 학교 단위 공용 — 스코프 비적용
+    examBestCases: collectRows(examBestCasesRes, 'exam_best_cases', errors).filter(byStudentId).map(toExamBestCase),
     _fetchErrors: errors,
     _fetchMeta: meta,
   }
