@@ -28,6 +28,9 @@ import { AttachmentChips } from '../../components/counseling/AttachmentField.jsx
 import { removeCounselingFiles, filterUnreferencedPaths } from '../../lib/counselingFiles.js'
 import { educatorDisplayName } from '../../utils/educatorName.js'
 import { todayStr } from '../../utils/dateUtils.js'
+import ExamKeySelect from '../../components/examReports/ExamKeySelect.jsx'
+import ExamFeedbackForm from '../../components/examReports/ExamFeedbackForm.jsx'
+import { defaultExamKey, examKeyLabel, sameExamKey } from '../../utils/examTerms.js'
 import TaskFormModal from '../../components/tasks/TaskFormModal.jsx'
 import TaskFileChips from '../../components/tasks/TaskFileChips.jsx'
 import DownloadPdfButton from '../../pdf/components/DownloadPdfButton.jsx'
@@ -960,8 +963,39 @@ function CounselingSection({ studentId, data, currentUser, canWrite = true }) {
   )
 }
 
+// ─── 내신 피드백 (강사 대리 작성·열람) ───────────────────────
+function ExamFeedbackSection({ student, data, canWrite }) {
+  const [examKey, setExamKey] = useState(() => defaultExamKey())
+  const mine = (data.examFeedbacks ?? []).filter((f) => f.studentId === student.id)
+  const existing = mine.find((f) => sameExamKey(f, examKey)) ?? null
+  const past = [...mine].sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''))
+  return (
+    <div className="space-y-4">
+      <ExamKeySelect value={examKey} onChange={(k) => k && setExamKey(k)} className="w-full" />
+      <ExamFeedbackForm
+        key={`${examKey.examYear}-${examKey.semester}-${examKey.examType}`}
+        student={student} examKey={examKey} existing={existing} readOnly={!canWrite}
+      />
+      {past.length > 0 && (
+        <div className="space-y-1.5">
+          <p className="text-xs font-bold text-gray-700 px-1">작성된 보고서</p>
+          {past.map((f) => (
+            <button key={f.id} type="button" onClick={() => setExamKey({ examYear: f.examYear, semester: f.semester, examType: f.examType })}
+              className={`w-full flex items-center justify-between bg-white rounded-xl border px-3 py-2.5 text-sm text-left ${
+                sameExamKey(f, examKey) ? 'border-blue-300' : 'border-gray-200'
+              }`}>
+              <span className="text-gray-800">{examKeyLabel(f)}</span>
+              <span className="text-xs text-gray-400">{f.updatedByName || ''} · {(f.updatedAt || '').slice(0, 10)}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── 메인 ─────────────────────────────────────────────────────
-const TABS = ['이용시간', '마인드', '일기', '학습', '과제', '피드백', '학습진단', '진로설계', '상담']
+const TABS = ['이용시간', '마인드', '일기', '학습', '과제', '피드백', '학습진단', '진로설계', '상담', '내신']
 
 export default function StudentDetailPage() {
   const { studentId } = useParams()
@@ -1031,6 +1065,7 @@ export default function StudentDetailPage() {
       {activeTab === 6 && <LearningDiagnosisSection studentId={studentId} data={data} />}
       {activeTab === 7 && <CareerDesignSection studentId={studentId} data={data} />}
       {activeTab === 8 && <CounselingSection studentId={studentId} data={data} currentUser={currentUser} canWrite={currentUser?.role !== 'viewer'} />}
+      {activeTab === 9 && <ExamFeedbackSection student={student} data={data} canWrite={currentUser?.role !== 'viewer'} />}
     </div>
   )
 }

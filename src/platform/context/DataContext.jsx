@@ -32,6 +32,7 @@ import { useSelfScoreDomain } from './domains/selfScoreDomain.js'
 import { useWorkPlanDomain } from './domains/workPlanDomain.js'
 import { useUrgentReportDomain } from './domains/urgentReportDomain.js'
 import { useWorkRecordsDomain } from './domains/workRecordsDomain.js'
+import { useExamReportsDomain } from './domains/examReportsDomain.js'
 import { useNoticeDomain } from './domains/noticeDomain.js'
 import { useCenterClosureDomain } from './domains/centerClosureDomain.js'
 import { useStudentFeedbackDomain } from './domains/studentFeedbackDomain.js'
@@ -246,6 +247,7 @@ export function DataProvider({ children }) {
   const workPlan = useWorkPlanDomain(domainSetData)
   const urgentReport = useUrgentReportDomain(domainSetData)
   const workRecords = useWorkRecordsDomain(domainSetData)
+  const examReports = useExamReportsDomain(domainSetData)
   const notice = useNoticeDomain(domainSetData)
   const centerClosure = useCenterClosureDomain(domainSetData)
   const studentFeedback = useStudentFeedbackDomain(domainSetData)
@@ -282,6 +284,7 @@ export function DataProvider({ children }) {
       ...workPlan,
       ...urgentReport,
       ...workRecords,
+      ...examReports,
       ...notice,
       ...centerClosure,
       ...studentFeedback,
@@ -289,7 +292,7 @@ export function DataProvider({ children }) {
       resetData,
       refetch,
     }),
-    [data, loading, refreshing, dataReady, mind, diary, alert, task, learning, career, quiz, student, counseling, attendance, parent, educator, selfScore, workPlan, urgentReport, workRecords, notice, centerClosure, studentFeedback, getWeeklyLearning, resetData, refetch]
+    [data, loading, refreshing, dataReady, mind, diary, alert, task, learning, career, quiz, student, counseling, attendance, parent, educator, selfScore, workPlan, urgentReport, workRecords, examReports, notice, centerClosure, studentFeedback, getWeeklyLearning, resetData, refetch]
   )
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>

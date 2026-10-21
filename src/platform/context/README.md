@@ -37,6 +37,15 @@ fetch 실패는 죽이지 않고 `data._fetchErrors`에 수집 → 화면 상단
 7. cross-domain 파생값이 필요하면 `selectors/`에 순수함수 추가 + vitest 단위테스트
    (`*.test.js` — selector는 테스트가 이미 21파일 있음. 패턴 따라할 것)
 
+## 내신백서 (`examReportsDomain.js`, 2026-10)
+
+컬렉션 `examFeedbacks`(학생별 시험 후 피드백)·`examAnalyses`(학교·학년·과목·시험별 시험지 분석)·
+`examBestCases`(우수사례). 피드백·분석은 시험 키(`utils/examTerms.js`)당 1건 unique —
+add 시 unique 위반은 `err.code === 'DUPLICATE'`로 던지니 `refetchExamFeedback/Analysis`로
+기존 행을 가져와 수정 모드로 전환할 것. 세 컬렉션 fetch는 `lib/fetchAllPages.js`의
+`fetchAllRows`(`.range` 페이지 이어붙이기)로 1000행 조용한 잘림을 막는다. 시험지 첨부는
+`lib/examPaperFiles.js`('exam-papers' 버킷). DDL `scripts/add-exam-reports.sql`.
+
 ## 알림(위험 신호) 설계 — 두 방식이 공존한다
 
 - **위험 탐지 = 계산형**: 레코드를 만들지 않고 조회 시점에 selector로 계산

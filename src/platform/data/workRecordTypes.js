@@ -1,7 +1,7 @@
 // 업무기록 통합 탭 공용 상수 — 메뉴·업무계획 진행상황·관리보고 유형·재정 분류.
 // counselingTypes.js와 같은 방식: 배열 순서가 곧 표시 순서.
 
-// ── 업무기록 탭 메뉴 6종 ─────────────────────────────────────
+// ── 업무기록 탭 메뉴 7종 ─────────────────────────────────────
 // plans/management/finance는 admin 전용 작성(viewer 열람), counseling/lesson/notices는 공통.
 export const WORK_RECORD_MENUS = [
   { key: 'plans', label: '업무계획' },
@@ -10,6 +10,7 @@ export const WORK_RECORD_MENUS = [
   { key: 'counseling', label: '상담보고' },
   { key: 'lesson', label: '수업보고' },
   { key: 'notices', label: '공지·알림' },
+  { key: 'exam', label: '내신백서' },
 ]
 
 export const ADMIN_ONLY_MENUS = ['plans', 'management', 'finance']

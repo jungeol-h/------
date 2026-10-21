@@ -38,6 +38,7 @@ import {
 } from './tempBetaNotice.js'
 import { SUBJECTS, SUBJECT_COLORS } from '../../data/subjects.js'
 import DailySelfScoreSection from './DailySelfScoreSection.jsx'
+import ExamFeedbackTab from './ExamFeedbackTab.jsx'
 
 const TIME_STEPS = [
   { label: '-10', value: -10 },
@@ -1465,7 +1466,7 @@ export default function LearningTab() {
 
   return (
     <div className="py-6 space-y-5">
-      <div className="grid grid-cols-3 gap-2 rounded-xl bg-gray-100 p-1">
+      <div className="grid grid-cols-4 gap-1.5 rounded-xl bg-gray-100 p-1">
         <button
           type="button"
           onClick={() => setActiveTab('plan')}
@@ -1493,6 +1494,15 @@ export default function LearningTab() {
         >
           돌아보기
         </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('exam')}
+          className={`h-11 rounded-lg text-sm font-bold transition-colors ${
+            activeTab === 'exam' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500'
+          }`}
+        >
+          내신
+        </button>
       </div>
 
       <div className={activeTab === 'plan' ? 'block' : 'hidden'}>
@@ -1503,6 +1513,9 @@ export default function LearningTab() {
       </div>
       <div className={activeTab === 'stats' ? 'block' : 'hidden'}>
         <StatsTab records={records} data={data} studentId={currentUser?.id} currentUser={currentUser} />
+      </div>
+      <div className={activeTab === 'exam' ? 'block' : 'hidden'}>
+        <ExamFeedbackTab />
       </div>
     </div>
   )

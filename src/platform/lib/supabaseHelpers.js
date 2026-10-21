@@ -421,3 +421,64 @@ export function reportFinalFetchFailure(fetchErrors, extra) {
     ...(extra ?? {}),
   })
 }
+
+// ── 내신백서 (add-exam-reports.sql) ─────────────────────────
+export const toExamFeedback = (row) => ({
+  id: row.id,
+  studentId: row.student_id,
+  examYear: row.exam_year,
+  semester: row.semester,
+  examType: row.exam_type,
+  school: row.school ?? '',
+  grade: row.grade ?? '',
+  className: row.class_name ?? '',
+  writtenDate: row.written_date ?? null,
+  subjects: toArray(row.subjects),
+  actionPlan: row.action_plan ?? '',
+  updatedBy: row.updated_by ?? null,
+  updatedByName: row.updated_by_name ?? '',
+  createdAt: row.created_at,
+  updatedAt: row.updated_at ?? row.created_at,
+})
+
+export const toExamAnalysis = (row) => ({
+  id: row.id,
+  school: row.school,
+  grade: row.grade,
+  subject: row.subject,
+  examYear: row.exam_year,
+  semester: row.semester,
+  examType: row.exam_type,
+  examDate: row.exam_date ?? null,
+  startTime: row.start_time ?? '',
+  endTime: row.end_time ?? '',
+  publisher: row.publisher ?? '',
+  totalQuestions: row.total_questions ?? null,
+  difficulty: row.difficulty ?? '',
+  questionTypes: toArray(row.question_types),
+  scope: row.scope ?? '',
+  sections: row.sections && typeof row.sections === 'object' && !Array.isArray(row.sections) ? row.sections : {},
+  attachments: toArray(row.attachments),
+  authorId: row.author_id ?? null,
+  updatedBy: row.updated_by ?? null,
+  updatedByName: row.updated_by_name ?? '',
+  createdAt: row.created_at,
+  updatedAt: row.updated_at ?? row.created_at,
+})
+
+export const toExamBestCase = (row) => ({
+  id: row.id,
+  studentId: row.student_id,
+  authorId: row.author_id ?? null,
+  authorName: row.author_name ?? '',
+  examYear: row.exam_year,
+  semester: row.semester,
+  examType: row.exam_type,
+  subject: row.subject ?? '',
+  score: row.score ?? '',
+  prepPeriod: row.prep_period ?? '',
+  process: row.process ?? '',
+  keyPoint: row.key_point ?? '',
+  createdAt: row.created_at,
+  updatedAt: row.updated_at ?? row.created_at,
+})

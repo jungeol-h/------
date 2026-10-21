@@ -9,9 +9,10 @@ import {
   toLearningDiagnosisResult, toAssignment, toQuizSet, toQuizQuestion,
   toQuizAttempt, toAttendanceRecord, toAttendanceSchedule,
   toAttendanceNotification, toUrgentReport, toLessonReport, toNotice,
-  toCenterClosure, toStudentFeedback, collectRows,
+  toCenterClosure, toStudentFeedback, toExamFeedback, toExamAnalysis, toExamBestCase, collectRows,
 } from '../../lib/supabaseHelpers.js'
 import { EMPTY } from '../dataModel.js'
+import { fetchAllRows } from '../../lib/fetchAllPages.js'
 import { canViewByGroups } from '../../utils/groupScope.js'
 
 export async function fetchForManager(userId) {
@@ -59,7 +60,7 @@ export async function fetchForManager(userId) {
   const attendanceSince = daysAgoStr(60)
   const notificationsSince = new Date(Date.now() - 7 * 86400000).toISOString()
 
-  const [mindRes, alertsRes, counselingRes, tasksRes, learningRes, diaryRes, careerRes, diagRes, attemptsRes, setsRes, attendanceRes, schedulesRes, attNotiRes, urgentRes, educatorsRes, lessonReportsRes, studentGroupsRes, closuresRes, feedbacksRes] = await Promise.all([
+  const [mindRes, alertsRes, counselingRes, tasksRes, learningRes, diaryRes, careerRes, diagRes, attemptsRes, setsRes, attendanceRes, schedulesRes, attNotiRes, urgentRes, educatorsRes, lessonReportsRes, studentGroupsRes, closuresRes, feedbacksRes, examFeedbacksRes, examAnalysesRes, examBestCasesRes] = await Promise.all([
     supabase.from('mind_records').select('*', { count: 'exact' }).in('student_id', studentIds).order('date', { ascending: false }).limit(2000),
     supabase.from('alerts').select('*').eq('manager_id', userId).order('created_at', { ascending: false }),
     // 담당 학생의 상담 기록 전체 — 작성자 무관 열람 (2026-07 클라이언트: 학생별 기록은 모든 강사 열람)
@@ -86,6 +87,10 @@ export async function fetchForManager(userId) {
     supabase.from('center_closures').select('*').order('start_date', { ascending: false }),
     // 학생 피드백(수시 코멘트) — 담당 학생분
     supabase.from('student_feedbacks').select('*').in('student_id', studentIds).order('date', { ascending: false }).limit(2000),
+    // 내신백서 — 담당 학생분(피드백·우수사례)은 페이지 이어붙이기, 시험지 분석은 학교 단위 공용 전체
+    fetchAllRows(() => supabase.from('exam_feedbacks').select('*').in('student_id', studentIds).order('id')),
+    fetchAllRows(() => supabase.from('exam_analyses').select('*').order('id')),
+    fetchAllRows(() => supabase.from('exam_best_cases').select('*').in('student_id', studentIds).order('id')),
   ])
   const notices = await fetchNotices()
 
@@ -139,6 +144,9 @@ export async function fetchForManager(userId) {
     notices,
     centerClosures: collectRows(closuresRes, 'center_closures', errors).map(toCenterClosure),
     studentFeedbacks: collectRows(feedbacksRes, 'student_feedbacks', errors).map(toStudentFeedback),
+    examFeedbacks: collectRows(examFeedbacksRes, 'exam_feedbacks', errors).map(toExamFeedback),
+    examAnalyses: collectRows(examAnalysesRes, 'exam_analyses', errors).map(toExamAnalysis),
+    examBestCases: collectRows(examBestCasesRes, 'exam_best_cases', errors).map(toExamBestCase),
     _fetchErrors: errors,
     _fetchMeta: meta,
   }
