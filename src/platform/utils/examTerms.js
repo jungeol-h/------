@@ -51,3 +51,13 @@ export function examKeyOptions(dateStr = todayStr(), count = 6) {
   }
   return out
 }
+
+// 학교명 정규화 — 학생 명단에 '경덕중'·'경덕중학교'가 섞여 있어 시험지 분석 키(학교·학년·과목·시험)가
+// 갈라지지 않도록 저장·필터·추천 모두 짧은 표기로 맞춘다. ('경안여중'처럼 이미 짧은 표기는 그대로)
+export function normalizeSchool(name) {
+  return (name ?? '')
+    .replace(/\s+/g, '')
+    .replace(/초등학교$/, '초')
+    .replace(/중학교$/, '중')
+    .replace(/고등학교$/, '고')
+}

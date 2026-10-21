@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { EXAM_TYPES, examKeyLabel, sameExamKey, defaultExamKey, examKeyOptions } from './examTerms.js'
+import { EXAM_TYPES, examKeyLabel, sameExamKey, defaultExamKey, examKeyOptions, normalizeSchool } from './examTerms.js'
 
 describe('examTerms', () => {
   it('라벨', () => {
@@ -35,5 +35,15 @@ describe('examTerms', () => {
     expect(opts[1]).toEqual({ examYear: 2026, semester: 1, examType: 'final' })
     expect(opts[3]).toEqual({ examYear: 2025, semester: 2, examType: 'final' })
     expect(opts[5]).toEqual({ examYear: 2025, semester: 1, examType: 'final' })
+  })
+})
+
+describe('normalizeSchool', () => {
+  it('학교 접미사를 짧은 표기로 맞춘다', () => {
+    expect(normalizeSchool('경덕중학교')).toBe('경덕중')
+    expect(normalizeSchool(' 안동 중학교 ')).toBe('안동중')
+    expect(normalizeSchool('경안여중')).toBe('경안여중')
+    expect(normalizeSchool('경일고등학교')).toBe('경일고')
+    expect(normalizeSchool(null)).toBe('')
   })
 })

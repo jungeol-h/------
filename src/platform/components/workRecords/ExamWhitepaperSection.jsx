@@ -6,7 +6,7 @@ import ExamKeySelect from '../examReports/ExamKeySelect.jsx'
 import ExamAnalysisForm from './ExamAnalysisForm.jsx'
 import ExamBestCaseForm from './ExamBestCaseForm.jsx'
 import { GRADES } from '../../data/grades.js'
-import { examKeyLabel, sameExamKey } from '../../utils/examTerms.js'
+import { examKeyLabel, normalizeSchool, sameExamKey } from '../../utils/examTerms.js'
 import { removeExamPapers } from '../../lib/examPaperFiles.js'
 import { educatorDisplayName } from '../../utils/educatorName.js'
 import { isActiveStudent } from '../../data/studentStatus.js'
@@ -30,8 +30,8 @@ function AnalysisTab({ readOnly }) {
   const all = data.examAnalyses
   const schools = useMemo(() => {
     const set = new Set()
-    data.students.forEach((s) => s.school && set.add(s.school.trim()))
-    all.forEach((a) => a.school && set.add(a.school))
+    data.students.forEach((s) => s.school && set.add(normalizeSchool(s.school)))
+    all.forEach((a) => a.school && set.add(normalizeSchool(a.school)))
     return [...set].sort((a, b) => a.localeCompare(b, 'ko'))
   }, [data.students, all])
   const subjects = useMemo(

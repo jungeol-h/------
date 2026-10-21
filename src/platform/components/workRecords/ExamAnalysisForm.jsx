@@ -8,7 +8,7 @@ import ExamKeySelect from '../examReports/ExamKeySelect.jsx'
 import { AttachmentField } from '../counseling/AttachmentField.jsx'
 import { SUBJECTS } from '../../data/subjects.js'
 import { GRADES } from '../../data/grades.js'
-import { defaultExamKey, sameExamKey } from '../../utils/examTerms.js'
+import { defaultExamKey, normalizeSchool, sameExamKey } from '../../utils/examTerms.js'
 import {
   validateExamPaper, uploadExamPapers, removeExamPapers, MAX_EXAM_PAPER_MB,
 } from '../../lib/examPaperFiles.js'
@@ -92,7 +92,7 @@ export default function ExamAnalysisForm({
   const checkDup = (next) => {
     if (isEdit || readOnly) return
     const k = next.key ?? key
-    const sc = norm(next.school ?? school)
+    const sc = normalizeSchool(next.school ?? school)
     const gr = next.grade ?? grade
     const sj = next.subject ?? subject
     if (!sc || !gr || !sj) return
@@ -109,7 +109,7 @@ export default function ExamAnalysisForm({
   const toggleType = (t) =>
     setQuestionTypes((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]))
 
-  const canSave = !readOnly && !saving && norm(school) && grade && subject
+  const canSave = !readOnly && !saving && normalizeSchool(school) && grade && subject
 
   const handleSave = async () => {
     if (!canSave) return
@@ -120,7 +120,7 @@ export default function ExamAnalysisForm({
       if (pending.length > 0) uploaded = await uploadExamPapers(pending, currentUser?.id)
       const attachments = [...existingAtt, ...uploaded]
       const body = {
-        school: norm(school), grade, subject,
+        school: normalizeSchool(school), grade, subject,
         examYear: key.examYear, semester: key.semester, examType: key.examType,
         examDate: examDate || null, startTime, endTime,
         publisher: norm(publisher),
@@ -141,7 +141,7 @@ export default function ExamAnalysisForm({
       if (uploaded.length) removeExamPapers(uploaded.map((a) => a.path))
       if (err?.code === 'DUPLICATE') {
         const hit = await refetchExamAnalysis({
-          school: norm(school), grade, subject,
+          school: normalizeSchool(school), grade, subject,
           examYear: key.examYear, semester: key.semester, examType: key.examType,
         }).catch(() => null)
         if (hit) onSwitchToEdit?.(hit, '이미 작성된 분석이 있어 불러왔어요')
@@ -174,7 +174,7 @@ export default function ExamAnalysisForm({
           {label('학교명')}
           <input list="exam-school-list" value={school} disabled={readOnly}
             onChange={(e) => setSchool(e.target.value)}
-            onBlur={() => { setSchool(norm(school)); checkDup({ school: norm(school) }) }}
+            onBlur={() => { setSchool(normalizeSchool(school)); checkDup({ school: normalizeSchool(school) }) }}
             placeholder="예: 안동중" className={`${fieldClass} w-full`} />
           <datalist id="exam-school-list">
             {schools.map((s) => <option key={s} value={s} />)}
