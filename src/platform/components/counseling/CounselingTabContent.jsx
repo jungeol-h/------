@@ -21,6 +21,7 @@ import MonthlyReportModal from './MonthlyReportModal.jsx'
 import { AttachmentField, AttachmentChips } from './AttachmentField.jsx'
 import { uploadCounselingPdfs, removeCounselingFiles, filterUnreferencedPaths } from '../../lib/counselingFiles.js'
 import { todayStr } from '../../utils/dateUtils.js'
+import { buildCounselingGroupSizes, counselingGroupKey } from '../../context/selectors/counselingGroup.js'
 import { findBookingDuplicates, confirmBookingDuplicate } from '../../utils/counselingDup.js'
 
 const EMPTY_FIELDS = { topic: '', diagnosis: '', advice: '', followUp: '', note: '', nextAppointment: '' }
@@ -68,6 +69,9 @@ export default function CounselingTabContent({ students, records, showAuthor = f
       .filter((s) => ids.has(s.id))
       .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'))
   }, [records, data.students])
+
+  // 그룹 배지용 — 필터와 무관하게 전체 기록 기준
+  const groupSizes = useMemo(() => buildCounselingGroupSizes(data.counselingRecords), [data.counselingRecords])
 
   const filteredRecords = useMemo(
     () => records.filter((r) =>
@@ -360,6 +364,7 @@ export default function CounselingTabContent({ students, records, showAuthor = f
             {filteredRecords.map((r) => {
               const student = data.students.find((s) => s.id === r.studentId)
               const author = data.educators.find((e) => e.id === r.educatorId)
+              const groupSize = groupSizes.get(counselingGroupKey(r)) ?? 0
               return (
                 <div key={r.id} className="bg-white rounded-2xl p-4 shadow-sm">
                   <div className="flex items-center justify-between mb-2">
@@ -371,6 +376,11 @@ export default function CounselingTabContent({ students, records, showAuthor = f
                       <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
                         {COUNSELING_TARGET_LABELS[r.targetType] ?? '학생'}
                       </span>
+                      {groupSize >= 2 && (
+                        <span className="text-xs bg-purple-50 text-purple-600 px-2 py-0.5 rounded-full">
+                          그룹 {groupSize}명
+                        </span>
+                      )}
                       {r.source === 'booking' && (
                         <span className="text-xs bg-violet-50 text-violet-600 px-2 py-0.5 rounded-full">
                           예약 상담

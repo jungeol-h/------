@@ -27,4 +27,13 @@ describe('filterUnreferencedPaths', () => {
     expect(filterUnreferencedPaths(undefined, records, 'c1')).toEqual([])
     expect(filterUnreferencedPaths(['a/x.pdf'], undefined, 'c1')).toEqual(['a/x.pdf'])
   })
+
+  it('excludeId 배열: 지정한 기록 전부를 참조에서 제외한다', () => {
+    expect(filterUnreferencedPaths(['a/shared.pdf', 'a/own1.pdf'], records, ['c1', 'c2']))
+      .toEqual(['a/shared.pdf', 'a/own1.pdf'])
+    expect(filterUnreferencedPaths(['a/shared.pdf'], records, ['c1']))
+      .toEqual([]) // c2가 아직 참조
+    expect(filterUnreferencedPaths(['a/shared.pdf'], records, []))
+      .toEqual([])
+  })
 })

@@ -54,8 +54,13 @@ export function useCounselingDomain(setData) {
   )
 
   // 상담 기록 수정 — 앱 모델 content는 DB의 content 컬럼(변환기에서 comment로 매핑)이다.
+  // id는 문자열 또는 id 배열 — 배열이면 같은 patch를 한 번의 UPDATE(.in)로 원자 적용한다
+  // (다중 학생 그룹 일괄 수정). 빈 배열은 no-op.
   const updateCounselingRecord = useCallback(
-    async (id, { content, type, targetType, fields, attachments, startTime, endTime, date }) => {
+    async (idOrIds, { content, type, targetType, fields, attachments, startTime, endTime, date }) => {
+      const ids = Array.isArray(idOrIds) ? idOrIds : [idOrIds]
+      if (ids.length === 0) return
+      const idSet = new Set(ids)
       const snake = {}
       if (content !== undefined) snake.content = content
       if (type !== undefined) snake.type = type
@@ -74,14 +79,14 @@ export function useCounselingDomain(setData) {
       }
       if (Object.keys(snake).length === 0) return
       const { error } = await withWriteRetry(
-        () => supabase.from('counseling_records').update(snake).eq('id', id),
+        () => supabase.from('counseling_records').update(snake).in('id', ids),
         { label: 'updateCounselingRecord' }
       )
       if (error) throw error
       setData((prev) => ({
         ...prev,
         counselingRecords: prev.counselingRecords.map((r) =>
-          r.id === id
+          idSet.has(r.id)
             ? {
                 ...r,
                 ...(content !== undefined ? { comment: content } : {}),
