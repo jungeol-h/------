@@ -44,11 +44,13 @@ export async function removeCounselingFiles(paths) {
 // 다중 학생 fan-out으로 생성된 기록들은 같은 첨부 실파일(path)을 공유한다.
 // 삭제 전 반드시 이 필터를 거쳐, 다른 기록(excludeId 제외)이 아직 참조하는
 // path는 실파일 삭제 대상에서 제외한다 — 형제 기록의 첨부 파손 방지.
+// excludeId는 id 하나 또는 배열(그룹 일괄 수정·삭제 시 대상 기록 전부).
 export function filterUnreferencedPaths(paths, records, excludeId) {
   if (!paths?.length) return []
+  const excluded = new Set(Array.isArray(excludeId) ? excludeId : [excludeId])
   return paths.filter(
     (path) => !(records ?? []).some(
-      (r) => r.id !== excludeId && (r.attachments ?? []).some((a) => a.path === path)
+      (r) => !excluded.has(r.id) && (r.attachments ?? []).some((a) => a.path === path)
     )
   )
 }

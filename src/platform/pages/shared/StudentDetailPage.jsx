@@ -26,6 +26,7 @@ import CounselingFormModal from '../../components/counseling/CounselingFormModal
 import CounselingRecordBody from '../../components/counseling/CounselingRecordBody.jsx'
 import { AttachmentChips } from '../../components/counseling/AttachmentField.jsx'
 import { removeCounselingFiles, filterUnreferencedPaths } from '../../lib/counselingFiles.js'
+import { buildCounselingGroupSizes, counselingGroupKey } from '../../context/selectors/counselingGroup.js'
 import { educatorDisplayName } from '../../utils/educatorName.js'
 import { todayStr } from '../../utils/dateUtils.js'
 import ExamKeySelect from '../../components/examReports/ExamKeySelect.jsx'
@@ -795,6 +796,8 @@ function CounselingSection({ studentId, data, currentUser, canWrite = true }) {
     .filter((r) => r.studentId === studentId)
     .slice()
     .sort((a, b) => (b.date > a.date ? 1 : -1))
+  // 그룹 배지용 — 학생 필터 전의 전체 기록 기준
+  const groupSizes = useMemo(() => buildCounselingGroupSizes(data.counselingRecords), [data.counselingRecords])
 
   const { deleteCounselingRecord } = useData()
 
@@ -906,6 +909,11 @@ function CounselingSection({ studentId, data, currentUser, canWrite = true }) {
                   <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
                     {COUNSELING_TARGET_LABELS[r.targetType] ?? '학생'}
                   </span>
+                  {(groupSizes.get(counselingGroupKey(r)) ?? 0) >= 2 && (
+                    <span className="text-xs bg-purple-50 text-purple-600 px-2 py-0.5 rounded-full">
+                      그룹 {groupSizes.get(counselingGroupKey(r))}명
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-gray-400">{r.date}</span>
