@@ -61,7 +61,7 @@ export default function ExamFeedbackReport({ feedback, studentName, generatedAt,
         <InfoGrid>
           <InfoRow label="학생 이름" value={studentName} />
           <InfoRow label="학교" value={feedback?.school} />
-          <InfoRow label="학년·반" value={[feedback?.grade, feedback?.className].filter(Boolean).join(' ')} />
+          <InfoRow label="학년·반" value={[...new Set([feedback?.grade, feedback?.className].filter(Boolean))].join(' ')} />
           <InfoRow label="작성일" value={feedback?.writtenDate} />
           <InfoRow label="최종 수정" value={updated} />
         </InfoGrid>

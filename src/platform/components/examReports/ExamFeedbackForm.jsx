@@ -151,7 +151,7 @@ export default function ExamFeedbackForm({ student, examKey, existing = null, re
       <div className="bg-white rounded-xl border border-gray-200 p-3 text-sm">
         <p className="font-bold text-gray-900">{examKeyLabel(examKey)}</p>
         <p className="text-xs text-gray-500 mt-1">
-          {[school, [grade, className].filter(Boolean).join(' '), student?.name].filter(Boolean).join(' · ')}
+          {[school, [...new Set([grade, className].filter(Boolean))].join(' '), student?.name].filter(Boolean).join(' · ')}
         </p>
         {current && (
           <p className="text-[11px] text-gray-400 mt-1">
