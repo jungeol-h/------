@@ -26,7 +26,7 @@ export const fontSize = {
 
 export const spacing = {
   pageMargin: 36,
-  pageMarginTop: 84,
+  pageMarginTop: 104, // 헤더에 보고 기간 줄이 붙으면 84로는 첫 섹션 제목과 겹쳤다
   pageMarginBottom: 56,
 }
 
