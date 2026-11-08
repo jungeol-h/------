@@ -19,13 +19,13 @@ import { findBookingDuplicates, confirmBookingDuplicate } from '../../utils/coun
 import { findCounselingGroupSiblings } from '../../context/selectors/counselingGroup.js'
 
 // 상담 작성 모달 — 매니저/관리자/학생상세에서 재사용. 코칭 모달(ManagerHomeTab) 패턴 차용.
-// fixedStudent가 있으면 해당 학생 고정, 없으면 students 목록에서 다중 선택(최대 6명) —
+// fixedStudent가 있으면 해당 학생 고정, 없으면 students 목록에서 다중 선택(최대 10명, 지정예약과 동일) —
 // 같은 내용의 상담기록이 학생별로 각각 생성된다(fan-out, 첨부 실파일은 공유).
 // record가 있으면 수정 모드 — 학생 고정·내용/type 프리필 후 updateCounselingRecord 호출.
 // 구 기록(단일 comment) 수정 시엔 comment를 진단 칸에 프리필한다.
 // 같은 내용으로 fan-out된 형제 기록이 있으면 그룹 전체/이 학생만 범위를 고를 수 있다(기본 그룹 전체).
 // 한 학생만 고치면 내용이 달라져 그룹에서 자연히 빠진다.
-export const COUNSELING_MAX_STUDENTS = 6
+export const COUNSELING_MAX_STUDENTS = 10
 
 export default function CounselingFormModal({ students = [], fixedStudent, record, authorId, onClose, onSaved }) {
   const { addCounselingRecord, updateCounselingRecord, data } = useData()
