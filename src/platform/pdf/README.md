@@ -16,6 +16,8 @@ reports/    UserListReport · StatisticsReport(미사용 — 월간 종합으로
             교재·과제) · StudentCounselingReport(학생별 — 등록일정은
             data/attendanceBlocks.js 시간블록 기호) — 셋 다 관공서 서식이라
             PageWrapper 대신 자체 Document/Page + CounselingFormLayout 골격
+            ExamFeedbackReport(학생×시험 1건 내신 피드백 보고서 — PageWrapper 기반, 트리거는
+            StudentDetailPage ExamFeedbackSection · student/ExamFeedbackTab, 저장된 기록 있을 때만 노출)
 ```
 
 ## 새 리포트 추가 패턴

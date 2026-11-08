@@ -5,6 +5,8 @@ import { useAuth } from '../../context/AuthContext.jsx'
 import { useData } from '../../context/DataContext.jsx'
 import ExamKeySelect from '../../components/examReports/ExamKeySelect.jsx'
 import ExamFeedbackForm from '../../components/examReports/ExamFeedbackForm.jsx'
+import DownloadPdfButton from '../../pdf/components/DownloadPdfButton.jsx'
+import { buildFilename } from '../../pdf/utils/formatters.js'
 import { defaultExamKey, examKeyLabel, sameExamKey } from '../../utils/examTerms.js'
 
 export default function ExamFeedbackTab() {
@@ -20,6 +22,19 @@ export default function ExamFeedbackTab() {
   return (
     <div className="space-y-4">
       <ExamKeySelect value={examKey} onChange={(k) => k && setExamKey(k)} className="w-full" />
+      {existing && (
+        <div className="flex justify-end">
+          <DownloadPdfButton
+            buildDocument={async () => {
+              const { default: ExamFeedbackReport } = await import('../../pdf/reports/ExamFeedbackReport.jsx')
+              return {
+                element: <ExamFeedbackReport feedback={existing} studentName={currentUser.name} />,
+                filename: buildFilename('내신피드백', `${currentUser.name}_${examKeyLabel(existing)}`),
+              }
+            }}
+          />
+        </div>
+      )}
       <ExamFeedbackForm
         key={`${examKey.examYear}-${examKey.semester}-${examKey.examType}`}
         student={currentUser}
