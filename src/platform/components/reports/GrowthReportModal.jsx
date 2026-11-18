@@ -3,6 +3,7 @@
 // 무관 — MonthlyOperationsReportModal과 같은 이유·패턴) → 화면 미리보기
 // 차트(Recharts)를 captureChart로 PNG 캡처해 PDF에 삽입한다.
 // 자기주도학습코칭 내용은 기간 내 코칭 상담에서 자동 생성하되 직원은 수정 가능.
+// 2026-11: 기간(시작월~종료월) 선택 + 1쪽 요약 리포트(GrowthSummaryReport) 추가 — 상세 리포트와 병존.
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Loader, AlertCircle, RotateCcw } from 'lucide-react'
 import {
@@ -17,12 +18,15 @@ import { supabase } from '../../lib/supabase.js'
 import {
   toAttendanceRecord, toLearningRecord, toCounselingRecord,
   toBookingCounselingRecord, toTask, toQuizAttempt, toMindRecord,
-  toStudentFeedback,
+  toStudentFeedback, toCareerDesignResult, toLearningDiagnosisResult, toExamFeedback,
 } from '../../lib/supabaseHelpers.js'
 import { todayStr } from '../../utils/dateUtils.js'
 import { buildFilename, nowDateTime } from '../../pdf/utils/formatters.js'
 import { authorOf } from '../../pdf/config/meta.js'
-import { buildGrowthReportData } from '../../context/selectors/growthReport.js'
+import {
+  buildGrowthReportData, buildExamTrend, buildCareerSummaryText, buildDiagnosisSummaryText,
+  defaultSummaryTitle, SUMMARY_SUBJECTS, SUMMARY_TEXT_LIMITS,
+} from '../../context/selectors/growthReport.js'
 import { subjectColor } from '../../data/subjects.js'
 import { STUDY_METHODS } from '../../context/selectors/learningRecords.js'
 
@@ -35,6 +39,44 @@ const METHOD_COLORS = ['#dc2626', '#2563eb', '#d97706', '#7c3aed', '#16a34a', '#
 const methodColor = (method) => {
   const idx = STUDY_METHODS.indexOf(method)
   return idx >= 0 ? METHOD_COLORS[idx % METHOD_COLORS.length] : '#6b7280'
+}
+
+// 기간 표기 — 한 달: '8월', 같은 해 여러 달: '7~9월', 해 넘김: '2026.11~2027.2'
+function rangeLabel(start, end) {
+  const [sy, sm] = start.split('-').map(Number)
+  const [ey, em] = end.split('-').map(Number)
+  if (sy === ey && sm === em) return `${sm}월`
+  if (sy === ey) return `${sm}~${em}월`
+  return `${sy}.${sm}~${ey}.${em}`
+}
+
+// 요약 리포트 텍스트 입력 — 권장 글자수 카운터 + 자동 생성 되돌리기. 학생·학부모는 읽기 전용.
+function SummaryField({ label, value, auto, limit, editable, rows = 3, onChange, onReset }) {
+  const over = limit && value.length > limit
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <label className="text-[11px] font-semibold text-gray-600">{label}</label>
+        <span className="flex items-center gap-2">
+          {limit ? (
+            <span className={`text-[11px] ${over ? 'text-orange-600 font-semibold' : 'text-gray-400'}`}>
+              {value.length}/{limit}자{over ? ' (초과 시 글자가 작아집니다)' : ''}
+            </span>
+          ) : null}
+          {editable && value !== auto && (
+            <button type="button" onClick={onReset} className="inline-flex items-center gap-1 text-[11px] text-blue-600 font-semibold">
+              <RotateCcw size={11} /> 되돌리기
+            </button>
+          )}
+        </span>
+      </div>
+      {editable ? (
+        <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={rows} className={fieldClass} />
+      ) : (
+        <p className="text-sm text-gray-600 whitespace-pre-line bg-gray-50 rounded-xl px-3 py-2 min-h-[2.5rem]">{value || '-'}</p>
+      )}
+    </div>
+  )
 }
 
 const fmtHours = (min) => {
@@ -79,7 +121,10 @@ export default function GrowthReportModal({ student, onClose }) {
   const { currentUser } = useAuth()
   const studentId = student?.id
 
-  const [month, setMonth] = useState(() => todayStr().slice(0, 7))
+  const [startMonth, setStartMonth] = useState(() => todayStr().slice(0, 7))
+  const [endMonth, setEndMonth] = useState(() => todayStr().slice(0, 7))
+  // 요약 리포트 텍스트 직접 수정분 {key: text} — 없으면 자동 생성값. 기간·학생 변경 시 비움.
+  const [overrides, setOverrides] = useState({})
   const [period, setPeriod] = useState(null) // { rows... } 조회 결과
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(false)
@@ -95,13 +140,26 @@ export default function GrowthReportModal({ student, onClose }) {
   const weeklyRef = useRef(null)
   const consultingRef = useRef(null)
 
+  // 시작 > 종료가 되지 않게 반대쪽을 끌어 맞춘다
+  const changeStart = (v) => {
+    if (!v) return
+    setStartMonth(v)
+    if (v > endMonth) setEndMonth(v)
+  }
+  const changeEnd = (v) => {
+    if (!v) return
+    setEndMonth(v)
+    if (v < startMonth) setStartMonth(v)
+  }
+
   useEffect(() => {
-    if (!month || !studentId) return
+    if (!startMonth || !endMonth || !studentId) return
     let cancelled = false
     setLoading(true)
     setError(false)
-    const [y, m] = month.split('-').map(Number)
-    const first = `${y}-${String(m).padStart(2, '0')}-01`
+    const [sy, sm] = startMonth.split('-').map(Number)
+    const [y, m] = endMonth.split('-').map(Number)
+    const first = `${sy}-${String(sm).padStart(2, '0')}-01`
     // 말일은 실제 달력 기준 — '2026-02-31' 같은 date 리터럴은 Postgres 에러
     const last = `${y}-${String(m).padStart(2, '0')}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`
 
@@ -116,16 +174,21 @@ export default function GrowthReportModal({ student, onClose }) {
       supabase.from('quiz_attempts').select('*').eq('student_id', studentId),
       inMonth(supabase.from('mind_records').select('*')),
       inMonth(supabase.from('student_feedbacks').select('*')),
+      // 요약 리포트용 — 검사 결과·내신 피드백은 기간 무관 학생 전량(소량), 선택은 selector가 한다
+      supabase.from('career_results').select('*').eq('student_id', studentId),
+      supabase.from('diagnosis_results').select('*').eq('student_id', studentId),
+      supabase.from('exam_feedbacks').select('*').eq('student_id', studentId),
     ]).then((results) => {
       if (cancelled) return
       const failed = results.find((r) => r.error)
       // student_feedbacks는 마이그레이션 미적용이어도 나머지로 리포트 생성
-      if (failed && failed !== results[7]) {
+      if (failed && !results.slice(7).includes(failed)) {
         setError(true)
         setLoading(false)
         return
       }
-      const [attRes, learnRes, counsRes, bookRes, taskRes, quizRes, mindRes, fbRes] = results
+      const [attRes, learnRes, counsRes, bookRes, taskRes, quizRes, mindRes, fbRes, careerRes, diagRes, examRes] = results
+      const okRows = (r) => (r.error ? [] : (r.data ?? []))
       setPeriod({
         startDate: first,
         endDate: last,
@@ -138,12 +201,15 @@ export default function GrowthReportModal({ student, onClose }) {
         tasks: (taskRes.data ?? []).map(toTask),
         quizAttempts: (quizRes.data ?? []).map(toQuizAttempt),
         mindRecords: (mindRes.data ?? []).map(toMindRecord),
-        studentFeedbacks: (fbRes.error ? [] : (fbRes.data ?? [])).map(toStudentFeedback),
+        studentFeedbacks: okRows(fbRes).map(toStudentFeedback),
+        careerResults: okRows(careerRes).map(toCareerDesignResult),
+        diagnosisResults: okRows(diagRes).map(toLearningDiagnosisResult),
+        examFeedbacks: okRows(examRes).map(toExamFeedback),
       })
       setLoading(false)
     })
     return () => { cancelled = true }
-  }, [month, studentId, retryKey])
+  }, [startMonth, endMonth, studentId, retryKey])
 
   const report = useMemo(() => {
     if (!period) return null
@@ -156,13 +222,69 @@ export default function GrowthReportModal({ student, onClose }) {
   // 월 변경/재조회 시 코칭 텍스트를 자동 생성값으로 갱신 (직접 수정 전까지)
   useEffect(() => {
     coachingTouched.current = false
-  }, [month, studentId])
+    setOverrides({})
+  }, [startMonth, endMonth, studentId])
   useEffect(() => {
     if (report && !coachingTouched.current) setCoachingText(report.coaching.autoText)
   }, [report])
 
-  const monthNum = Number(month.split('-')[1] ?? 0)
+  const label = rangeLabel(startMonth, endMonth)
+  const multiMonth = startMonth !== endMonth
   const groupName = (student?.groups ?? []).join(', ')
+
+  // 요약 리포트 자동 생성 텍스트 (period가 바뀔 때만 재계산)
+  const summaryAuto = useMemo(() => {
+    if (!period || !report) return null
+    const end = period.endDate
+    const trend = buildExamTrend(period.examFeedbacks, studentId, end)
+    const auto = {
+      title: defaultSummaryTitle(student?.groups, end.slice(0, 4)),
+      career: buildCareerSummaryText(period.careerResults, studentId, end),
+      diagnosis: buildDiagnosisSummaryText(period.diagnosisResults, studentId, end),
+      actionPlan: trend.actionPlan,
+    }
+    for (const k of SUMMARY_SUBJECTS) auto[k] = report.subjectCoaching[k].autoText
+    return { auto, trend }
+  }, [period, report, studentId, student?.groups])
+
+  const sumVal = (key) => overrides[key] ?? summaryAuto?.auto[key] ?? ''
+  const sumField = (key, extra) => ({
+    value: sumVal(key),
+    auto: summaryAuto?.auto[key] ?? '',
+    editable: canEditCoaching,
+    onChange: (v) => setOverrides((o) => ({ ...o, [key]: v })),
+    onReset: () => setOverrides((o) => { const n = { ...o }; delete n[key]; return n }),
+    ...extra,
+  })
+
+  const buildSummaryDocument = async () => {
+    const { default: GrowthSummaryReport } = await import('../../pdf/reports/GrowthSummaryReport.jsx')
+    return {
+      element: (
+        <GrowthSummaryReport
+          title={sumVal('title')}
+          student={{ name: student?.name, school: student?.school, grade: student?.grade }}
+          generatedAt={nowDateTime()}
+          author={authorOf(currentUser)}
+          usage={{
+            title: multiMonth ? '월별' : '주차별',
+            totalMinutes: report.usage.totalMinutes,
+            bars: multiMonth ? report.usage.monthly : report.usage.weekly,
+          }}
+          study={report.study}
+          coachingText={coachingText}
+          examTrend={summaryAuto.trend}
+          actionPlanText={sumVal('actionPlan')}
+          careerText={sumVal('career')}
+          diagnosisText={sumVal('diagnosis')}
+          subjects={SUMMARY_SUBJECTS.map((k) => ({
+            name: k, count: report.subjectCoaching[k].count, text: sumVal(k),
+          }))}
+        />
+      ),
+      filename: buildFilename('종합성장요약리포트', `${student?.name}_${label}`),
+    }
+  }
 
   const buildDocument = async () => {
     const { captureChart } = await import('../../pdf/utils/captureChart.js')
@@ -176,7 +298,7 @@ export default function GrowthReportModal({ student, onClose }) {
     return {
       element: (
         <GrowthReport
-          title={`종합성장리포트 ${monthNum}월`}
+          title={`종합성장리포트 ${label}`}
           groupName={groupName}
           periodText={`${period.startDate} ~ ${period.endDate}`}
           student={{ name: student?.name, school: student?.school, grade: student?.grade }}
@@ -193,22 +315,22 @@ export default function GrowthReportModal({ student, onClose }) {
           tasks={report.tasks}
         />
       ),
-      filename: buildFilename('종합성장리포트', `${student?.name}_${monthNum}월`),
+      filename: buildFilename('종합성장리포트', `${student?.name}_${label}`),
     }
   }
 
-  const hasWeekly = report?.usage.weekly.some((w) => w.minutes > 0)
+  const usageBars = multiMonth ? report?.usage.monthly : report?.usage.weekly
+  const hasWeekly = usageBars?.some((w) => w.minutes > 0)
 
   return (
     <ModalShell title="종합성장리포트" onClose={onClose} maxWidth="max-w-2xl">
       <div>
-        <label className="text-xs text-gray-500 mb-1 block">대상 월</label>
-        <input
-          type="month"
-          value={month}
-          onChange={(e) => setMonth(e.target.value)}
-          className={fieldClass}
-        />
+        <label className="text-xs text-gray-500 mb-1 block">대상 기간 (시작월 ~ 종료월)</label>
+        <div className="flex items-center gap-2">
+          <input type="month" value={startMonth} onChange={(e) => changeStart(e.target.value)} className={fieldClass} />
+          <span className="text-gray-400">~</span>
+          <input type="month" value={endMonth} onChange={(e) => changeEnd(e.target.value)} className={fieldClass} />
+        </div>
       </div>
 
       {loading ? (
@@ -265,11 +387,11 @@ export default function GrowthReportModal({ student, onClose }) {
               )}
             </div>
             <div>
-              <p className="text-xs font-semibold text-gray-600 mb-1">주차별 센터 이용시간</p>
+              <p className="text-xs font-semibold text-gray-600 mb-1">{multiMonth ? '월별' : '주차별'} 센터 이용시간</p>
               {hasWeekly ? (
                 <div ref={weeklyRef} className="h-[180px] bg-white">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={report.usage.weekly} margin={{ top: 16, right: 8, bottom: 4, left: 8 }}>
+                    <BarChart data={usageBars} margin={{ top: 16, right: 8, bottom: 4, left: 8 }}>
                       <XAxis dataKey="label" tick={{ fontSize: 10 }} tickLine={false} axisLine={{ stroke: '#e5e7eb' }} />
                       <YAxis hide />
                       <Tooltip formatter={(v) => fmtHours(v)} />
@@ -341,8 +463,31 @@ export default function GrowthReportModal({ student, onClose }) {
             피드백 {report.feedbacks.length}건 · 확인평가 {report.quiz.rows.length}회 · 과제 {report.tasks.total}건
           </div>
 
-          <div className="flex justify-end">
-            <DownloadPdfButton label="리포트 PDF" buildDocument={buildDocument} disabled={!report} />
+          <details className="rounded-xl border border-gray-200 px-3 py-2">
+            <summary className="text-xs font-semibold text-gray-700 cursor-pointer">
+              요약 리포트 내용 {canEditCoaching && <span className="font-normal text-gray-400">(1쪽 · 수정 가능)</span>}
+            </summary>
+            {summaryAuto && (
+              <div className="space-y-3 mt-3">
+                <SummaryField label="제목" {...sumField('title')} rows={1} />
+                <p className="text-[11px] text-gray-400">학습코칭은 위 '자기주도 학습 코칭 내용'이 그대로 들어갑니다 (권장 {SUMMARY_TEXT_LIMITS.coaching}자, 현재 {coachingText.length}자).</p>
+                <SummaryField label="진로진단" {...sumField('career', { limit: SUMMARY_TEXT_LIMITS.career })} />
+                <SummaryField label="학습진단" {...sumField('diagnosis', { limit: SUMMARY_TEXT_LIMITS.diagnosis })} />
+                <SummaryField label={`내신 보완과 실천과제 (${summaryAuto.trend.examYear}학년도 최근 시험 기준)`} {...sumField('actionPlan', { limit: SUMMARY_TEXT_LIMITS.actionPlan, rows: 4 })} />
+                {SUMMARY_SUBJECTS.map((k) => (
+                  <SummaryField
+                    key={k}
+                    label={`${k} 교과 코칭 (총 ${report.subjectCoaching[k].count}회)`}
+                    {...sumField(k, { limit: SUMMARY_TEXT_LIMITS.subject, rows: 4 })}
+                  />
+                ))}
+              </div>
+            )}
+          </details>
+
+          <div className="flex justify-end gap-2 flex-wrap">
+            <DownloadPdfButton label="상세 리포트 PDF" buildDocument={buildDocument} disabled={!report} />
+            <DownloadPdfButton label="요약 리포트(1쪽) PDF" buildDocument={buildSummaryDocument} disabled={!report || !summaryAuto} />
           </div>
         </>
       )}

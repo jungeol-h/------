@@ -14,6 +14,9 @@ import { getSelfDirectedIndex, getEmotionStability } from './indices.js'
 import { rowUsageMinutes } from './monthlyOperationsReport.js'
 import { timeToMinutes } from './attendance.js'
 import { toDateStr } from '../../utils/dateUtils.js'
+import { defaultExamKey, sameExamKey } from '../../utils/examTerms.js'
+import { CAREER_CATEGORY_LABELS } from '../../data/careerCategories.js'
+import { STAGE_META, STAGE_ORDER } from '../../data/stageFeedbackLibrary.js'
 
 // 상담 시간 미기재 구 기록의 기본 시간(분) — 교과 컨설팅 60분 시수 규칙
 // (monthlyOperationsReport의 교과60 스냅 규칙과 같은 근거).
@@ -52,6 +55,27 @@ export function buildWeeklyUsage(attendanceRecords, startDate, endDate) {
     cursor.setDate(cursor.getDate() + 7)
   }
   return weeks
+}
+
+// 기간을 달(月) 단위로 쪼갠 이용시간 합계. [{ label: '7월', minutes }]
+// 여러 달 기간 리포트용 — 연도가 걸치면 라벨에 연도('26.12월')를 붙여 구분한다.
+export function buildMonthlyUsage(attendanceRecords, startDate, endDate) {
+  const [sy, sm] = startDate.split('-').map(Number)
+  const [ey, em] = endDate.split('-').map(Number)
+  const crossYear = sy !== ey
+  const out = []
+  let y = sy
+  let m = sm
+  while (y < ey || (y === ey && m <= em)) {
+    const ym = `${y}-${String(m).padStart(2, '0')}`
+    const minutes = attendanceRecords
+      .filter((r) => inRange(r.date, startDate, endDate) && String(r.date).startsWith(ym))
+      .reduce((sum, r) => sum + rowUsageMinutes(r), 0)
+    out.push({ label: crossYear ? `${String(y).slice(2)}.${m}월` : `${m}월`, minutes })
+    m += 1
+    if (m > 12) { m = 1; y += 1 }
+  }
+  return out
 }
 
 // 상담 1건의 시간(분). start/end('HH:MM')가 유효하면 그 간격, 아니면 기본 60분.
@@ -94,6 +118,115 @@ export function buildCoachingAutoText(records) {
     })
     .filter(Boolean)
     .join('\n')
+}
+
+// ── 요약 리포트(1쪽) 전용 빌더 ─────────────────────────────────────────
+
+// 요약 리포트 카드별 권장 글자수 — PDF는 이 값 기준으로 폰트를 줄이고(최소 5pt),
+// 모달은 같은 값을 카운터로 안내한다. 카드 크기를 바꾸면 함께 조정.
+export const SUMMARY_TEXT_LIMITS = {
+  coaching: 220, career: 170, diagnosis: 170, actionPlan: 330, subject: 190,
+}
+
+// 요약 리포트 하단 4교과 카드 (표시 순서 고정)
+export const SUMMARY_SUBJECTS = ['수학', '영어', '과학', '국어']
+
+// 강사 users.subject 문자열 → 4교과 키. 실데이터가 '수학' '영어' '과학' 단일값이지만
+// 포함 여부로 판정하고, '비교과 계열심화 자연' 같은 비교과 담당은 제외(null).
+export function summarySubjectKey(subject) {
+  const s = String(subject ?? '')
+  if (!s || s.includes('비교과') || s.includes('계열')) return null
+  return SUMMARY_SUBJECTS.find((k) => s.includes(k)) ?? null
+}
+
+// 교과 컨설팅(subject_learning) 기록 → 4교과별 { count, autoText }.
+// 자동 텍스트는 코칭과 같은 '날짜 · 내용' 형식.
+export function buildSubjectCoachingSummary(records, educators) {
+  const bucket = Object.fromEntries(SUMMARY_SUBJECTS.map((k) => [k, []]))
+  for (const r of records) {
+    if (r.type !== 'subject_learning') continue
+    const key = summarySubjectKey(educators.find((e) => e.id === r.educatorId)?.subject)
+    if (key) bucket[key].push(r)
+  }
+  return Object.fromEntries(SUMMARY_SUBJECTS.map((k) => [
+    k, { count: bucket[k].length, autoText: buildCoachingAutoText(bucket[k]) },
+  ]))
+}
+
+const EXAM_SLOTS = [
+  { semester: 1, examType: 'mid', label: '1학기 중간' },
+  { semester: 1, examType: 'final', label: '기말' },
+  { semester: 2, examType: 'mid', label: '2학기 중간' },
+  { semester: 2, examType: 'final', label: '기말' },
+]
+
+// 내신 피드백 → 기간 종료일이 속한 학년도의 4시험 성적 추이.
+// score = 그 시험 과목 점수 평균(빈 점수 제외, 소수 첫째 자리), 기록 없으면 null(빈 슬롯).
+// actionPlan = 그 학년도에서 가장 나중 시험 피드백의 실천과제.
+export function buildExamTrend(examFeedbacks, studentId, endDate) {
+  const { examYear } = defaultExamKey(endDate)
+  const mine = (examFeedbacks ?? []).filter((f) => f.studentId === studentId)
+  let actionPlan = ''
+  const bars = EXAM_SLOTS.map((slot) => {
+    const key = { examYear, semester: slot.semester, examType: slot.examType }
+    const fb = mine
+      .filter((f) => sameExamKey(f, key))
+      .sort((a, b) => String(b.updatedAt ?? '').localeCompare(String(a.updatedAt ?? '')))[0]
+    if (!fb) return { label: slot.label, score: null }
+    const nums = (fb.subjects ?? [])
+      .map((s) => s.score)
+      .filter((v) => v !== null && v !== undefined && v !== '' && !Number.isNaN(Number(v)))
+      .map(Number)
+    if ((fb.actionPlan ?? '').trim()) actionPlan = fb.actionPlan.trim()
+    return {
+      label: slot.label,
+      score: nums.length > 0 ? Math.round((nums.reduce((a, b) => a + b, 0) / nums.length) * 10) / 10 : null,
+    }
+  })
+  return { examYear, bars, actionPlan }
+}
+
+const latestUpTo = (rows, studentId, endDate) => (rows ?? [])
+  .filter((r) => r.studentId === studentId && r.date && r.date <= endDate)
+  .sort((a, b) => String(b.date).localeCompare(String(a.date)))[0] ?? null
+
+export const NO_TEST_TEXT = '검사 기록 없음'
+
+// 진로 설계 검사 결과 → 요약 텍스트. 유형명 + 상위 3계열 + 추천 분야.
+export function buildCareerSummaryText(careerResults, studentId, endDate) {
+  const r = latestUpTo(careerResults, studentId, endDate)
+  if (!r) return NO_TEST_TEXT
+  const top = Object.entries(r.finalScores ?? {})
+    .filter(([, v]) => Number(v) > 0)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([k]) => CAREER_CATEGORY_LABELS[k] ?? k)
+  const fields = (r.fields ?? []).map((f) => f.field).filter(Boolean).slice(0, 3)
+  const lines = [`유형: ${r.typeName || '-'} (검사일 ${r.date})`]
+  if (top.length > 0) lines.push(`상위 계열: ${top.join(' > ')}`)
+  if (fields.length > 0) lines.push(`추천 분야: ${fields.join(', ')}`)
+  return lines.join('\n')
+}
+
+// 학습 진단 결과 → 요약 텍스트. 유형명 + 단계별 등급.
+export function buildDiagnosisSummaryText(diagnosisResults, studentId, endDate) {
+  const r = latestUpTo(diagnosisResults, studentId, endDate)
+  if (!r) return NO_TEST_TEXT
+  const grades = STAGE_ORDER
+    .filter((s) => r.stageGrades?.[s])
+    .map((s) => `${STAGE_META[s].label} ${r.stageGrades[s]}`)
+  const lines = [`유형: ${r.typeName || '-'} (검사일 ${r.date})`]
+  if (grades.length > 0) lines.push(`단계별 등급: ${grades.join(' · ')}`)
+  return lines.join('\n')
+}
+
+// 요약 리포트 제목 기본값. 그룹명에 'N기'가 있으면 기간 연도와 조합('NAVI : 2026 4기'),
+// 없으면 그룹명 그대로. (실데이터 그룹은 '안동NAVI' — data/groups.js)
+export function defaultSummaryTitle(groups, year) {
+  const list = groups ?? []
+  const withTerm = list.map((g) => String(g).match(/(\d+)\s*기/)).find(Boolean)
+  if (withTerm) return `NAVI : ${year} ${withTerm[1]}기`
+  return list[0] ? `NAVI : ${list[0]}` : 'NAVI'
 }
 
 // 리포트 데이터 조립 본체. src 컬렉션은 모두 해당 학생 것만 넘겨도 되고,
@@ -162,6 +295,7 @@ export function buildGrowthReportData(src, { studentId, startDate, endDate }) {
     usage: {
       totalMinutes: usageMinutes,
       weekly: buildWeeklyUsage(attendance, startDate, endDate),
+      monthly: buildMonthlyUsage(attendance, startDate, endDate),
     },
     study: {
       totalMinutes: studyMinutes,
@@ -174,6 +308,7 @@ export function buildGrowthReportData(src, { studentId, startDate, endDate }) {
       count: mind.length,
     },
     consulting,
+    subjectCoaching: buildSubjectCoachingSummary(counseling, src.educators ?? []),
     coaching: {
       count: coachingRecords.length,
       autoText: buildCoachingAutoText(coachingRecords),
