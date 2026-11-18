@@ -422,6 +422,21 @@ export function reportFinalFetchFailure(fetchErrors, extra) {
   })
 }
 
+// 나비 후기 (add-navi-reviews.sql) — 계정당 1건
+export const toNaviReview = (row) => ({
+  id: row.id,
+  userId: row.user_id,
+  authorRole: row.author_role ?? '',
+  authorName: row.author_name ?? '',
+  instructorReviews: toArray(row.instructor_reviews), // [{ educatorId, educatorName, content }]
+  toDirector: row.to_director ?? '',
+  toSelf: row.to_self ?? '',
+  mostHelpful: row.most_helpful ?? '',
+  mostRegret: row.most_regret ?? '',
+  createdAt: row.created_at,
+  updatedAt: row.updated_at ?? row.created_at,
+})
+
 // ── 내신백서 (add-exam-reports.sql) ─────────────────────────
 export const toExamFeedback = (row) => ({
   id: row.id,

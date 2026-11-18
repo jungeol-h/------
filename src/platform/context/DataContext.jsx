@@ -36,6 +36,7 @@ import { useExamReportsDomain } from './domains/examReportsDomain.js'
 import { useNoticeDomain } from './domains/noticeDomain.js'
 import { useCenterClosureDomain } from './domains/centerClosureDomain.js'
 import { useStudentFeedbackDomain } from './domains/studentFeedbackDomain.js'
+import { useNaviReviewsDomain } from './domains/naviReviewsDomain.js'
 import { getWeeklyLearning as selectWeeklyLearning } from './selectors/weeklyLearning.js'
 import { reportError, setSentryUser } from '../lib/sentry.js'
 import { isTransientFetchMessage } from '../lib/supabaseRetry.js'
@@ -251,6 +252,7 @@ export function DataProvider({ children }) {
   const notice = useNoticeDomain(domainSetData)
   const centerClosure = useCenterClosureDomain(domainSetData)
   const studentFeedback = useStudentFeedbackDomain(domainSetData)
+  const naviReviews = useNaviReviewsDomain(domainSetData)
 
   // getWeeklyLearning — selector를 data에 바인딩해 기존 useData() API 호환 유지.
   const getWeeklyLearning = useCallback(
@@ -288,11 +290,12 @@ export function DataProvider({ children }) {
       ...notice,
       ...centerClosure,
       ...studentFeedback,
+      ...naviReviews,
       getWeeklyLearning,
       resetData,
       refetch,
     }),
-    [data, loading, refreshing, dataReady, mind, diary, alert, task, learning, career, quiz, student, counseling, attendance, parent, educator, selfScore, workPlan, urgentReport, workRecords, examReports, notice, centerClosure, studentFeedback, getWeeklyLearning, resetData, refetch]
+    [data, loading, refreshing, dataReady, mind, diary, alert, task, learning, career, quiz, student, counseling, attendance, parent, educator, selfScore, workPlan, urgentReport, workRecords, examReports, notice, centerClosure, studentFeedback, naviReviews, getWeeklyLearning, resetData, refetch]
   )
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>
