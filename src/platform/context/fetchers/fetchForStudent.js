@@ -10,12 +10,13 @@ import {
   toExamFeedback, collectRows,
 } from '../../lib/supabaseHelpers.js'
 import { fetchAllRows } from '../../lib/fetchAllPages.js'
+import { fetchNaviReviews } from './fetchNaviReviews.js'
 import { EMPTY } from '../dataModel.js'
 import { toDateStr } from '../../utils/dateUtils.js'
 
 export async function fetchForStudent(userId) {
   const todayStr = toDateStr(new Date())
-  const [userRes, assnRes, mindRes, learningRes, tasksRes, todoRes, diaryRes, careerRes, diagRes, attemptsRes, attendanceRes, schedulesRes, loginCountRes, selfScoresRes, counselingRes, workPlansRes, noticesRes, examFeedbacksRes] = await Promise.all([
+  const [userRes, assnRes, mindRes, learningRes, tasksRes, todoRes, diaryRes, careerRes, diagRes, attemptsRes, attendanceRes, schedulesRes, loginCountRes, selfScoresRes, counselingRes, workPlansRes, noticesRes, examFeedbacksRes, naviReviews] = await Promise.all([
     supabase.from('users').select('*').eq('id', userId).limit(1),
     supabase.from('assignments').select('*').eq('student_id', userId),
     supabase.from('mind_records').select('*', { count: 'exact' }).eq('student_id', userId).order('date', { ascending: false }).limit(2000),
@@ -41,6 +42,8 @@ export async function fetchForStudent(userId) {
     supabase.from('notices').select('*').eq('active', true).in('audience', ['all', 'student']).order('created_at', { ascending: false }).limit(100),
     // 내신 시험 후 피드백 — 본인분 (학생당 시험 수만큼이라 소량이지만 페이지 이어붙이기로 잘림 방지)
     fetchAllRows(() => supabase.from('exam_feedbacks').select('*').eq('student_id', userId).order('id')),
+    // 나비 후기 — 본인 1건 (테이블 미적용이면 조용히 [])
+    fetchNaviReviews(userId),
   ])
 
   const errors = []
@@ -89,6 +92,7 @@ export async function fetchForStudent(userId) {
     workPlans: collectRows(workPlansRes, 'work_plans', errors).map(toWorkPlan),
     notices: collectRows(noticesRes, 'notices', errors).map(toNotice),
     examFeedbacks: collectRows(examFeedbacksRes, 'exam_feedbacks', errors).map(toExamFeedback),
+    naviReviews,
     _fetchErrors: errors,
     _fetchMeta: meta,
   }

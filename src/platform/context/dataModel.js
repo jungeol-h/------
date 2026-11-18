@@ -35,6 +35,7 @@ export const EMPTY = {
   examFeedbacks: [],    // 내신백서 — 학생별 시험 후 피드백
   examAnalyses: [],     // 내신백서 — 시험지 분석 (학교·학년·과목·시험별)
   examBestCases: [],    // 내신백서 — 우수사례
+  naviReviews: [],      // 나비 후기 — 본인 1건(학생·학부모·강사) / 관리자는 전체
   loginCount: null, // 학생 본인 로그인 누적 횟수 (count 쿼리, 학생 fetch만 채움)
   // 침묵 실패 방지용 메타. fetch 시점에 채워진다.
   _fetchErrors: [], // [{ table, message }] — 로드 실패한 쿼리

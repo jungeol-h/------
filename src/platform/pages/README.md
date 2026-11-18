@@ -20,6 +20,13 @@
 알림(notification)은 학생·학부모 홈 알림 칸(`NoticeFeedCard`, 대상 전체/학생/학부모)
 누적 표시.
 
+## 나비 후기 코너 (2026-11)
+
+`components/common/NaviReviewBanner`(제출 전 CTA / 제출 후 '내 후기 수정하기')가 학생 홈(`DashboardTab`)·
+학부모 홈(`ParentHomeTab`)·강사/컨설턴트 첫 화면(`EducatorStudentListTab` — 별도 홈 탭이 없음) 상단에 있고,
+탭하면 `NaviReviewFormModal`(ModalShell)이 열린다. 관리자 홈(`AdminHomeTab`, viewer 제외)에는 '나비 후기 N건'
+카드 → `components/admin/AdminNaviReviewsModal`(읽기 전용, 역할 필터·강사별 모아보기). 출력 양식은 후속.
+
 ## 관리자 ↔ 강사 화면 전환 ("보기 모드", 2026-09-30)
 
 `data/roleViews.js`의 `EDUCATOR_VIEWS`에 등록된 계정(`a-hwang` 황광희, 검증용 `test-admin`)은

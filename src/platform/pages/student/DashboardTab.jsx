@@ -16,6 +16,7 @@ import { todayStr } from '../../utils/dateUtils.js'
 import ClockTimetable from '../../components/student/ClockTimetable.jsx'
 import TodayCenterScheduleCard from './TodayCenterScheduleCard.jsx'
 import NoticeFeedCard from '../../components/common/NoticeFeedCard.jsx'
+import NaviReviewBanner from '../../components/common/NaviReviewBanner.jsx'
 
 function getMoodWeather(mindRecord) {
   if (!mindRecord) return { Icon: Cloud, color: 'text-gray-300', label: '미입력' }
@@ -73,6 +74,9 @@ export default function DashboardTab() {
         </div>
         <p className="text-sm opacity-70 mt-1">{student?.school} · {student?.grade}</p>
       </div>
+
+      {/* 나비 후기 — 제출 전 CTA / 제출 후 수정 진입 */}
+      <NaviReviewBanner />
 
       {/* 오늘의 센터 일정 — 상담 예약 현황 + 이용시간 등록 현황 */}
       <TodayCenterScheduleCard studentId={currentUser?.id} />

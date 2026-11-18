@@ -8,6 +8,7 @@ import { actualMinutes } from '../../context/selectors/learningRecords.js'
 import { toDateStr } from '../../utils/dateUtils.js'
 import { formatMinutes } from '../student/learningTabLogic.js'
 import NoticeFeedCard from '../../components/common/NoticeFeedCard.jsx'
+import NaviReviewBanner from '../../components/common/NaviReviewBanner.jsx'
 
 const STATUS_LABELS = {
   checked_out: { label: '하원 완료', color: 'text-gray-600 bg-gray-100' },
@@ -70,6 +71,9 @@ export default function ParentHomeTab({ child }) {
         <h2 className="text-lg font-bold text-gray-900">{child.name} 오늘</h2>
         <p className="text-xs text-gray-500 mt-0.5">{today}</p>
       </div>
+
+      {/* 나비 후기 — 학부모 계정 단위 (자녀 선택과 무관) */}
+      <NaviReviewBanner />
 
       {/* 알림 칸 — 자녀 선택과 무관한 계정 단위 데이터 */}
       <NoticeFeedCard audience="parent" />

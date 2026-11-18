@@ -6,6 +6,7 @@ import { getMindStatus } from '../../context/selectors/riskDetection.js'
 import { actualMinutes } from '../../context/selectors/learningRecords.js'
 import { useNavigate } from 'react-router-dom'
 import { LineChart, Line, ResponsiveContainer } from 'recharts'
+import NaviReviewBanner from '../../components/common/NaviReviewBanner.jsx'
 
 const RISK_LABELS = {
   normal: { label: '정상', color: 'text-green-600 bg-green-100' },
@@ -41,6 +42,8 @@ export default function EducatorStudentListTab() {
 
   return (
     <div className="py-6 space-y-4">
+      {/* 강사·컨설턴트는 별도 홈 탭이 없어 로그인 직후 랜딩인 학생 탭 상단에 둔다 */}
+      <NaviReviewBanner />
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-lg font-bold text-gray-900">전체 학생 ({students.length}명)</h2>
         <button

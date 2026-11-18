@@ -13,6 +13,7 @@ import {
   toParentChild, toNotice, collectRows,
 } from '../../lib/supabaseHelpers.js'
 import { EMPTY } from '../dataModel.js'
+import { fetchNaviReviews } from './fetchNaviReviews.js'
 
 export async function fetchForParent(userId) {
   const errors = []
@@ -35,10 +36,12 @@ export async function fetchForParent(userId) {
     .order('created_at', { ascending: false })
     .limit(100)
   const notices = collectRows(noticesRes, 'notices', errors).map(toNotice)
+  // 나비 후기 — 본인 1건. 자녀 연결과 무관한 계정 단위 데이터 (테이블 미적용이면 [])
+  const naviReviews = await fetchNaviReviews(userId)
 
   if (studentIds.length === 0) {
     // 연결된 자녀가 없거나 테이블 미존재 — 빈 데이터(에러 아님).
-    return { ...EMPTY, parentChildren, notices, _fetchErrors: errors, _fetchMeta: meta }
+    return { ...EMPTY, parentChildren, notices, naviReviews, _fetchErrors: errors, _fetchMeta: meta }
   }
 
   // 상담 코멘트 작성자 표기용 교육자 목록
@@ -76,6 +79,7 @@ export async function fetchForParent(userId) {
     counselingRecords: collectRows(counselingRes, 'counseling_records', errors).map(toCounselingRecord),
     parentChildren,
     notices,
+    naviReviews,
     _fetchErrors: errors,
     _fetchMeta: meta,
   }

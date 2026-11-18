@@ -23,12 +23,13 @@ import {
 } from '../../lib/supabaseHelpers.js'
 import { EMPTY } from '../dataModel.js'
 import { fetchAllRows } from '../../lib/fetchAllPages.js'
+import { fetchNaviReviews } from './fetchNaviReviews.js'
 
 export async function fetchForAdmin(scope = null) {
   const errors = []
   const meta = {}
 
-  const [usersRes, assnRes, alertsRes, counselingRes, bookingCounselingRes, statsRes, setsRes, parentChildrenRes, workPlansRes, urgentReportsRes, managementReportsRes, financeRecordsRes, lessonReportsRes, noticesRes, closuresRes, feedbacksRes, examFeedbacksRes, examAnalysesRes, examBestCasesRes] = await Promise.all([
+  const [usersRes, assnRes, alertsRes, counselingRes, bookingCounselingRes, statsRes, setsRes, parentChildrenRes, workPlansRes, urgentReportsRes, managementReportsRes, financeRecordsRes, lessonReportsRes, noticesRes, closuresRes, feedbacksRes, examFeedbacksRes, examAnalysesRes, examBestCasesRes, naviReviews] = await Promise.all([
     supabase.from('users').select('*').order('grade').order('login_id'),
     supabase.from('assignments').select('*'),
     supabase.from('alerts').select('*').order('created_at', { ascending: false }),
@@ -54,6 +55,12 @@ export async function fetchForAdmin(scope = null) {
     fetchAllRows(() => supabase.from('exam_feedbacks').select('*').order('id')),
     fetchAllRows(() => supabase.from('exam_analyses').select('*').order('id')),
     fetchAllRows(() => supabase.from('exam_best_cases').select('*').order('id')),
+    // 나비 후기 — admin(스코프 없음)은 전체, 강사·컨설턴트는 본인 1건, 열람자(viewer)는 제외
+    (!scope || scope.role === 'admin')
+      ? fetchNaviReviews()
+      : (scope.role === 'instructor' || scope.role === 'consultant')
+        ? fetchNaviReviews(scope.userId)
+        : Promise.resolve([]),
   ])
 
   const allUsers = collectRows(usersRes, 'users', errors)
@@ -161,6 +168,7 @@ export async function fetchForAdmin(scope = null) {
     examFeedbacks: collectRows(examFeedbacksRes, 'exam_feedbacks', errors).filter(byStudentId).map(toExamFeedback),
     examAnalyses: collectRows(examAnalysesRes, 'exam_analyses', errors).map(toExamAnalysis), // 학교 단위 공용 — 스코프 비적용
     examBestCases: collectRows(examBestCasesRes, 'exam_best_cases', errors).filter(byStudentId).map(toExamBestCase),
+    naviReviews,
     _fetchErrors: errors,
     _fetchMeta: meta,
   }

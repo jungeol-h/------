@@ -72,6 +72,7 @@ DB 스키마 변경은 **Supabase Studio SQL Editor에서 수동 실행**한다 
 | `add-booking-auto-attendance-cron.sql` | 위 야간 일괄의 pg_cron 등록(KST 00:02, 다이제스트 00:05보다 먼저). ⚠️ 신 프런트 배포 **후** 적용 — 먼저 돌리면 구 화면이 자동 참석분에 "상담기록 미작성"을 띄운다. 과거 누적분 소급 절차는 파일 헤더 참조 | 적용됨 (2026-09-30, Studio — 실DB 검증: cron 잡 booking-auto-attendance) |
 | `add-student-status-dates.sql` | 학생 목록 보고서(PDF) 입학일·퇴원일·신청취소일 표시(2026-09-30 클라이언트): users.withdrawn_at/cancelled_at DATE 추가(널 허용). 퇴원·신청취소 처리(setStudentStatus) 시 그날 날짜를 자동 기록하고, 도입 이전 처리 건은 NULL — 학생 수정 모달에서 수기 입력. 재원 복구 시 값은 유지(표시는 상태 일치 시만). ⚠️ 신코드 배포 전 적용 필수 — 미적용 상태에서 퇴원·신청취소 처리와 해당 학생 정보 수정이 컬럼 없음으로 실패. 소비처: studentDomain.setStudentStatus/updateStudent, StudentFormModal.jsx, UserListReport.jsx | 적용됨 (2026-09-30, Studio — 실DB 검증: 컬럼 2개) |
 | `add-exam-reports.sql` | 내신백서: exam_feedbacks(학생별 시험 후 피드백, 시험당 unique)·exam_analyses(학교·학년·과목·시험별 시험지 분석, unique)·exam_best_cases(우수사례) + RLS + 'exam-papers' 버킷 | 2026-10-21 적용·확인 |
+| `add-navi-reviews.sql` | 나비 후기(2026-11 클라이언트): navi_reviews 테이블 — 학생·학부모·강사 계정당 1건(user_id unique, 제출 후 수정 가능, 실명) + 강사별 후기 instructor_reviews jsonb + 센터장·자신에게 하는 말·도움된 점·아쉬운 점 + RLS(anon_all). 미적용이어도 앱은 죽지 않는다(배너 표시·저장 시 오류). 소비처: NaviReviewBanner/NaviReviewFormModal, AdminNaviReviewsModal, naviReviewsDomain | **적용됨** (2026-11-18 Studio) |
 
 
 ## 시드·일회성 유틸 (재실행 금지 또는 불필요)

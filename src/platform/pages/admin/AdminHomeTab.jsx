@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   Users, AlertTriangle, Bell, CalendarX, TrendingDown,
   UserCog, ClipboardCheck, ChevronRight, MonitorSmartphone,
-  ShieldCheck, ShieldAlert, CalendarDays, Siren, Loader,
+  ShieldCheck, ShieldAlert, CalendarDays, Siren, Loader, Sparkles,
 } from 'lucide-react'
 import { useData } from '../../context/DataContext.jsx'
 import { getRiskStudents, getMindCautionStudents } from '../../context/selectors/riskDetection.js'
@@ -21,6 +21,7 @@ import { WORK_PLAN_TYPE_LABELS, WORK_PLAN_AUDIENCE_LABELS } from '../../data/wor
 import StatisticsSection from '../../components/admin/StatisticsSection.jsx'
 import UrgentReportListModal from '../../components/admin/UrgentReportListModal.jsx'
 import CautionStudentsModal from '../../components/admin/CautionStudentsModal.jsx'
+import AdminNaviReviewsModal from '../../components/admin/AdminNaviReviewsModal.jsx'
 import GroupAttendanceSummary from '../../components/admin/GroupAttendanceSummary.jsx'
 import { useHomeGroupFilter } from '../../components/admin/useHomeGroupFilter.js'
 
@@ -44,6 +45,7 @@ export default function AdminHomeTab({ basePath = '/admin', readOnly = false }) 
   const navigate = useNavigate()
   const [showUrgentList, setShowUrgentList] = useState(false)
   const [cautionModal, setCautionModal] = useState(null) // 'attendance' | 'learning' | 'mind'
+  const [showNaviReviews, setShowNaviReviews] = useState(false)
   const [memberView, setMemberView] = useState('grade') // 인원 현황 보기: 'grade' | 'group'
   const unconfirmedUrgent = data.urgentReports.filter((r) => !r.confirmed).length
 
@@ -176,6 +178,21 @@ export default function AdminHomeTab({ basePath = '/admin', readOnly = false }) 
         <h2 className="text-lg font-bold text-gray-900">{readOnly ? '대시보드' : '관리자 대시보드'}</h2>
         <p className="text-xs text-gray-500 mt-0.5">현재 상황을 한눈에 확인합니다.</p>
       </div>
+
+      {/* 나비 후기 열람 — admin 전용 (viewer는 후기 fetch 제외라 숨김) */}
+      {!readOnly && (
+        <button
+          type="button"
+          onClick={() => setShowNaviReviews(true)}
+          className="w-full flex items-center justify-between bg-amber-50 border border-amber-100 rounded-2xl px-4 py-3 text-left hover:bg-amber-100/60 transition active:scale-[0.99]"
+        >
+          <span className="flex items-center gap-2 text-sm font-bold text-amber-800">
+            <Sparkles size={15} />
+            나비 후기 {data.naviReviews.length}건
+          </span>
+          <ChevronRight size={16} className="text-amber-400" />
+        </button>
+      )}
 
       {/* ── 1단: 인원 현황 (학년별/그룹별 보기 전환) ─────────── */}
       <section className="bg-white rounded-2xl shadow-sm p-4">
@@ -432,6 +449,7 @@ export default function AdminHomeTab({ basePath = '/admin', readOnly = false }) 
       <StatisticsSection />
 
       {showUrgentList && <UrgentReportListModal readOnly={readOnly} onClose={() => setShowUrgentList(false)} />}
+      {showNaviReviews && <AdminNaviReviewsModal reviews={data.naviReviews} onClose={() => setShowNaviReviews(false)} />}
       {cautionModal && (
         <CautionStudentsModal
           {...CAUTION_MODALS[cautionModal]}

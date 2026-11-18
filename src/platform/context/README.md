@@ -46,6 +46,14 @@ add 시 unique 위반은 `err.code === 'DUPLICATE'`로 던지니 `refetchExamFee
 `fetchAllRows`(`.range` 페이지 이어붙이기)로 1000행 조용한 잘림을 막는다. 시험지 첨부는
 `lib/examPaperFiles.js`('exam-papers' 버킷). DDL `scripts/add-exam-reports.sql`.
 
+## 나비 후기 (`naviReviewsDomain.js`, 2026-11)
+
+컬렉션 `naviReviews` — 계정당 1건(`user_id` unique). 학생·학부모·강사/컨설턴트는 본인 1행만,
+admin은 전체를 fetch한다(`fetchers/fetchNaviReviews.js`가 4개 fetcher 공유). **테이블 미적용이어도
+`_fetchErrors` 배너 없이 []로 강등**하고 저장 시에만 오류가 난다. `saveNaviReview(user, existing, input)`는
+기존 행이 있으면 update, 없으면 insert(unique 위반 시 서버 행을 찾아 update로 전환). 순수 로직은
+`utils/naviReview.js`(+test). DDL `scripts/add-navi-reviews.sql`.
+
 ## 알림(위험 신호) 설계 — 두 방식이 공존한다
 
 - **위험 탐지 = 계산형**: 레코드를 만들지 않고 조회 시점에 selector로 계산
