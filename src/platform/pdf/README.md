@@ -11,6 +11,9 @@ utils/      downloadPdf.js(renderPdfBlob/saveBlob) · captureChart.js(Recharts�
 reports/    UserListReport · StatisticsReport(미사용 — 월간 종합으로 교체됨) · QuizReport ·
             GrowthReport(학생별 월간 종합성장리포트 — 월 선택·차트 4종·코칭/피드백,
             트리거는 components/reports/GrowthReportModal, 구 ReflectionReport 대체 2026-08) ·
+            GrowthSummaryReport(종합성장 요약 1쪽 A4 가로 — 같은 모달의 두 번째 버튼, 차트는 View로 직접
+            그림·카드 고정높이+폰트 자동축소로 반드시 1페이지, 권장 글자수는 selectors/growthReport의
+            SUMMARY_TEXT_LIMITS) ·
             MonthlyOperationsReport(월간 종합 — 강사별 시수·이용 현황)
             MonthlyCounselingReport(강사별 월간) · MonthlyLessonReport(강사별 월간 수업보고 —
             교재·과제) · StudentCounselingReport(학생별 — 등록일정은
