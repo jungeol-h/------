@@ -30,8 +30,8 @@ const s = StyleSheet.create({
   infoRow: { flexDirection: 'row' },
   infoBox: { backgroundColor: '#fff', borderRadius: 8, paddingHorizontal: 10, height: 26, justifyContent: 'center', marginLeft: 8, minWidth: 90 },
   infoText: { fontSize: 11, fontWeight: 700, color: INK },
-  topRow: { height: 330, flexDirection: 'row', marginBottom: 8 },
-  bottomRow: { height: 151, flexDirection: 'row' },
+  topRow: { height: 292, flexDirection: 'row', marginBottom: 8 },
+  bottomRow: { height: 189, flexDirection: 'row' },
   col: { flex: 1, marginRight: 8 },
   // 검은 그림자 = 뒤에 깔린 검정 박스를 아래로 3pt 비워 드러냄
   shadow: { backgroundColor: INK, borderRadius: 10, paddingBottom: 3 },
@@ -85,6 +85,37 @@ function BodyText({ text, cap, empty = '내용 없음' }) {
   if (!t) return <Text style={[s.small, { fontSize: 8.5 }]}>{empty}</Text>
   const size = fitSize(t, cap)
   return <Text style={{ fontSize: size, lineHeight: 1.35, color: INK }}>{t}</Text>
+}
+
+// 교과 코칭 칸 — '날짜 · 주제' 줄 목록이라 글자 수가 아니라 '줄 수(줄바꿈 포함)'가 넘침을 좌우한다.
+// 카드 안쪽 폭·높이(pt)에 맞을 때까지 폰트를 줄인다. 폭은 글자 종류별 대략치로 추정
+// (Pretendard: 한글 ≈0.92em, 영숫자 ≈0.56em, 공백 ≈0.26em) — 실측 렌더로 보정함.
+const SUBJECT_BOX = { width: 178, height: 148 }
+const LINE_HEIGHT = 1.3
+function textWidthEm(str) {
+  let w = 0
+  for (const ch of str) {
+    if (ch === ' ') w += 0.26
+    else if (/[\u3131-\uD79D]/.test(ch)) w += 0.92
+    else if (/[.,·:;'"()[\]/-]/.test(ch)) w += 0.32
+    else w += 0.56
+  }
+  return w
+}
+function fitLinesSize(lines, { width, height }, max = 8.5, min = 4.6) {
+  for (let size = max; size > min; size = Math.round((size - 0.1) * 10) / 10) {
+    const perLine = width / size // 한 줄에 들어가는 em 수
+    const rows = lines.reduce((n, l) => n + Math.max(1, Math.ceil(textWidthEm(l) / perLine)), 0)
+    if (rows * size * LINE_HEIGHT <= height) return size
+  }
+  return min
+}
+
+function LinesText({ text, empty }) {
+  const t = String(text ?? '').trim()
+  if (!t) return <Text style={[s.small, { fontSize: 8.5 }]}>{empty}</Text>
+  const size = fitLinesSize(t.split('\n'), SUBJECT_BOX)
+  return <Text style={{ fontSize: size, lineHeight: LINE_HEIGHT, color: INK }}>{t}</Text>
 }
 
 // 세로 막대 차트 — value 최대값 기준 비율 (scaleMax 지정 시 그 값 기준)
@@ -216,7 +247,7 @@ export default function GrowthSummaryReport({
                 right={`총 ${sub.count}회`}
                 style={[s.col, i === subjects.length - 1 ? { marginRight: 0 } : null]}
               >
-                <BodyText text={sub.text} cap={SUMMARY_TEXT_LIMITS.subject} empty="기간 내 코칭 기록 없음" />
+                <LinesText text={sub.text} empty="기간 내 코칭 기록 없음" />
               </Card>
             ))}
           </View>
