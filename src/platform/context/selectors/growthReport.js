@@ -149,8 +149,31 @@ export function buildSubjectCoachingSummary(records, educators) {
     if (key) bucket[key].push(r)
   }
   return Object.fromEntries(SUMMARY_SUBJECTS.map((k) => [
-    k, { count: bucket[k].length, autoText: buildCoachingAutoText(bucket[k]) },
+    k, { count: bucket[k].length, autoText: buildTopicLines(bucket[k]) },
   ]))
+}
+
+// 상담 1건의 주제 — topic 필드 우선, 구 기록은 본문의 '[상담주제] …' 구간, 그것도 없으면 본문 앞부분.
+export function counselingTopicOf(record) {
+  const topic = (record.topic ?? '').trim()
+  if (topic) return topic
+  const body = (record.comment ?? '').trim()
+  const tagged = body.match(/\[상담주제\]\s*([^[]+)/)
+  const text = (tagged ? tagged[1] : body.split('\n')[0]).trim()
+  return text.length > 40 ? `${text.slice(0, 40)}…` : text
+}
+
+// 요약 리포트 교과 코칭 칸 — 클라이언트 요청(2026-11-21)으로 '날짜 · 상담 주제'만 한 줄씩 (날짜순).
+export function buildTopicLines(records) {
+  return records
+    .slice()
+    .sort((a, b) => String(a.date).localeCompare(String(b.date)))
+    .map((r) => {
+      const topic = counselingTopicOf(r)
+      return topic ? `${fmtMD(r.date)} · ${topic}` : null
+    })
+    .filter(Boolean)
+    .join('\n')
 }
 
 const EXAM_SLOTS = [
@@ -162,26 +185,34 @@ const EXAM_SLOTS = [
 
 // 내신 피드백 → 기간 종료일이 속한 학년도의 4시험 성적 추이.
 // score = 그 시험 과목 점수 평균(빈 점수 제외, 소수 첫째 자리), 기록 없으면 null(빈 슬롯).
+// 그 시험 피드백이 없으면 바로 다음 시험 피드백의 '지난시험'(prevScore) 평균으로 채운다 —
+// 학생들은 2학기 중간부터 기록을 시작해 1학기 기말 점수는 prevScore로만 들어 있다(2026-11 실데이터).
 // actionPlan = 그 학년도에서 가장 나중 시험 피드백의 실천과제.
+const avgOf = (subjects, field) => {
+  const nums = (subjects ?? [])
+    .map((s) => s[field])
+    .filter((v) => v !== null && v !== undefined && v !== '' && !Number.isNaN(Number(v)))
+    .map(Number)
+  if (nums.length === 0) return { score: null, count: 0 }
+  return { score: Math.round((nums.reduce((a, b) => a + b, 0) / nums.length) * 10) / 10, count: nums.length }
+}
+
 export function buildExamTrend(examFeedbacks, studentId, endDate) {
   const { examYear } = defaultExamKey(endDate)
   const mine = (examFeedbacks ?? []).filter((f) => f.studentId === studentId)
+  const feedbackOf = (slot) => mine
+    .filter((f) => sameExamKey(f, { examYear, semester: slot.semester, examType: slot.examType }))
+    .sort((a, b) => String(b.updatedAt ?? '').localeCompare(String(a.updatedAt ?? '')))[0] ?? null
+  const fbs = EXAM_SLOTS.map(feedbackOf)
   let actionPlan = ''
-  const bars = EXAM_SLOTS.map((slot) => {
-    const key = { examYear, semester: slot.semester, examType: slot.examType }
-    const fb = mine
-      .filter((f) => sameExamKey(f, key))
-      .sort((a, b) => String(b.updatedAt ?? '').localeCompare(String(a.updatedAt ?? '')))[0]
-    if (!fb) return { label: slot.label, score: null }
-    const nums = (fb.subjects ?? [])
-      .map((s) => s.score)
-      .filter((v) => v !== null && v !== undefined && v !== '' && !Number.isNaN(Number(v)))
-      .map(Number)
-    if ((fb.actionPlan ?? '').trim()) actionPlan = fb.actionPlan.trim()
-    return {
-      label: slot.label,
-      score: nums.length > 0 ? Math.round((nums.reduce((a, b) => a + b, 0) / nums.length) * 10) / 10 : null,
-    }
+  const bars = EXAM_SLOTS.map((slot, i) => {
+    const fb = fbs[i]
+    if (fb && (fb.actionPlan ?? '').trim()) actionPlan = fb.actionPlan.trim()
+    const own = fb ? avgOf(fb.subjects, 'score') : { score: null, count: 0 }
+    if (own.score != null) return { label: slot.label, score: own.score, subjectCount: own.count }
+    const next = fbs[i + 1]
+    const prev = next ? avgOf(next.subjects, 'prevScore') : { score: null, count: 0 }
+    return { label: slot.label, score: prev.score, subjectCount: prev.count }
   })
   return { examYear, bars, actionPlan }
 }
