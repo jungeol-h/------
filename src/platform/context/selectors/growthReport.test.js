@@ -3,7 +3,7 @@ import {
   buildMonthlyUsage, summarySubjectKey, buildSubjectCoachingSummary, buildExamTrend,
   buildCareerSummaryText, buildDiagnosisSummaryText, defaultSummaryTitle, NO_TEST_TEXT,
   buildGrowthReportData, buildWeeklyUsage, consultMinutes,
-  buildConsultingBySubject, buildCoachingAutoText, DEFAULT_CONSULT_MINUTES,
+  buildConsultingBySubject, buildCoachingAutoText, DEFAULT_CONSULT_MINUTES, buildTopicLines,
 } from './growthReport.js'
 
 const S = 's1'
@@ -162,6 +162,23 @@ describe('요약 리포트 빌더', () => {
     expect(r.actionPlan).toBe('2학기 중간')
     // 1~2월은 직전 학년도
     expect(buildExamTrend(fbs, S, '2027-02-28').examYear).toBe(2026)
+  })
+
+  it('내신 추이: 시험 기록이 없으면 다음 시험의 지난시험(prevScore) 평균으로 채운다', () => {
+    const fbs = [
+      { studentId: S, examYear: 2026, semester: 2, examType: 'mid', subjects: [{ score: 80, prevScore: 70 }, { score: 90, prevScore: 91 }] },
+    ]
+    const r = buildExamTrend(fbs, S, '2026-11-30')
+    expect(r.bars.map((b) => b.score)).toEqual([null, 80.5, 85, null])
+    expect(r.bars[1].subjectCount).toBe(2)
+  })
+
+  it('교과 코칭: 날짜 · 상담 주제만, 주제 없는 구 기록은 [상담주제] 구간', () => {
+    const lines = buildTopicLines([
+      { date: '2026-08-09', topic: '', comment: '[상담주제] 수학 교과 학습 [진단] 형성평가' },
+      { date: '2026-08-02', topic: '운문 독해', comment: '[상담주제] 운문 독해 [진단] 긴 본문' },
+    ])
+    expect(lines).toBe('8/2 · 운문 독해\n8/9 · 수학 교과 학습')
   })
 
   it('진로·학습 진단 요약: 종료일 이전 최신 결과, 없으면 검사 기록 없음', () => {

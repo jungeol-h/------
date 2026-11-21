@@ -181,7 +181,9 @@ export default function GrowthSummaryReport({
 
             {/* 3열: 내신 피드백 */}
             <Card title="내신 피드백" color="#5B1E7A" style={s.col}>
-              <Text style={[s.small, { color: INK, fontWeight: 700, marginBottom: 2 }]}>성적추이</Text>
+              <Text style={[s.small, { color: INK, fontWeight: 700, marginBottom: 2 }]}>
+                성적추이 <Text style={{ fontWeight: 400, color: '#6b7280' }}>(과목 평균)</Text>
+              </Text>
               <View style={{ height: 110 }}>
                 <Bars
                   bars={examTrend.bars.map((b) => ({ label: b.label, value: b.score }))}
